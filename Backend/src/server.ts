@@ -8,6 +8,7 @@ import authRoutes from './routes/authRoutes'
 import userRoutes from './routes/userRoutes'
 import mealLogsRoutes from './routes/mealLogsRoutes'
 import recipeRoutes from './routes/recipeRoutes'
+import instructorRoutes from './routes/instructorRoutes'
 
 
 
@@ -36,7 +37,7 @@ app.use("/api/v1/auth", authRoutes)
 app.use("/api/v1/users", userRoutes)
 app.use("/api/v1/mealLogs", mealLogsRoutes)
 app.use("/api/v1/recipes", recipeRoutes);
-// app.use("/api/v1/summary", bookSummaryRoutes)
+app.use("/api/v1/instructors", instructorRoutes);
 // app.use("/api/v1/bookCopies", copiesRoutes)
 
 
