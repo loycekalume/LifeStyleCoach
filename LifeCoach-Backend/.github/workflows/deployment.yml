@@ -1,4 +1,3 @@
-# Deployment file for Dounebain Diagnostics
 name: CI/CD Pipeline
 
 on:
