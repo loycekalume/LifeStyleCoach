@@ -16,6 +16,8 @@ import adminRoutes from "../src/routes/adminRoutes"
 import notificationRoutes from "../src/routes/notificationRoutes"
 import authRoutes from "../src/routes/authRoutes"
 import dieticianRoutes from "../src/routes/dieticianRoutes"
+import chatRoutes from "../src/routes/chatRoutes"
+
 
 
 //configure the dotenv
@@ -50,6 +52,7 @@ app.use("/posts",communityPostRoutes)
 app.use("/admin",adminRoutes)
 app.use("/notification",notificationRoutes)
 app.use("/dietician",dieticianRoutes)
+app.use("/chat",chatRoutes)
 
 const port =process.env.PORT 
 
