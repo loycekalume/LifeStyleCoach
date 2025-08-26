@@ -37,7 +37,7 @@ export const chatWithBot = asyncHandler(async (req: Request, res: Response) => {
 
     // Generate content using the correct method
     const result = await model.generateContent(prompt);
-    const response = await result.response;
+    const response =  result.response;
     const answer = response.text() || "I'm not sure how to respond.";
 
     // Save to database
