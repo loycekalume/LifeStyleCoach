@@ -86,7 +86,7 @@ export default function Admin() {
         <div className="sidebar-header">
           <div className="logo">
             <i className="fas fa-shield-alt"></i>
-            <span>Admin Panel</span>
+            <span>Admin Panel Welcome Admin</span>
           </div>
           <button
             className="sidebar-toggle"
