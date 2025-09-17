@@ -10,15 +10,7 @@ export const addUser = asyncHandler(async (req: Request, res: Response) => {
             name,
             email,
             password_hash,
-            weight_goal,
-            age,
-            gender,
-            weight,
-            height,
-            health_conditions,
-            allergies,
-            budget,
-            location,
+            contact,
             role_id
         } = req.body
 
@@ -36,34 +28,18 @@ export const addUser = asyncHandler(async (req: Request, res: Response) => {
         //Insert new user
         const newUser = await pool.query(
             `INSERT INTO users( 
-        name,
-        email,
-        password_hash,
-        weight_goal,
-        age,
-        gender,
-        weight,
-        height,
-        health_conditions,
-        allergies,
-        budget,
-        location,
-        role_id
-    )VALUES( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       name,
+            email,
+            password_hash,
+            contact,
+            role_id
+    )VALUES( $1, $2, $3, $4, $5)
     RETURNING *`,
             [name,
-                email,
-                hashedPassword,
-                weight_goal,
-                age,
-                gender,
-                weight,
-                height,
-                health_conditions,
-                allergies,
-                budget,
-                location,
-                role_id]
+            email,
+            password_hash,
+            contact,
+            role_id]
         );
 
         res.status(201).json({
