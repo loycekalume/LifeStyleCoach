@@ -1,15 +1,18 @@
-import React from 'react';
-import ProfileCard from '../components/instructor/profileCard';
-import ContactCard from '../components/instructor/contactCard';
-import Specializations from '../components/instructor/specializationCard';
-import PricingCard from '../components/instructor/pricingCard';
-import MonthlyStats from '../components/instructor/statsCard';
-import UpcomingSessions from '../components/instructor/sessionsCard';
-import Reviews from '../components/instructor/reviewCard';
-import '../css/instructor.css';
-import Overview from '../components/instructor/overview';
+import React, { useState } from "react";
+import ProfileCard from "../components/instructor/profileCard";
+import ContactCard from "../components/instructor/contactCard";
+import Specializations from "../components/instructor/specializationCard";
+import PricingCard from "../components/instructor/pricingCard";
+import MonthlyStats from "../components/instructor/statsCard";
+import UpcomingSessions from "../components/instructor/sessionsCard";
+import Reviews from "../components/instructor/reviewCard";
+import "../css/instructor.css";
+import Overview from "../components/instructor/overview";
+import WorkoutsModal from "../components/instructor/workOutModal";
 
 const InstructorProfile: React.FC = () => {
+  const [isWorkoutsOpen, setIsWorkoutsOpen] = useState(false);
+
   return (
     <div>
       <header className="header">
@@ -17,11 +20,11 @@ const InstructorProfile: React.FC = () => {
           <div className="header-content">
             <h1>Instructor Profile</h1>
             <div className="header-actions">
-              <button className="btn btn-outline analytics-btn">
-                <i className="fas fa-chart-bar"></i> Analytics
-              </button>
-              <button className="btn btn-outline settings-btn">
-                <i className="fas fa-cog"></i> Settings
+              <button
+                className="btn btn-outline"
+                onClick={() => setIsWorkoutsOpen(true)}
+              >
+                <i className="fas fa-dumbbell"></i> Workouts
               </button>
               <button className="btn btn-primary">
                 <i className="fas fa-edit"></i> Edit Profile
@@ -40,13 +43,19 @@ const InstructorProfile: React.FC = () => {
             <PricingCard />
           </aside>
           <main className="profile-main">
-            <Overview/>
+            <Overview />
             <MonthlyStats />
             <UpcomingSessions />
             <Reviews />
           </main>
         </div>
       </div>
+
+      {/* Workouts Modal */}
+      <WorkoutsModal
+        isOpen={isWorkoutsOpen}
+        onClose={() => setIsWorkoutsOpen(false)}
+      />
     </div>
   );
 };
