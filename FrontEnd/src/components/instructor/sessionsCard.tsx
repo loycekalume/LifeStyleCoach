@@ -1,104 +1,128 @@
-import React from 'react';
+import React, { useEffect, useState } from "react";
+
+interface Session {
+  id: number;
+  session_type: string;
+  duration: number;
+  scheduled_at: string;
+  status: string;
+  notes?: string;
+  client_id: number;
+  client_name: string;
+  instructor_id: number;
+  instructor_name: string;
+  meeting_link?: string;   
+  chat_link?: string;   
+}
 
 const UpcomingSessions: React.FC = () => {
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const instructorId = 4; // hardcoded for now
 
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const res = await fetch("http://localhost:3000/sessions");
+        const data = await res.json();
+        // Filter sessions for instructor 4 only
+        const filtered = data.filter(
+          (s: Session) => s.instructor_id === instructorId
+        );
+        setSessions(filtered);
+      } catch (error) {
+        console.error("Error fetching sessions:", error);
+      }
+    };
 
-    return (
-        <div className="card sessions-card">
-            <div className="card-header">
-                <h3><i className="fas fa-calendar"></i> Upcoming Sessions</h3>
-                <button className="btn btn-ghost">View Schedule</button>
-            </div>
-            <div className="card-content">
-                <div className="sessions-list">
-                    <div className="session-item">
-                        <div className="session-info">
-                            <div className="session-avatar">
-                                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face" alt="Sarah Johnson"/>
-                            </div>
-                            <div className="session-details">
-                                <div className="session-client">Sarah Johnson</div>
-                                <div className="session-type">Yoga Session • 60 min</div>
-                                <div className="session-time">Today, 2:00 PM</div>
-                            </div>
-                        </div>
-                        <div className="session-actions">
-                            <span className="badge badge-success">confirmed</span>
-                            <button className="btn btn-icon">
-                                <i className="fas fa-comment"></i>
-                            </button>
-                            <button className="btn btn-icon">
-                                <i className="fas fa-video"></i>
-                            </button>
-                        </div>
+    fetchSessions();
+  }, []);
+
+  return (
+    <div className="card sessions-card">
+      <div className="card-header">
+        <h3>
+          <i className="fas fa-calendar"></i> Upcoming Sessions
+        </h3>
+        <button className="btn btn-ghost">View Schedule</button>
+      </div>
+      <div className="card-content">
+        <div className="sessions-list">
+          {sessions.length > 0 ? (
+            sessions.map((session) => (
+              <div key={session.id} className="session-item">
+                <div className="session-info">
+                  <div className="session-avatar">
+                    <img
+                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                        session.client_name
+                      )}&background=random`}
+                      alt={session.client_name}
+                    />
+                  </div>
+                  <div className="session-details">
+                    <div className="session-client">{session.client_name}</div>
+                    <div className="session-type">
+                      {session.session_type} • {session.duration} min
                     </div>
-                    <div className="session-item">
-                        <div className="session-info">
-                            <div className="session-avatar">
-                                <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face" alt="Mike Chen"/>
-                            </div>
-                            <div className="session-details">
-                                <div className="session-client">Mike Chen</div>
-                                <div className="session-type">Strength Training • 45 min</div>
-                                <div className="session-time">Today, 4:30 PM</div>
-                            </div>
-                        </div>
-                        <div className="session-actions">
-                            <span className="badge badge-success">confirmed</span>
-                            <button className="btn btn-icon">
-                                <i className="fas fa-comment"></i>
-                            </button>
-                            <button className="btn btn-icon">
-                                <i className="fas fa-video"></i>
-                            </button>
-                        </div>
+                    <div className="session-time">
+                      {new Date(session.scheduled_at).toLocaleString()}
                     </div>
-                    <div className="session-item">
-                        <div className="session-info">
-                            <div className="session-avatar">
-                                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=40&h=40&fit=crop&crop=face" alt="Emma Rodriguez"/>
-                            </div>
-                            <div className="session-details">
-                                <div className="session-client">Emma Rodriguez</div>
-                                <div className="session-type">HIIT Workout • 30 min</div>
-                                <div className="session-time">Tomorrow, 9:00 AM</div>
-                            </div>
-                        </div>
-                        <div className="session-actions">
-                            <span className="badge badge-warning">pending</span>
-                            <button className="btn btn-icon">
-                                <i className="fas fa-comment"></i>
-                            </button>
-                            <button className="btn btn-icon">
-                                <i className="fas fa-video"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div className="session-item">
-                        <div className="session-info">
-                            <div className="session-avatar">
-                                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face" alt="David Kim"/>
-                            </div>
-                            <div className="session-details">
-                                <div className="session-client">David Kim</div>
-                                <div className="session-type">Pilates • 50 min</div>
-                                <div className="session-time">Tomorrow, 11:00 AM</div>
-                            </div>
-                        </div>
-                        <div className="session-actions">
-                            <span className="badge badge-success">confirmed</span>
-                            <button className="btn btn-icon">
-                                <i className="fas fa-comment"></i>
-                            </button>
-                            <button className="btn btn-icon">
-                                <i className="fas fa-video"></i>
-                            </button>
-                        </div>
-                    </div>
+                  </div>
                 </div>
-            </div>
+                <div className="session-actions">
+                  <span
+                    className={`badge ${
+                      session.status === "confirmed"
+                        ? "badge-success"
+                        : session.status === "pending"
+                        ? "badge-warning"
+                        : "badge-secondary"
+                    }`}
+                  >
+                    {session.status}
+                  </span>
+
+                  {/* ✅ Chat button */}
+                  {session.chat_link ? (
+                    <a
+                      href={session.chat_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-icon"
+                    >
+                      <i className="fas fa-comment"></i>
+                    </a>
+                  ) : (
+                    <button className="btn btn-icon" disabled>
+                      <i className="fas fa-comment"></i>
+                    </button>
+                  )}
+
+                  {/* ✅ Meeting button */}
+                  {session.meeting_link ? (
+                    <a
+                      href={session.meeting_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-icon"
+                    >
+                      <i className="fas fa-video"></i>
+                    </a>
+                  ) : (
+                    <button className="btn btn-icon" disabled>
+                      <i className="fas fa-video"></i>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <p>No upcoming sessions</p>
+          )}
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default UpcomingSessions;
