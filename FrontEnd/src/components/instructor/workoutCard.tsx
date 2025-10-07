@@ -81,33 +81,43 @@ const InstructorWorkouts: React.FC = () => {
     );
   };
 
-  const confirmAssign = async () => {
-    if (!selectedWorkout || !selectedClientId) {
-      alert("Please select a client.");
-      return;
-    }
-    try {
-      const res = await fetch("http://localhost:3000/clientWorkouts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workout_id: selectedWorkout.workout_id,
-          client_id: selectedClientId, // ✅ now matches user_id from dropdown
-          instructor_id: 4, // hardcoded for now
-        }),
-      });
+ const confirmAssign = async () => {
+  if (!selectedWorkout || !selectedClientId) {
+    alert("Please select a client.");
+    return;
+  }
 
-      if (res.ok) {
-        alert("Workout assigned successfully!");
-        setIsAssignOpen(false);
-        setSelectedClientId(null);
-      } else {
-        alert("Failed to assign workout.");
-      }
-    } catch (err) {
-      console.error("Error assigning workout:", err);
-    }
+  const payload = {
+    client_id: selectedClientId,  // ✅ keep as client_id
+    workout_id: selectedWorkout.workout_id,
+    instructor_id: 4,             // hardcoded for now
+    status: "scheduled",          // ✅ same as AllWorkoutsPage
+    notes: "do this for 6 weeks", // ✅ add notes
   };
+
+  console.log("Sending assignment:", payload);
+
+  try {
+    const res = await fetch("http://localhost:3000/clientWorkouts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      alert("Workout assigned successfully!");
+      setIsAssignOpen(false);
+      setSelectedClientId(null);
+    } else {
+      alert(data.message || "Failed to assign workout.");
+    }
+  } catch (err) {
+    console.error("Error assigning workout:", err);
+  }
+};
+
 
   return (
     <div className="card">
