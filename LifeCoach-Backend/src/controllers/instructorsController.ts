@@ -1,85 +1,343 @@
 import { Request, Response } from "express"
 import pool from "../db.config"
 import asyncHandler
- from "../middlewares/asyncHandler"
+  from "../middlewares/asyncHandler"
 export const addInstructor = asyncHandler(async (req: Request, res: Response) => {
-    try {
-        const { user_id,
-            specialization,
-            coaching_mode,
-            bio,
-            available_locations } = req.body
+  try {
+    const { user_id,
+      specialization,
+      website_url,
+      certifications,
+      years_of_experience,
+      profile_title,
+      coaching_mode,
+      bio,
+      available_locations } = req.body
 
-         const user=await pool.query("SELECT *FROM users WHERE user_id=$1",[user_id])
+    const user = await pool.query("SELECT *FROM users WHERE user_id=$1", [user_id])
 
-        if(!user.rows.length || user.rows[0].role_id !==3){
-            return res.status(400).json({ message: "User is not an instructor" });
-        }
+    if (!user.rows.length || user.rows[0].role_id !== 3) {
+      return res.status(400).json({ message: "User is not an instructor" });
+    }
 
-        const result = await pool.query
-            (`INSERT INTO instructors(
+    const result = await pool.query
+      (`INSERT INTO instructors(
             user_id,
             specialization,
+            website_url,
+            certifications,
+            years_of_experience,
+            profile_title,
             coaching_mode,
             bio,
             available_locations) 
-            VALUES($1,$2,$3,$4,$5) RETURNING *`,
-                [user_id,
-                    specialization,
-                    coaching_mode,
-                    bio,
-                    available_locations])
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [user_id,
+          specialization,
+          website_url,
+          certifications,
+          years_of_experience,
+          profile_title,
+          coaching_mode,
+          bio,
+          available_locations])
 
-        res.status(200).json({
-            message: "Instructor successfully added",
-            instructor: result.rows[0]
-        })
+    res.status(200).json({
+      message: "Instructor successfully added",
+      instructor: result.rows[0]
+    })
 
-    } catch (error) {
-        console.error("Error adding instructor:", error);
-        res.status(500).json({ message: "Internal server error" })
-    }
+  } catch (error) {
+    console.error("Error adding instructor:", error);
+    res.status(500).json({ message: "Internal server error" })
+  }
 })
 
-export const getInstructors =asyncHandler( async (req: Request, res: Response) => {
-    try {
-        const result = await pool.query("SELECT * FROM instructors ")
+export const getInstructors = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query("SELECT * FROM instructors ")
 
-        res.status(200).json({
-            message: "Instructors retrieved",
-            instructor: result.rows
-        })
-    } catch (error) {
-        console.error("Error adding user:", error);
-        res.status(500).json({ message: "Internal server error" })
-    }
+    res.status(200).json({
+      message: "Instructors retrieved",
+      instructor: result.rows
+    })
+  } catch (error) {
+    console.error("Error adding user:", error);
+    res.status(500).json({ message: "Internal server error" })
+  }
 })
 export const getInstuctorById = asyncHandler(async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params
-        const result = await pool.query("SELECT * FROM instructors WHERE instructor_id=$1 RETURNING *", [id])
-        if (result.rows.length === 0) {
-            res.status(400).json({ message: "Instructor not found " })
-            return
-        }
-        res.status(200).json(result.rows[0])
-    } catch (error) {
-        console.error("Error adding user:", error);
-        res.status(500).json({ message: "Internal server error" })
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      "SELECT * FROM instructors WHERE instructor_id=$1",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(400).json({ message: "Instructor not found" });
+      return;
     }
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error("Error fetching instructor:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+export const updateInstructor = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      specialization,
+      website_url,
+      certifications,
+      years_of_experience,
+      profile_title,
+      coaching_mode,
+      bio,
+      available_locations
+    } = req.body;
+
+    //  Check if instructor exists
+    const instructor = await pool.query(
+      "SELECT * FROM instructors WHERE instructor_id=$1",
+      [id]
+    );
+
+    if (instructor.rows.length === 0) {
+      return res.status(404).json({ message: "Instructor not found" });
+    }
+
+    // Update instructor
+    const result = await pool.query(
+      `UPDATE instructors 
+       SET 
+        specialization = COALESCE($1, specialization),
+        website_url = COALESCE($2, website_url),
+        certifications = COALESCE($3, certifications),
+        years_of_experience = COALESCE($4,years_of_experience),
+        profile_title = COALESCE($5, profile_title),
+        coaching_mode = COALESCE($6, coaching_mode),
+        bio = COALESCE($7, bio),
+        available_locations = COALESCE($8, available_locations)        
+       WHERE instructor_id = $9
+       RETURNING *`,
+      [
+        specialization,
+        website_url,
+        certifications,
+        years_of_experience,
+        profile_title,
+        coaching_mode,
+        bio,
+        available_locations,
+        id
+      ]
+    );
+
+    res.status(200).json({
+      message: "Instructor updated successfully",
+      instructor: result.rows[0],
+    });
+
+  } catch (error) {
+    console.error("Error updating instructor:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+export const deleteInstuctor = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params
+    const result = await pool.query(`DELETE  FROM instructors where instructor_id=$1 RETURNING *`, [id])
+    if (result.rows.length === 0) {
+      res.status(400).json({ message: "Instructor Not found" });
+      return
+    }
+    res.status(200).json({ message: "instuctor successfully deleted" })
+  } catch (error) {
+    console.error("Error adding instuctor:", error);
+    res.status(500).json({ message: "Internal server error" })
+  }
 })
 
-export const deleteInstuctor =asyncHandler( async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params
-        const result = await pool.query(`DELETE  FROM instructors where instructor_id=$1 RETURNING *`, [id])
-        if (result.rows.length === 0) {
-            res.status(400).json({ message: "Instructor Not found" });
-            return
-        }
-        res.status(200).json({ message: "instuctor successfully deleted" })
-    } catch (error) {
-        console.error("Error adding instuctor:", error);
-        res.status(500).json({ message: "Internal server error" })
+export const getInstructorContact = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT 
+          u.name,
+          u.email,
+          u.contact,
+          i.website_url,
+          i.availability,
+          i.coaching_mode
+       FROM instructors i
+       JOIN users u ON i.user_id = u.user_id
+       WHERE i.instructor_id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: "Instructor not found" });
+      return;
     }
-})
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error("Error fetching instructor contact:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+export const updateInstructorContact = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { website_url, availability, coaching_mode } = req.body;
+
+    const result = await pool.query(
+      `UPDATE instructors
+       SET website_url = COALESCE($1, website_url),
+           availability = COALESCE($2, availability),
+           coaching_mode = COALESCE($3, coaching_mode)
+       WHERE instructor_id = $4
+       RETURNING *`,
+      [website_url, availability, coaching_mode, id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: "Instructor not found" });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Instructor contact updated successfully",
+      instructor: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Error updating instructor contact:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// ✅ Fetch instructor's specializations & certifications
+export const getInstructorSpecializations = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const result = await pool.query(
+    `
+    SELECT specialization, certifications
+    FROM instructors
+    WHERE instructor_id = $1
+    `,
+    [id]
+  );
+
+  if (result.rows.length === 0) {
+    res.status(404).json({ message: "Instructor not found" });
+    return;
+  }
+
+  res.status(200).json(result.rows[0]);
+});
+
+//  Get pricing for one instructor
+export const getInstructorPricing = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const result = await pool.query(
+    `SELECT pricing_id, session_type, price, unit 
+     FROM instructor_pricing 
+     WHERE instructor_id = $1`,
+    [id]
+  );
+
+  res.status(200).json(result.rows);
+});
+
+//  Add a new pricing option
+export const addPricingOption = asyncHandler(async (req: Request, res: Response) => {
+  const { instructor_id, session_type, price, unit } = req.body;
+
+  const result = await pool.query(
+    `INSERT INTO instructor_pricing (instructor_id, session_type, price, unit)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [instructor_id, session_type, price, unit]
+  );
+
+  res.status(201).json({
+    message: "Pricing option added successfully",
+    pricing: result.rows[0]
+  });
+});
+
+//  Update a pricing option
+export const updatePricingOption = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { session_type, price, unit } = req.body;
+
+  const result = await pool.query(
+    `UPDATE instructor_pricing
+     SET session_type = COALESCE($1, session_type),
+         price = COALESCE($2, price),
+         unit = COALESCE($3, unit)
+     WHERE pricing_id = $4
+     RETURNING *`,
+    [session_type, price, unit, id]
+  );
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ message: "Pricing option not found" });
+  }
+
+  res.status(200).json({
+    message: "Pricing option updated successfully",
+    pricing: result.rows[0]
+  });
+});
+
+//  Delete a pricing option
+export const deletePricingOption = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const result = await pool.query(
+    `DELETE FROM instructor_pricing WHERE pricing_id = $1 RETURNING *`,
+    [id]
+  );
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ message: "Pricing option not found" });
+  }
+
+  res.status(200).json({ message: "Pricing option deleted" });
+});
+
+export const getInstructorProfile = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+  
+
+    const result = await pool.query(
+      `SELECT u.name, i.profile_title, i.years_of_experience, i.available_locations
+       FROM instructors i
+       JOIN users u ON u.user_id = i.user_id
+       WHERE i.instructor_id = $1`,
+      [id] // <-- parameterized, safe
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Instructor not found" });
+    }
+
+    res.status(200).json({
+      message: "Instructor profile fetched successfully",
+      profile: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Error fetching instructor profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});

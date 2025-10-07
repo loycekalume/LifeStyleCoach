@@ -7,9 +7,9 @@ const router=express.Router()
 
 
 router.post("/",protect, addUser);
-router.get("/",protect, getUser)
-router.get("/:id",protect, notUserGuard ,getUserById)
-router.delete("/:id",protect,deleteUser)
+router.get("/", getUser)
+router.get("/:id",getUserById)
+router.delete("/:id",deleteUser)
 
 
 

@@ -1,15 +1,30 @@
 import express from "express"
-import { addInstructor, deleteInstuctor, getInstructors, getInstuctorById } from "../controllers/instructorsController";
+import { addInstructor, addPricingOption, deleteInstuctor, deletePricingOption, getInstructorContact, getInstructorPricing, getInstructorProfile, getInstructors, getInstructorSpecializations, getInstuctorById, updateInstructor, updateInstructorContact, updatePricingOption } from "../controllers/instructorsController";
 import { protect } from './../middlewares/auth/protect';
 import { adminGuard } from "../middlewares/auth/roleMiddleware";
 
 
 const router=express.Router()
 
-router.post("/",protect,addInstructor)
-router.get("/", protect,getInstructors)
-router.get("/:id",protect,getInstuctorById)
-router.delete("/:id",protect,adminGuard,deleteInstuctor)
+router.post("/",addInstructor)
+router.get("/", getInstructors)
+router.get("/:id",getInstuctorById)
+router.put("/:id", updateInstructor);
+router.delete("/:id",deleteInstuctor)
+router.get("/:id/contact", getInstructorContact);
+router.put("/:id/contact", updateInstructorContact);
+router.get("/:id/specializations", getInstructorSpecializations);
+router.get("/:id/profile",getInstructorProfile)
+
+router.get("/:id/pricing", getInstructorPricing);
+
+router.post("/pricing", addPricingOption);
+
+
+router.put("/:id/pricing", updatePricingOption);
+
+
+router.delete("/:id/pricing", deletePricingOption);
 
 
 export default router;
