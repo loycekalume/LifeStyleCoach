@@ -19,5 +19,6 @@ export const adminGuard = roleGuard(["Admin"])
 export const InstuctorGuard = roleGuard(["Instructor"])
 export const dieticianGuard = roleGuard(["Dietician"])
 export const userGuard=roleGuard(["User"])
+export const clientGuard=roleGuard(["client"])
 
 export const notUserGuard=roleGuard(["Admin","Instructor","Dietician"])
