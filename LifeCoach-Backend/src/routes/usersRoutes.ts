@@ -6,10 +6,10 @@ import { adminGuard, InstuctorGuard, notUserGuard } from "../middlewares/auth/ro
 const router=express.Router()
 
 
-router.post("/", addUser);
+router.post("/",protect, addUser);
 router.get("/", getUser)
-router.get("/:id",getUserById)
-router.delete("/:id",deleteUser)
+router.get("/:id",protect, notUserGuard ,getUserById)
+router.delete("/:id",protect,deleteUser)
 
 
 
