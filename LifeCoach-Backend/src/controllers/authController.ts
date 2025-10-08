@@ -6,36 +6,41 @@ import { generateToken } from "../utils/helpers/generateToken";
 
 export const registerUser = asyncHandler(async (req: Request, res: Response) => {
     try {
-        const { name, email, password_hash, role_id } = req.body
+        const { name, email, contact, password_hash, role_id } = req.body;
 
-        //Check if the user exists
-        const userExists = await pool.query("SELECT user_id FROM users where email=$1", [email])
+        // Check if the user exists
+        const userExists = await pool.query(
+            "SELECT user_id FROM users WHERE email = $1",
+            [email]
+        );
         if (userExists.rows.length > 0) {
-            res.status(400).json({ message: "User already exists" })
+            res.status(400).json({ message: "User already exists" });
             return;
         }
 
-        const salt = await bcrypt.genSalt(10)
-        const hashedPassword = await bcrypt.hash(password_hash, salt)
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password_hash, salt);
 
-        //Insert into users table
-        const register = await pool.query(`INSERT INTO users(name,email,password_hash,role_id) 
-            VALUES($1,$2,$3,$4) RETURNING *`,
-            [name, email, hashedPassword, role_id])
+        // Insert into users table (with contact added)
+        const register = await pool.query(
+            `INSERT INTO users(name, email, contact, password_hash, role_id) 
+             VALUES($1, $2, $3, $4, $5) RETURNING *`,
+            [name, email, contact, hashedPassword, role_id]
+        );
 
-        //Generate JWT token for user access
-        generateToken(res, register.rows[0].user_id, role_id)
+        // Generate JWT token for user access
+        generateToken(res, register.rows[0].user_id, role_id);
 
         res.status(201).json({
             message: "User registered successfully",
-            user: register.rows[0]
-        })
-
+            user: register.rows[0],
+        });
     } catch (error) {
-        console.error("Error registering user", error)
-        res.status(500).json({ message: "Internal Server Error" })
+        console.error("Error registering user", error);
+        res.status(500).json({ message: "Internal Server Error" });
     }
-})
+});
+
 
 export const loginUser = asyncHandler(async (req: Request, res: Response) => {
     try {
