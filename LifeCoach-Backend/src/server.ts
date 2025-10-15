@@ -17,7 +17,7 @@ import notificationRoutes from "../src/routes/notificationRoutes"
 import authRoutes from "../src/routes/authRoutes"
 import dieticianRoutes from "../src/routes/dieticianRoutes"
 import chatRoutes from "../src/routes/chatRoutes"
-
+import clientRoutes from "../src/routes/clientRoutes"
 
 
 //configure the dotenv
@@ -34,7 +34,7 @@ app.use(cookieParser()) || 3000
 //CORS configuration
 app.use(cors({
     origin:"http://localhost:5173",
-    methods:"GET,PUT,DELETE",
+    methods:"GET,PUT,DELETE,POST",
     credentials:true
 }))
 
@@ -53,6 +53,7 @@ app.use("/admin",adminRoutes)
 app.use("/notification",notificationRoutes)
 app.use("/dietician",dieticianRoutes)
 app.use("/chat",chatRoutes)
+app.use("/client",clientRoutes)
 
 const port =process.env.PORT 
 

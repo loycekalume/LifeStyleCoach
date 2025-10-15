@@ -49,7 +49,7 @@ export const getLogs= asyncHandler(async(req:Request,res:Response)=>{
        res.status(500).json({message:"Internal Server Error"})
     }
     })
-    export const getLogByUserId=asyncHandler( async(req:Request,res:Response)=>{
+export const getLogByUserId=asyncHandler( async(req:Request,res:Response)=>{
        try {
         const{user_id}=req.params
         const result=await pool.query("SELECT * FROM ProgressLogs WHERE user_id=$1",[user_id])

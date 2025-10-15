@@ -6,8 +6,8 @@ import { adminGuard } from "../middlewares/auth/roleMiddleware";
 
 const router=express.Router()
 
-router.post("/",protect,addInstructor)
-router.get("/", protect,getInstructors)
+router.post("/",addInstructor)
+router.get("/", getInstructors)
 router.get("/:id",protect,getInstuctorById)
 router.delete("/:id",protect,adminGuard,deleteInstuctor)
 
