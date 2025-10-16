@@ -1,6 +1,7 @@
 import React, {  useState } from "react";
 import "../styles/Client.css"
 import MealForm from "../components/mealLogs";
+import BookSession from "../components/bookSession";
 
 const Client: React.FC = () => {
 
@@ -107,12 +108,7 @@ const Client: React.FC = () => {
               >
                 <i className="fas fa-play"></i> Start Workout
               </button>
-              <button
-                className="action-btn secondary"
-                onClick={() => alert("Book Session functionality")}
-              >
-                <i className="fas fa-calendar-plus"></i> Book Session
-              </button>
+            <BookSession />
               <button
                 className="action-btn tertiary"
                 onClick={() =>setShowForm(true)}

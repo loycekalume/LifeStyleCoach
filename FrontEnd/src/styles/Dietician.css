@@ -1107,3 +1107,47 @@ body {
         display: block;
     }
 }
+
+/* DieticianList.css */
+
+.dietician-container {
+  padding: 20px;
+}
+
+.dietician-container h2 {
+  color: #007bff;
+  margin-bottom: 15px;
+}
+
+.dietician-list {
+  list-style: none;
+  padding: 0;
+}
+
+.dietician-item {
+  background: #f8f9fa;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.dietician-item strong {
+  display: block;
+}
+
+.dietician-item small {
+  color: #333;
+}
+
+.dietician-item p {
+  margin: 5px 0 0 0;
+  color: #555;
+}
+
+/* Optional: add hover effect */
+.dietician-item:hover {
+  background: #e9ecef;
+  transform: translateY(-2px);
+  transition: 0.2s;
+}
