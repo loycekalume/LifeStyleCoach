@@ -5,18 +5,21 @@ import asyncHandler from "../middlewares/asyncHandler";
 // Add new workout
 export const addWorkout = asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { instructor_id, created_at, plan, title, description } = req.body;
+    const { instructor_id, plan, title, description } = req.body;
 
-    if (!instructor_id || !plan) {
-      return res.status(400).json({ message: "instructor_id and plan are required" });
+    // Enhanced validation: Check all necessary fields
+    if (!instructor_id || !title || !description || !plan || (Array.isArray(plan) && plan.length === 0)) {
+      return res.status(400).json({ 
+          message: "instructor_id, title, description, and a non-empty plan are required" 
+      });
     }
-
+    
+    // The rest of your existing, correct code:
     const result = await pool.query(
-      `INSERT INTO workouts (instructor_id, created_at, plan, description, title) 
-       VALUES ($1, $2, $3::jsonb, $4, $5) RETURNING *`,
+      `INSERT INTO workouts (instructor_id, plan, description, title) 
+       VALUES ($1, $2::jsonb, $3, $4) RETURNING *`, // Assuming you removed created_at
       [
         instructor_id,
-        created_at || new Date(),
         JSON.stringify(plan), 
         description,
         title
@@ -29,7 +32,6 @@ export const addWorkout = asyncHandler(async (req: Request, res: Response) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
-
 
 // Get all workouts
 export const getWorkouts = asyncHandler(async (_req: Request, res: Response) => {
