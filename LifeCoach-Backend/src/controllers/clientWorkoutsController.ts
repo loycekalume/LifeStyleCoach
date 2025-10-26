@@ -38,22 +38,19 @@ export const assignWorkoutToClient = asyncHandler(async (req: Request, res: Resp
 export const getClientWorkouts = asyncHandler(async (req: Request, res: Response) => {
   const { client_id, instructor_id } = req.query;
 
- let query = `
-  SELECT cw.*,
-         w.plan,
-         w.created_at,
-         cu.name AS client_name,
-         iu.name AS instructor_name
-  FROM client_workouts cw
-  JOIN workouts w ON cw.workout_id = w.workout_id
-  -- Ensure client is really from clients table
-  JOIN clients c ON cw.client_id = c.user_id
-  JOIN users cu ON c.user_id = cu.user_id
-  -- Instructor is from instructors table
-  JOIN instructors i ON cw.instructor_id = i.instructor_id
-  JOIN users iu ON i.user_id = iu.user_id
-`;
-
+  let query = `
+    SELECT cw.*,
+           w.plan,
+           w.created_at,
+           cu.name AS client_name,
+           iu.name AS instructor_name
+    FROM client_workouts cw
+    JOIN workouts w ON cw.workout_id = w.workout_id
+    JOIN clients c ON cw.client_id = c.user_id         -- ensure only real clients
+    JOIN users cu ON c.user_id = cu.user_id            -- client info
+    JOIN instructors i ON cw.instructor_id = i.instructor_id
+    JOIN users iu ON i.user_id = iu.user_id            -- instructor info
+  `;
 
   const values: any[] = [];
   const conditions: string[] = [];
@@ -74,6 +71,33 @@ export const getClientWorkouts = asyncHandler(async (req: Request, res: Response
   query += ` ORDER BY cw.assigned_date DESC`;
 
   const result = await pool.query(query, values);
+
+  res.status(200).json(result.rows);
+});
+
+export const getInstructorClients = asyncHandler(async (req: Request, res: Response) => {
+  const { instructor_id } = req.params;
+
+  const query = `
+    SELECT DISTINCT 
+           c.user_id AS client_id,
+           u.name AS client_name,
+           u.email,
+           c.age,
+           c.gender,
+           c.weight,
+           c.height,
+           c.weight_goal,
+           c.budget,
+           c.location
+    FROM client_workouts cw
+    JOIN clients c ON cw.client_id = c.user_id
+    JOIN users u ON c.user_id = u.user_id
+    WHERE cw.instructor_id = $1
+    ORDER BY u.name ASC
+  `;
+
+  const result = await pool.query(query, [instructor_id]);
 
   res.status(200).json(result.rows);
 });

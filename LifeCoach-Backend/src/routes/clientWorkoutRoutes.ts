@@ -4,7 +4,8 @@ import {
   getClientWorkouts,
   getClientWorkoutById,
   deleteClientWorkout,
-  updateClientWorkoutStatus
+  updateClientWorkoutStatus,
+  getInstructorClients
 } from "../controllers/clientWorkoutsController";
 
 const router = Router();
@@ -13,9 +14,10 @@ router.post("/", assignWorkoutToClient);
 
 
 router.get("/", getClientWorkouts);
-
+router.get("/:instructor_id/clients", getInstructorClients);
 
 router.get("/:id", getClientWorkoutById);
+
 
 router.put("/:id", updateClientWorkoutStatus);
 
