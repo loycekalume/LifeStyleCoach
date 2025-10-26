@@ -32,7 +32,8 @@ export const upsertClient = asyncHandler(async (req: Request, res: Response) => 
 });
 
 
-//  Get all clients
+//  Get all clients aaaaaand
+///merge
 export const getClients = asyncHandler(async (req: Request, res: Response) => {
   const result = await pool.query(
     `SELECT 
