@@ -1,11 +1,12 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import InstructorProfileWizard from '../profileWizards/instructorWizard'; // Assuming this is the path
 import ClientProfileWizard from '../profileWizards/clientWizard'; // Assuming this is the path
+import DieticianProfileWizard from '../profileWizards/dieticianWizard';
 
 const ProfileLoader: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
+ 
   
   // Extract role and userId from the state passed by the login component
   const { role, userId } = (location.state as { role: string; userId: number | null }) || {
@@ -29,8 +30,7 @@ const ProfileLoader: React.FC = () => {
       return <ClientProfileWizard />;
 
     case 'Dietician':
-      // You will implement this wizard later
-      return <p>Dietician Profile Wizard Coming Soon...</p>; 
+        return <DieticianProfileWizard />;
 
     default:
       // Fallback for roles that don't need a wizard, but were incorrectly sent here
