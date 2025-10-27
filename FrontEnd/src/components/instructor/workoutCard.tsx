@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react"; // 👈 ADDED u
 import EditWorkoutModal from "./editWorkoutModal";
 import AssignWorkoutModal from "./assignWorkoutModal";
 import type { Workout } from "../../types/workout";
-import "../../css/instructor.css";
+import "../../styles/instructor.css";
 
 interface Client {
   user_id: number;

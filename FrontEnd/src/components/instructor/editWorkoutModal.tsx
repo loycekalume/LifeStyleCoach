@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type{ Workout, PlanItem } from "../../types/workout"; 
-import "../../css/instructor.css";
+import "../../styles/instructor.css";
 
 interface Props {
   isOpen: boolean;

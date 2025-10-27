@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import EditWorkoutModal from "../instructor/editWorkoutModal";
 import AssignWorkoutModal from "../instructor/assignWorkoutModal"; 
 import type { Workout } from "../../types/workout";
-import "../../css/instructor.css";
+import "../../styles/instructor.css";
 
 interface Client {
     user_id: number;

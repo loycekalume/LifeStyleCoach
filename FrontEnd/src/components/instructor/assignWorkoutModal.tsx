@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "../../css/instructor.css";
+import "../../styles/instructor.css";
 
 // ----------------------------------------------------------------------
 // 1. Interfaces (Simplified and Updated)

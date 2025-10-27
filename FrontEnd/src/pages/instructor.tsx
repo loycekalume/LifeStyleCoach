@@ -6,7 +6,7 @@ import PricingCard from "../components/instructor/pricingCard";
 import MonthlyStats from "../components/instructor/workoutCard";
 import UpcomingSessions from "../components/instructor/sessionsCard";
 import Reviews from "../components/instructor/reviewCard";
-import "../css/instructor.css";
+import "../styles/instructor.css";
 import Overview from "../components/instructor/overview";
 import WorkoutsModal from "../components/instructor/workOutModal";
 
