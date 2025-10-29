@@ -98,3 +98,62 @@ export  const deleteUser= asyncHandler(async(req:Request,res:Response)=>{
     }
 })
 
+
+export const getInstructors = async (req: Request, res: Response) => {
+  const result = await pool.query(`
+    SELECT user_id, name, email, profile_complete, created_at
+    FROM users
+    WHERE role_id = 3
+    ORDER BY created_at DESC
+  `);
+  res.json(result.rows);
+};
+
+export const getDieticians = async (req: Request, res: Response) => {
+  const result = await pool.query(`
+    SELECT user_id, name, email, profile_complete, created_at
+    FROM users
+    WHERE role_id = 4
+    ORDER BY created_at DESC
+  `);
+  res.json(result.rows);
+};
+
+export const getClients = async (req: Request, res: Response) => {
+  const result = await pool.query(`
+    SELECT user_id, name, email, profile_complete, created_at
+    FROM users
+    WHERE role_id = 5
+    ORDER BY created_at DESC
+  `);
+  res.json(result.rows);
+};
+
+export const toggleUserActive = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.params.id;
+
+  // Get current active state
+  const result = await pool.query(
+    `SELECT active FROM users WHERE user_id = $1`,
+    [userId]
+  );
+
+  if (result.rowCount === 0) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  const currentStatus = result.rows[0].active;
+  const newStatus = !currentStatus;
+
+  await pool.query(
+    `UPDATE users SET active = $1 WHERE user_id = $2`,
+    [newStatus, userId]
+  );
+
+  res.json({
+    success: true,
+    message: `User has been ${newStatus ? "activated" : "deactivated"}`,
+    active: newStatus,
+  });
+});

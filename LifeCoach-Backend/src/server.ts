@@ -37,7 +37,7 @@ app.use(cookieParser()) || 3000
 //CORS configuration
 app.use(cors({
     origin:"http://localhost:5173",
-    methods:"GET,PUT,DELETE,POST",
+    methods:"GET,PUT,DELETE,POST,PATCH",
     credentials:true
 }))
 
