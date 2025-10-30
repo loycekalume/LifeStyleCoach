@@ -49,7 +49,7 @@ const InstructorProfile: React.FC = () => {
                 <i className="fas fa-dumbbell"></i>Add Workouts
               </button>
               <button className="btn btn-primary">
-                <i className="fas fa-edit"></i> Edit Profile
+                <i className="fas fa-edit"></i> View Clients
               </button>
             </div>
           </div>

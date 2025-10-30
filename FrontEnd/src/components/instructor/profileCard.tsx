@@ -1,135 +1,118 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // Added for potential redirect if ID is missing
+import EditProfileModal from "./editProfileCard";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface InstructorProfile {
-  name?: string;
-  profile_title?: string | null;
-  years_of_experience?: number | null;
-  available_locations?: string[] | null;
-  avatar_url?: string | null; // optional, in case you add avatar later
+  name?: string;
+  profile_title?: string | null;
+  years_of_experience?: number | null;
+  available_locations?: string[] | null;
+  avatar_url?: string | null;
 }
 
 const ProfileCard: React.FC = () => {
-  const [profile, setProfile] = useState<InstructorProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // 🛑 FIX 1: State for dynamic instructor ID
-  const [instructorId, setInstructorId] = useState<number | null>(null); 
-  const navigate = useNavigate(); // Initialize useNavigate for potential redirects
+  const [profile, setProfile] = useState<InstructorProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [instructorId, setInstructorId] = useState<number | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
-  // Retrieve the ID from localStorage on component mount
   useEffect(() => {
-    // ✅ FIX 2: Read the dedicated instructorId from localStorage
-    const storedId = localStorage.getItem("instructorId"); 
-    if (storedId) {
-      setInstructorId(parseInt(storedId, 10));
-    } else {
-      // Optional: Redirect to login if a profile card is opened without a valid instructorId
-      // console.error("Missing instructorId in localStorage. Redirecting...");
-      // navigate("/login");
-    }
-  }, [navigate]);
+    const storedId = localStorage.getItem("instructorId");
+    if (storedId) setInstructorId(parseInt(storedId, 10));
+  }, []);
 
-  useEffect(() => {
-    // Only proceed if we have a valid ID
+  useEffect(() => {
     if (instructorId === null) return;
-    
-    const fetchProfile = async () => {
-      try {
-        // ✅ FIX 3: Use dynamic instructorId in the fetch URL
-        const res1 = await fetch(`http://localhost:3000/instructors/${instructorId}/profile`);
-        if (res1.ok) {
-          const json = await res1.json();
-          setProfile((json && (json.profile ?? json)) || null);
-          setLoading(false); // Set loading to false after successful fetch
-          return;
-        }
 
-        // fallback (This logic seems redundant as it hits the same endpoint, 
-        // but kept for structure while using the dynamic ID)
-        const res2 = await fetch(`http://localhost:3000/instructors/${instructorId}/profile`);
-        if (!res2.ok) throw new Error("Failed to fetch instructor profile");
-        const json2 = await res2.json();
-        setProfile((json2 && (json2.profile ?? json2)) || null);
-      } catch (err: any) {
-        console.error("Error fetching profile:", err);
-        setError("Unable to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(
+          `http://localhost:3000/instructors/${instructorId}/profile`
+        );
+        if (!res.ok) throw new Error("Failed to fetch instructor profile");
 
-    fetchProfile();
-  }, [instructorId]); // Depend on instructorId to re-run when it is fetched
+        const json = await res.json();
+        setProfile(json.profile ?? json);
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        setError("Unable to load profile");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const getInitials = (name?: string) => {
-    if (!name) return "";
-    return name
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((n) => n[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-  };
+    fetchProfile();
+  }, [instructorId]);
 
-  if (loading) return <div className="card profile-card">Loading profile...</div>;
-  if (error) return <div className="card profile-card">Error: {error}</div>;
-  if (!profile) return <div className="card profile-card">No profile data found.</div>;
+  const handleSave = (responseData: any) => {
+    const profileData = responseData.profile ?? responseData;
+    setProfile(profileData);
+    toast.success("Profile updated successfully!");
+  };
 
-  const initials = getInitials(profile.name);
+  const getAvatarUrl = (name?: string, avatar_url?: string | null) => {
+    // ✅ If there's an uploaded avatar, use it
+    if (avatar_url) return avatar_url;
 
-  const locations =
-    Array.isArray(profile.available_locations) && profile.available_locations.length > 0
-      ? profile.available_locations.join(", ")
-      : "Location not set";
+    // ✅ Otherwise generate one using UI Avatars API
+    const displayName = name || "Instructor";
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      displayName
+    )}&background=random&color=fff&size=128`;
+  };
 
-  return (
-    <div className="card profile-card">
-      <div className="profile-header">
-        <div className="profile-avatar-container">
-          <div className="profile-avatar">
-            {/* If you later add avatar_url in DB, it will show; otherwise show initials fallback */}
-            {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt={profile.name ?? "Instructor avatar"} />
-            ) : (
-              <div className="avatar-fallback" aria-hidden>
-                {initials || "?"}
-              </div>
-            )}
+  if (loading) return <div className="card profile-card">Loading...</div>;
+  if (error) return <div className="card profile-card">Error: {error}</div>;
+  if (!profile) return <div className="card profile-card">No data found</div>;
 
-            {/* edit button (can be hidden if not editable) */}
-            <button className="avatar-edit-btn" aria-label="Edit avatar">
-              <i className="fas fa-camera"></i>
-            </button>
+  return (
+    <div className="card profile-card">
+      <div className="profile-header">
+        <div className="profile-avatar-container">
+          <div className="profile-avatar">
+            <img
+              src={getAvatarUrl(profile.name, profile.avatar_url)}
+              alt={profile.name || "Instructor avatar"}
+              className="avatar-img"
+            />
+          </div>
+        </div>
 
-            {/* verified badge - show always or conditionally when you add verification */}
-            <div className="verified-badge">
-              <i className="fas fa-check-circle"></i>
-            </div>
-        </div>
-        </div>
+        <button
+          className="edit-icon"
+          onClick={() => setIsEditing(true)}
+          title="Edit profile"
+        >
+          <i className="fas fa-edit"></i>
+        </button>
+      </div>
 
-        <h2 className="profile-name">{profile.name ?? "Unnamed Instructor"}</h2>
-        <p className="profile-title">{profile.profile_title ?? "Instructor"}</p>
+      <h2 className="profile-name">{profile.name}</h2>
+      <p className="profile-title">{profile.profile_title ?? "Instructor"}</p>
+      <div className="profile-meta">
+        <p>
+          <i className="fas fa-briefcase"></i>{" "}
+          {profile.years_of_experience ?? "N/A"} years experience
+        </p>
+        <p>
+          <i className="fas fa-map-marker-alt"></i>{" "}
+          {profile.available_locations?.join(", ") || "No location set"}
+        </p>
+      </div>
 
-        <div className="profile-meta">
-          <div className="meta-item">
-            <i className="fas fa-map-marker-alt"></i> <span>{locations}</span>
-          </div>
-          <div className="meta-item">
-            <i className="fas fa-calendar"></i>{" "}
-            <span>
-              {profile.years_of_experience != null
-                ? `${profile.years_of_experience} years exp.`
-                : "Years of experience not set"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+      {instructorId && (
+        <EditProfileModal
+          instructorId={instructorId}
+          profile={profile}
+          isOpen={isEditing}
+          onClose={() => setIsEditing(false)}
+          onSave={handleSave}
+        />
+      )}
+    </div>
+  );
 };
 
 export default ProfileCard;
