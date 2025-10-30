@@ -351,4 +351,90 @@ export const getInstructorProfile = asyncHandler(async (req: Request, res: Respo
 });
 
 
+export const updateInstructorProfile = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      profile_title,
+      years_of_experience,
+      available_locations,
+      bio,
+      coaching_mode,
+    } = req.body;
+
+    // ✅ Check if instructor exists
+    const existingInstructor = await pool.query(
+      `SELECT * FROM instructors WHERE instructor_id = $1`,
+      [id]
+    );
+
+    if (existingInstructor.rows.length === 0) {
+      return res.status(404).json({ message: "Instructor not found" });
+    }
+
+    // ✅ Start transaction
+    await pool.query("BEGIN");
+
+    // ✅ Update users table (for name)
+    await pool.query(
+      `
+      UPDATE users 
+      SET name = COALESCE($1, name)
+      WHERE user_id = (SELECT user_id FROM instructors WHERE instructor_id = $2)
+      `,
+      [name, id]
+    );
+
+    // ✅ Update instructors table
+    await pool.query(
+      `
+      UPDATE instructors 
+      SET 
+        profile_title = COALESCE($1, profile_title),
+        years_of_experience = COALESCE($2, years_of_experience),
+        available_locations = COALESCE($3, available_locations),
+        bio = COALESCE($4, bio),
+        coaching_mode = COALESCE($5, coaching_mode)
+      WHERE instructor_id = $6
+      `,
+      [
+        profile_title,
+        years_of_experience,
+        available_locations,
+        bio,
+        coaching_mode,
+        id,
+      ]
+    );
+
+    // ✅ Fetch updated joined record (to include user's name)
+    const updatedProfile = await pool.query(
+      `
+      SELECT 
+        u.name,
+        i.profile_title,
+        i.years_of_experience,
+        i.available_locations,
+        i.bio,
+        i.coaching_mode
+      FROM instructors i
+      JOIN users u ON u.user_id = i.user_id
+      WHERE i.instructor_id = $1
+      `,
+      [id]
+    );
+
+    await pool.query("COMMIT");
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      profile: updatedProfile.rows[0],
+    });
+  } catch (error) {
+    await pool.query("ROLLBACK");
+    console.error("Error updating instructor profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
