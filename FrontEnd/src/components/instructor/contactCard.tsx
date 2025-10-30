@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import EditContactModal from "./editContactModal"; 
 
 interface ContactInfo {
   name: string;
@@ -13,14 +14,13 @@ const ContactCard: React.FC<{ instructorId: number }> = ({ instructorId }) => {
   const [contact, setContact] = useState<ContactInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false); // 👈 for modal visibility
 
   useEffect(() => {
     const fetchContact = async () => {
       try {
         const res = await fetch(`http://localhost:3000/instructors/${instructorId}/contact`);
-        if (!res.ok) {
-          throw new Error("Failed to fetch contact info");
-        }
+        if (!res.ok) throw new Error("Failed to fetch contact info");
         const data = await res.json();
         setContact(data);
       } catch (err: any) {
@@ -29,21 +29,21 @@ const ContactCard: React.FC<{ instructorId: number }> = ({ instructorId }) => {
         setLoading(false);
       }
     };
-
     fetchContact();
   }, [instructorId]);
 
-  if (loading) {
-    return <div className="card contact-card">Loading contact info...</div>;
-  }
+  const handleSave = (updatedData: ContactInfo) => {
+    setContact(updatedData);
+    setIsEditing(false);
+  };
 
-  if (error || !contact) {
+  if (loading) return <div className="card contact-card">Loading contact info...</div>;
+  if (error || !contact)
     return (
       <div className="card contact-card">
         <p className="text-red-500">Error: {error || "No contact info found"}</p>
       </div>
     );
-  }
 
   const coachingText =
     contact.coaching_mode === "onsite"
@@ -58,7 +58,13 @@ const ContactCard: React.FC<{ instructorId: number }> = ({ instructorId }) => {
         <h3>
           <i className="fas fa-user"></i> Contact & Availability
         </h3>
+
+        {/* 👇 Edit button */}
+        <button className="edit-icon" onClick={() => setIsEditing(true)} title="Edit contact info">
+          <i className="fas fa-edit"></i>
+        </button>
       </div>
+
       <div className="card-content">
         <div className="contact-list">
           <div className="contact-item">
@@ -83,6 +89,16 @@ const ContactCard: React.FC<{ instructorId: number }> = ({ instructorId }) => {
           </div>
         </div>
       </div>
+
+      {/* 👇 Include the edit modal */}
+      {isEditing && contact && (
+        <EditContactModal
+          instructorId={instructorId}
+          contact={contact}
+          onClose={() => setIsEditing(false)}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
 };
