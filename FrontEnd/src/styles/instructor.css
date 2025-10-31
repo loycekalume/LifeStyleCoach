@@ -185,80 +185,45 @@ body {
     object-fit: cover;
 }
 
-.avatar-edit-btn {
-    position: absolute;
-    bottom: -8px;
-    right: -8px;
-    width: 32px;
-    height: 32px;
-    background: #00C853;
-    border: none;
-    border-radius: 50%;
-    color: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
-}
-
 .avatar-edit-btn:hover {
     background: #00B248;
     transform: scale(1.1);
 }
 
-.verified-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    width: 24px;
-    height: 24px;
-    background: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.edit-icon {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: color 0.2s;
+  position: absolute;
+  top: 15px;
+  right: 15px;
 }
 
-.verified-badge i {
-    color: #00C853;
-    font-size: 1.2rem;
+.edit-icon:hover {
+  color: #007bff;
 }
+
 
 .profile-name {
     font-size: 1.5rem;
     font-weight: 700;
     color: #424242;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.20rem;
+    margin-left:50px ;
+    margin-top: 2px;
 }
 
 .profile-title {
     color: #00C853;
     font-weight: 600;
     margin-bottom: 1rem;
+    margin-left:50px ;
 }
 
-.profile-rating {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
 
-.profile-rating i {
-    color: #FFD54F;
-}
-
-.rating-value {
-    font-weight: 600;
-    color: #424242;
-}
-
-.rating-count {
-    color: #666;
-}
 
 .profile-meta {
     display: flex;
@@ -273,13 +238,6 @@ body {
     display: flex;
     align-items: center;
     gap: 0.25rem;
-}
-
-.profile-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    text-align: center;
 }
 
 .stat-item {
