@@ -234,6 +234,69 @@ export const updateInstructorContact = asyncHandler(async (req: Request, res: Re
   }
 });
 
+export const updateInstructorContacts = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, email, contact, website_url, availability, coaching_mode } = req.body;
+
+    // ✅ Validate instructor existence
+    const instructorCheck = await pool.query(
+      `SELECT * FROM instructors WHERE instructor_id = $1`,
+      [id]
+    );
+
+    if (instructorCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Instructor not found" });
+    }
+
+    // ✅ Update users table (for name, email, contact)
+    await pool.query(
+      `
+      UPDATE users
+      SET 
+        name = COALESCE($1, name),
+        email = COALESCE($2, email),
+        contact = COALESCE($3, contact)
+      WHERE user_id = (SELECT user_id FROM instructors WHERE instructor_id = $4)
+      `,
+      [name, email, contact, id]
+    );
+
+    // ✅ Update instructors table (for website_url, availability, coaching_mode)
+    const result = await pool.query(
+      `
+      UPDATE instructors
+      SET 
+        website_url = COALESCE($1, website_url),
+        availability = COALESCE($2, availability),
+        coaching_mode = COALESCE($3, coaching_mode)
+      WHERE instructor_id = $4
+      RETURNING *
+      `,
+      [website_url, availability, coaching_mode, id]
+    );
+
+    // ✅ Fetch the updated data with JOIN to send a unified response
+    const updated = await pool.query(
+      `
+      SELECT u.name, u.email, u.contact, i.website_url, i.availability, i.coaching_mode
+      FROM instructors i
+      JOIN users u ON i.user_id = u.user_id
+      WHERE i.instructor_id = $1
+      `,
+      [id]
+    );
+
+    res.status(200).json({
+      message: "Instructor contact updated successfully",
+      contact: updated.rows[0],
+    });
+  } catch (error) {
+    console.error("Error updating instructor contact:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 // ✅ Fetch instructor's specializations & certifications
 export const getInstructorSpecializations = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -253,6 +316,45 @@ export const getInstructorSpecializations = asyncHandler(async (req: Request, re
   }
 
   res.status(200).json(result.rows[0]);
+});
+
+
+export const updateInstructorSpecializations = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { specialization, certifications } = req.body;
+
+    // Validate instructor exists
+    const checkInstructor = await pool.query(
+      `SELECT * FROM instructors WHERE instructor_id = $1`,
+      [id]
+    );
+
+    if (checkInstructor.rows.length === 0) {
+      return res.status(404).json({ message: "Instructor not found" });
+    }
+
+    // Update instructor specialization and certifications
+    const result = await pool.query(
+      `
+      UPDATE instructors
+      SET 
+        specialization = COALESCE($1, specialization),
+        certifications = COALESCE($2, certifications)
+      WHERE instructor_id = $3
+      RETURNING specialization, certifications
+      `,
+      [specialization, certifications, id]
+    );
+
+    res.status(200).json({
+      message: "Instructor specializations updated successfully",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Error updating instructor specializations:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 //  Get pricing for one instructor
@@ -297,6 +399,30 @@ export const updatePricingOption = asyncHandler(async (req: Request, res: Respon
          unit = COALESCE($3, unit)
      WHERE pricing_id = $4
      RETURNING *`,
+    [session_type, price, unit, id]
+  );
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ message: "Pricing option not found" });
+  }
+
+  res.status(200).json({
+    message: "Pricing option updated successfully",
+    pricing: result.rows[0]
+  });
+});
+
+export const updatePricingOptions = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params; // pricing_id
+  const { session_type, price, unit } = req.body;
+
+  const result = await pool.query(
+    `UPDATE instructor_pricing
+     SET session_type = COALESCE($1, session_type),
+         price = COALESCE($2, price),
+         unit = COALESCE($3, unit)
+     WHERE pricing_id = $4
+     RETURNING *`,
     [session_type, price, unit, id]
   );
 
