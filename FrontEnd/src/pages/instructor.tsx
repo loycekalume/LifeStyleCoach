@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import {Link} from "react-router-dom"
 import ProfileCard from "../components/instructor/profileCard";
 import ContactCard from "../components/instructor/contactCard";
 import Specializations from "../components/instructor/specializationCard";
@@ -11,12 +12,12 @@ import Overview from "../components/instructor/overview";
 import WorkoutsModal from "../components/instructor/workOutModal";
 
 const InstructorProfile: React.FC = () => {
-  const [isWorkoutsOpen, setIsWorkoutsOpen] = useState(false);
+  const [isWorkoutsOpen, setIsWorkoutsOpen] = useState(false);
   const [instructorId, setInstructorId] = useState<number | null>(null);
 
   // ✅ FIX: Read the dedicated instructorId from localStorage
   useEffect(() => {
-    const storedInstructorId = localStorage.getItem("instructorId"); 
+    const storedInstructorId = localStorage.getItem("instructorId");
     if (storedInstructorId) {
       setInstructorId(parseInt(storedInstructorId, 10));
     }
@@ -35,53 +36,53 @@ const InstructorProfile: React.FC = () => {
     );
   }
 
-  return (
-    <div>
-      <header className="header">
-        <div className="container">
-          <div className="header-content">
-            <h1>Instructor Profile </h1>
-            <div className="header-actions">
-              <button
-                className="btn btn-outline"
-                onClick={() => setIsWorkoutsOpen(true)}
-              >
-                <i className="fas fa-dumbbell"></i>Add Workouts
-              </button>
-              <button className="btn btn-primary">
-                <i className="fas fa-edit"></i> View Clients
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+  return (
+    <div>
+      <header className="header">
+        <div className="container">
+          <div className="header-content">
+            <h1>Instructor Profile </h1>
+            <div className="header-actions">
+              <button
+                className="btn btn-outline"
+                onClick={() => setIsWorkoutsOpen(true)}
+              >
+                <i className="fas fa-dumbbell"></i>Add Workouts
+              </button>
+              <Link to="/clientsView" className="btn btn-primary">
+                <i className="fas fa-user-friends"></i> View Clients
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
 
-      <div className="container">
-        <div className="profile-layout">
-          <aside className="profile-sidebar">
-            <ProfileCard />
-             {/* All cards now receive the distinct instructorId */}
-            <ContactCard instructorId={instructorId} /> 
-            <Specializations /> 
-            <PricingCard  />
-          </aside>
-          <main className="profile-main">
-            <Overview />
-            <MonthlyStats />
-            <UpcomingSessions />
-            <Reviews />
-          </main>
-        </div>
-      </div>
+      <div className="container">
+        <div className="profile-layout">
+          <aside className="profile-sidebar">
+            <ProfileCard />
+            {/* All cards now receive the distinct instructorId */}
+            <ContactCard instructorId={instructorId} />
+            <Specializations />
+            <PricingCard />
+          </aside>
+          <main className="profile-main">
+            <Overview />
+            <MonthlyStats />
+            <UpcomingSessions />
+            <Reviews />
+          </main>
+        </div>
+      </div>
 
-      {/* Workouts Modal */}
-      <WorkoutsModal
-        isOpen={isWorkoutsOpen}
-        onClose={() => setIsWorkoutsOpen(false)}
+      {/* Workouts Modal */}
+      <WorkoutsModal
+        isOpen={isWorkoutsOpen}
+        onClose={() => setIsWorkoutsOpen(false)}
         instructorId={instructorId}
-      />
-    </div>
-  );
+      />
+    </div>
+  );
 };
 
 export default InstructorProfile;
