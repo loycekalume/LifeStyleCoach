@@ -1,0 +1,313 @@
+/* --- Base Container & Layout --- */
+.wizard-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f7f9fc;
+  padding: 20px;
+}
+
+.wizard-form {
+  background: #fff;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 600px;
+  box-sizing: border-box;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.wizard-title {
+  text-align: center;
+  color: #1a202c;
+  margin-bottom: 30px;
+  font-size: 2em;
+  font-weight: 700;
+  border-bottom: 3px solid #4299e1;
+  padding-bottom: 10px;
+}
+
+.step-subtitle {
+    text-align: center;
+    color: #718096;
+    margin-bottom: 25px;
+    font-size: 1.1em;
+}
+
+.step-title {
+  font-size: 1.5em;
+  color: #2d3748;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* --- Step Indicator (Progress Bar) --- */
+.step-indicator {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  position: relative;
+  padding: 0 10px;
+}
+
+.step-indicator::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  height: 4px;
+  background: #e2e8f0;
+  transform: translateY(-50%);
+  z-index: 1;
+  border-radius: 2px;
+}
+
+.step {
+  width: 35px;
+  height: 35px;
+  background: #e2e8f0;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-weight: bold;
+  z-index: 2;
+  transition: all 0.3s ease;
+  font-size: 1.1em;
+}
+
+.step.active {
+  background-color: #4299e1; /* Blue 500 */
+  box-shadow: 0 0 0 5px rgba(66, 153, 225, 0.5);
+  transform: scale(1.1);
+}
+
+/* --- Form Fields & Input Styling --- */
+.form-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.input-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #a0aec0; /* Gray 400 */
+}
+
+.wizard-form input[type="text"],
+.wizard-form input[type="number"],
+.wizard-form input[type="url"],
+.wizard-form select,
+.wizard-form textarea {
+  width: 100%;
+  padding: 12px 12px 12px 45px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 1em;
+  color: #2d3748;
+  transition: all 0.2s;
+}
+
+.wizard-form textarea {
+  padding: 12px;
+  min-height: 100px;
+  padding-left: 12px; /* Remove icon padding for textarea */
+  resize: vertical;
+}
+
+.wizard-form input:focus,
+.wizard-form select:focus,
+.wizard-form textarea:focus {
+  border-color: #4299e1;
+  box-shadow: 0 0 0 1px #4299e1;
+  outline: none;
+}
+
+/* --- Buttons and Actions --- */
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 40px;
+  gap: 15px;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1em;
+  flex-grow: 1;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+  background-color: #4299e1;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #3182ce;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: #a0aec0; /* Gray 400 */
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #718096;
+  transform: translateY(-1px);
+}
+
+.wizard-form button:disabled {
+  background-color: #cbd5e0; /* Gray 300 */
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* --- Error Styling --- */
+.error-message {
+  color: #c53030; /* Red 600 */
+  background-color: #fff5f5;
+  border: 1px solid #feb2b2;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* --- Step 4: Pricing Specific Styles --- */
+.pricing-form {
+    border: 1px solid #e2e8f0;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    background-color: #fcfcfc;
+}
+
+.form-group-inline {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.form-group-inline .input-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+.form-group-inline select {
+    width: 150px; 
+    flex-shrink: 0;
+    padding-left: 12px;
+}
+
+.btn-add-pricing {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background-color: #48bb78; /* Green 500 */
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.btn-add-pricing:hover {
+    background-color: #38a169;
+}
+
+.pricing-list {
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 15px;
+    background-color: #fff;
+}
+
+.pricing-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    background-color: #edf2f7; /* Light gray background for items */
+}
+
+.pricing-details {
+    font-size: 1em;
+    color: #2d3748;
+    font-weight: 500;
+}
+
+.btn-delete-pricing {
+    background: none;
+    border: none;
+    color: #e53e3e; /* Red 500 */
+    cursor: pointer;
+    font-size: 1.1em;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.btn-delete-pricing:hover {
+    color: #c53030;
+}
+
+.no-pricing {
+    text-align: center;
+    color: #a0aec0;
+    padding: 10px;
+}
+
+/* --- Responsive Adjustments (Mobile) --- */
+@media (max-width: 600px) {
+  .wizard-form {
+    padding: 20px;
+    margin: 10px;
+  }
+  .form-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .btn-primary, .btn-secondary {
+    width: 100%;
+  }
+  .step-indicator {
+    padding: 0;
+  }
+  .step-indicator::before {
+    left: 10px;
+    right: 10px;
+  }
+  .form-group-inline {
+    flex-direction: column;
+    gap: 0;
+  }
+  .form-group-inline select {
+    width: 100%;
+    margin-top: 10px;
+  }
+}

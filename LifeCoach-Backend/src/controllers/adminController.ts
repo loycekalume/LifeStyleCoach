@@ -81,3 +81,79 @@ export const deleteAdmin = asyncHandler(async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Server error while deleting admin' })
   }
 })
+
+
+export const getOverviewStats = async (req: Request, res: Response) => {
+  try {
+    // Run all queries in parallel
+    const [clients, instructors, dieticians] = await Promise.all([
+      pool.query("SELECT COUNT(*) AS total_clients FROM users WHERE role_id = 5"),
+      pool.query("SELECT COUNT(*) AS total_instructors FROM users WHERE role_id = 3"),
+      pool.query("SELECT COUNT(*) AS total_dieticians FROM users WHERE role_id = 4"),
+    ]);
+
+    // Combine instructor + dietician counts as "verified experts"
+    const totalClients = parseInt(clients.rows[0].total_clients, 10);
+    const verifiedExperts =
+      parseInt(instructors.rows[0].total_instructors, 10) +
+      parseInt(dieticians.rows[0].total_dieticians, 10);
+
+    // If you have an approval column (e.g., is_verified / approved)
+    // use it here; otherwise simulate for now:
+    const pendingApprovals = 7;
+
+    // If you don’t have workout streak tracking, we’ll simulate this too:
+    const avgWorkoutStreak = 5.2;
+
+    res.json({
+      totalClients,
+      verifiedExperts,
+      pendingApprovals,
+      avgStreak: avgWorkoutStreak,
+    });
+  } catch (err) {
+    console.error("Error fetching overview stats:", err);
+    res.status(500).json({ error: "Server error fetching stats" });
+  }
+};
+
+
+// ✅ Get all users (for admin dashboard)
+export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+          user_id, 
+          name, 
+          email, 
+          role_id, 
+          profile_complete, 
+          created_at
+       FROM users
+       ORDER BY created_at DESC
+        LIMIT 5`
+      
+    );
+
+    const users = result.rows.map((u) => ({
+      id: u.user_id,
+      name: u.name,
+      email: u.email,
+      role:
+        u.role_id === 3
+          ? "Instructor"
+          : u.role_id === 4
+          ? "Dietician"
+          : u.role_id === 5
+          ? "Client"
+          : "Other",
+      status: u.profile_complete ? "Verified" : "Pending",
+      joined: new Date(u.created_at).toISOString().split("T")[0],
+    }));
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});

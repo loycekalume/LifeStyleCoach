@@ -42,51 +42,64 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
 });
 
 
+
+
 export const loginUser = asyncHandler(async (req: Request, res: Response) => {
-    try {
-        const { email, password_hash } = req.body
+  try {
+    const { email, password_hash } = req.body;
 
-        //Check if the user exists
-        const userQuery = await pool.query(
-            `SELECT users.user_id,users.name,users.email,users.password_hash,users.role_id 
-        FROM users
-        JOIN 
-        user_roles ON users.role_id = user_roles.role_id 
-        WHERE email=$1`, [email]
-        )
+    // 🛑 FIX: Consolidated the SQL query to prevent whitespace/indentation errors (42601)
+    const userQuery = await pool.query(
+      `SELECT 
+         u.user_id, 
+         u.name, 
+         u.email, 
+         u.password_hash, 
+         u.role_id, 
+         u.profile_complete, 
+         i.instructor_id
+       FROM users u
+       LEFT JOIN instructors i ON u.user_id = i.user_id
+       WHERE u.email = $1`,
+      [email]
+    );
 
-        if (userQuery.rows.length === 0) {
-            res.status(401).json({ message: "Invalid email or password" })
-            return;
-        }
-        //Query the user
-        const user = userQuery.rows[0]
-        //compare the passwords
-        const isMatch = await bcrypt.compare(password_hash, user.password_hash)
-
-        if (!isMatch) {
-            res.status(401).json({ message: "Invalaid email or password" })
-        }
-        //generate jwt token
-        generateToken(res, user.user_id, user.role_id)
-
-        res.status(200).json({
-            message: "Login successfully",
-            user: {
-                id: user.user_id,
-                name: user.name,
-                email: user.email,
-                role_id: user.role_id,
-
-            }
-        })
-
-
-    } catch (error) {
-        console.error("Error registering user", error)
-        res.status(500).json({ message: "Internal Server Error" })
+    if (userQuery.rows.length === 0) {
+      return res.status(401).json({ message: "Invalid email or password" });
     }
-})
+
+    const user = userQuery.rows[0];
+
+    const isMatch = await bcrypt.compare(password_hash, user.password_hash);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Retrieve the distinct instructorId (will be null for non-instructors)
+    const instructorId = user.instructor_id || null;
+
+    // Send successful login response
+    res.status(200).json({
+      message: "Login successfully",
+      user: {
+        id: user.user_id,
+        name: user.name,
+        email: user.email,
+        role_id: user.role_id,
+        profile_complete: user.profile_complete,
+        instructor_id: instructorId, // only for instructors
+      },
+    });
+  } catch (error) {
+    console.error("Error logging in user", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+
+
 
 export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
     //invalidate the access Token and the refresh Token

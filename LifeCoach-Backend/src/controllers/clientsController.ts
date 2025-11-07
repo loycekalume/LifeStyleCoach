@@ -32,17 +32,38 @@ export const upsertClient = asyncHandler(async (req: Request, res: Response) => 
 });
 
 
-//  Get all clients
+//  Get all clients aaaaaand
+///merge
 export const getClients = asyncHandler(async (req: Request, res: Response) => {
   const result = await pool.query(
-    `SELECT clients.*, users.name, users.email, user_roles.role_name
-     FROM clients
-     JOIN users ON clients.user_id = users.user_id
-     JOIN user_roles ON users.role_id = user_roles.role_id`
+    `SELECT 
+        u.user_id, 
+        u.name, 
+        u.email, 
+        r.role_name,
+        c.weight_goal, 
+        c.age, 
+        c.gender, 
+        c.weight, 
+        c.height, 
+        c.health_conditions, 
+        c.allergies, 
+        c.budget, 
+        c.location
+     FROM users u
+     JOIN user_roles r ON u.role_id = r.role_id
+     LEFT JOIN clients c ON u.user_id = c.user_id
+     WHERE u.role_id = 5`
   );
 
-  res.status(200).json(result.rows);
+  res.status(200).json({
+    message: "Clients fetched successfully",
+    clients: result.rows,
+  });
 });
+
+
+
 
 // Get client by ID
 export const getClientById = asyncHandler(async (req: Request, res: Response) => {
