@@ -1,0 +1,111 @@
+/* Card Base */
+.goals-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Header */
+.goals-card .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.goals-card .card-header h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.goals-card .btn-ghost {
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #555;
+  font-size: 0.9rem;
+  transition: 0.3s;
+}
+
+.goals-card .btn-ghost:hover {
+  background: #f2f2f2;
+}
+
+/* Goals List */
+.goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Each Goal Item */
+.goal-item {
+  padding: 16px;
+  border: 1px solid #e5e5e5;
+  border-radius: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: #fff;
+}
+
+.goal-item.completed {
+  background: #eafbea;
+  border-color: #b6e8b6;
+}
+
+/* Goal Text */
+.goal-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+/* Progress Bar */
+.goal-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progress-bar {
+  width: 160px;
+  height: 8px;
+  border-radius: 6px;
+  background: #ececec;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #4b8df8;
+  border-radius: 6px;
+}
+
+/* Achievement */
+.goal-achievement {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.goal-status {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.goal-status i {
+  font-size: 1.4rem;
+  color: #2e7d32;
+}

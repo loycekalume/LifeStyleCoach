@@ -1,135 +1,156 @@
-import React, {  useState } from "react";
-import "../styles/Client.css"
-import MealForm from "../components/mealLogs";
-import BookSession from "../components/bookSession";
+import SessionsCard from "../components/client/SessionCard";
+import ProgressChart from "../components/client/progressChart";
+import WorkoutPlan from "../components/client/WorkoutPlan";
+import NutritionCard from "../components/client/NutritionCard";
+import ActivityCard from "../components/client/ActivityCard";
+import GoalsCard from "../components/client/GoalsCard";
+import MobileNav from "../components/client/MobileNav";
+import InstructorsList from "../components/instructor/instructorList";
+import "../styles/Client.css";
+import TopNav from "../components/client/TopNav";
+import type { Client } from "../Services/clientViewService";
+import { useEffect, useState } from "react";
+import { getClientById } from "../Services/clientViewService";
+import BookSessionModal from "../components/client/bookSessionModal";
+import LogMealModal from "../components/client/logMealModal";
+import { createMealLog } from "../Services/mealLogService";
 
-const Client: React.FC = () => {
-
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [showForm,setShowForm] =useState(false)
 
 
+export default function ClientDashboard() {
+  const [client, setClient] = useState<Client | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [mealLogOpen,setMealLogOpen]=useState(false);
+  const [currentPage, setCurrentPage] = useState<
+    "dashboard" | "workouts" | "nutrition" | "instructors" | "schedule" | "progress"
+  >("dashboard");
 
-  return(
-    <div>
-      {/* Navigation bar */}
-      <nav className="navbar">
-        <div className="nav-container">
-          {/* Brand logo */}
-          <div className="nav-brand">
-            <div className="logo">
-              <i className="fas fa-heart"></i>
-              <span>LifeStyle Coach</span>
-            </div>
-          </div>
+  const userId = 13; // replace with real user ID
 
-          {/* Navigation menu links */}
-          <div className="nav-menu">
-            <a href="#" className="nav-link active">
-              <i className="fas fa-home"></i>
-              <span>Dashboard</span>
-            </a>
-            <a href="#" className="nav-link">
-              <i className="fas fa-dumbbell"></i>
-              <span>Workouts</span>
-            </a>
-            <a href="#" className="nav-link">
-              <i className="fas fa-utensils"></i>
-              <span>Nutrition</span>
-            </a>
-            <a href="#" className="nav-link">
-              <i className="fas fa-users"></i>
-              <span>Instructors</span>
-            </a>
-            <a href="#" className="nav-link">
-              <i className="fas fa-calendar"></i>
-              <span>Schedule</span>
-            </a>
-            <a href="#" className="nav-link">
-              <i className="fas fa-chart-line"></i>
-              <span>Progress</span>
-            </a>
-          </div>
+  useEffect(() => {
+    async function loadClient() {
+      try {
+        const data = await getClientById(userId);
+        setClient(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    loadClient();
+  }, []);
 
-          {/* Profile dropdown menu */}
-          <div className="nav-profile">
-            <div className="profile-dropdown">
-              <button
-                className="profile-btn"
-                onClick={() => setDropdownOpen(!dropdownOpen)} // Toggle dropdown
-              >
-                <img
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face"
-                  alt="Profile"
-                />
-                <span>John Doe</span>
-                <i className="fas fa-chevron-down"></i>
-              </button>
+ const handleLogMeal = async (meal: { meal_time: string; description: string; calories: number }) => {
+  if (!client) return;
+  const { meal_time, description, calories } = meal;
+  try {
+    await createMealLog({
+      user_id: client.user_id, meal_time, description, calories,
+      log_id: 0
+    });
+    alert("Meal logged successfully!");
+  } catch (err) {
+    console.error(err);
+    alert("Failed to log meal");
+  }
+};
 
-              {/* Dropdown menu items */}
-              {dropdownOpen && (
-                <div className="dropdown-menu show">
-                  <a href="#" className="dropdown-item">
-                    <i className="fas fa-user"></i> Profile Settings
-                  </a>
-                  <a href="#" className="dropdown-item">
-                    <i className="fas fa-bell"></i> Notifications
-                  </a>
-                  <a href="#" className="dropdown-item">
-                    <i className="fas fa-credit-card"></i> Billing
-                  </a>
-                  <div className="dropdown-divider"></div>
-                  <a href="#" className="dropdown-item">
-                    <i className="fas fa-sign-out-alt"></i> Sign Out
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
 
-      {/* Main content */}
-      <main className="main-content">
-        <div className="container">
+  return (
+    <>
+      <TopNav 
+      currentPage={currentPage}
+      onNavigate={(page) => setCurrentPage(page)} />
 
-          {/* Welcome section */}
+      {currentPage === "dashboard" && (
+        <>
           <section className="welcome-section">
             <div className="welcome-content">
-              <h1>Welcome back, John👋</h1>
-              <p>Ready to crush your fitness goals today?</p>
+              <h1>Welcome back, John! 👋</h1>
+              <p>Ready to crush your fitness and health goals today?</p>
             </div>
-
-            {/* Quick action buttons */}
             <div className="quick-actions">
-              <button
-                className="action-btn primary"
-                onClick={() => alert("Start Workout functionality")}
-              >
-                <i className="fas fa-play"></i> Start Workout
+              <button className="action-btn primary">
+                <i className="fas fa-play"></i>
+                Start Workout
               </button>
-            <BookSession />
-              <button
-                className="action-btn tertiary"
-                onClick={() =>setShowForm(true)}
-              >
-                <i className="fas fa-camera"></i> Log Meal
+              <button className="action-btn secondary" onClick={() => setModalOpen(true)}>
+                <i className="fas fa-calendar-plus"></i>
+                Book Session
               </button>
-
-              {showForm && <MealForm onClose={()=>setShowForm(false)}/> }
+              <BookSessionModal 
+              open={modalOpen} 
+              onClose={() => setModalOpen(false)} 
+               onNavigate={(page) => setCurrentPage(page)}
+              />
+              <button className="action-btn tertiary"  onClick={()=>setMealLogOpen(true)}>
+                <i className="fas fa-camera"></i>
+                Log Meal
+              </button>
+              <LogMealModal
+              open={mealLogOpen}
+              onClose={()=>setMealLogOpen(false)}
+                onSubmit={handleLogMeal}
+              
+               />
             </div>
           </section>
 
-        
+          <div className="dashboard-grid">
+            <div className="dashboard-left">
+              <SessionsCard client={client} />
+              <WorkoutPlan client={client} />
+            </div>
 
-        </div>
+            <div className="dashboard-middle">
+              <ProgressChart client={client} />
+              <NutritionCard client={client} />
+            </div>
 
+            <div className="dashboard-right">
+              <ActivityCard client={client} />
+              <GoalsCard client={client} />
+            </div>
+          </div>
+        </>
+      )}
 
-      </main>
-    </div>
-   
-)};
+      {currentPage === "workouts" && (
+        <section className="main-section">
+          <h1>Workouts</h1>
+          {/* You can add workout-specific components here */}
+          <p>Select a workout plan or start a session.</p>
+        </section>
+      )}
 
-export default Client;
+      {currentPage === "nutrition" && (
+        <section className="main-section">
+          <h1>Nutrition</h1>
+          <NutritionCard client={client} />
+        </section>
+      )}
 
+      {currentPage === "instructors" && (
+        <section className="main-section">
+          <h1>Available Instructors</h1>
+          <InstructorsList />
+        </section>
+      )}
 
+      {currentPage === "schedule" && (
+        <section className="main-section">
+          <h1>Schedule</h1>
+          <p>Your upcoming sessions will appear here.</p>
+        </section>
+      )}
+
+      {currentPage === "progress" && (
+        <section className="main-section">
+          <h1>Progress</h1>
+          <ProgressChart client={client} />
+        </section>
+      )}
+
+      <MobileNav />
+    </>
+  );
+}

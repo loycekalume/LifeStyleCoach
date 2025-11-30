@@ -1,0 +1,77 @@
+.workout-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workout-card {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.workout-card.expanded {
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.toggle-icon {
+  font-size: 1rem;
+}
+
+.card-content {
+  margin-top: 12px;
+}
+
+.workout-desc {
+  margin-bottom: 8px;
+}
+
+.schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.day-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.day-name {
+  font-weight: bold;
+}
+
+.day-workout {
+  font-style: italic;
+}
+
+.start-btn {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.start-btn:hover {
+  background-color: #0056b3;
+}

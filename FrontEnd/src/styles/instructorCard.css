@@ -1,0 +1,82 @@
+/* Container for the list */
+.instructors-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  background-color: #f5f7fa; /* Light gray-blue background for the list */
+}
+
+/* Individual card */
+.instructor-card {
+  background-color: #ffffff; /* White card */
+  border: 1px solid #e0e4e8; /* Soft border */
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.instructor-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Card headings */
+.instructor-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  color: #1f2937; /* Dark gray */
+}
+
+/* Card text */
+.instructor-card p {
+  margin: 4px 0;
+  font-size: 0.95rem;
+  color: #4b5563; /* Medium gray */
+}
+
+/* Bio text */
+.instructor-card .bio {
+  margin-top: 8px;
+  font-style: italic;
+  color: #6b7280; /* Lighter gray for bio */
+}
+
+/* Links */
+.instructor-card a {
+  color: #3b82f6; /* Vibrant blue for links */
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.instructor-card a:hover {
+  text-decoration: underline;
+}
+
+/* Highlight for key info */
+.instructor-card strong {
+  color: #111827; /* Darker gray for strong emphasis */
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .instructors-list {
+    grid-template-columns: 1fr; /* single column on small screens */
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .instructor-card {
+    padding: 12px;
+  }
+}
+
+.contact{
+  background-color: aqua;
+  padding: 10px 0;
+  
+}
