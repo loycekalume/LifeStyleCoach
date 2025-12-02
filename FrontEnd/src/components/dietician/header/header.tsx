@@ -1,5 +1,5 @@
 import Logo from "./logo";
-import ProfileDropdown from "./profileDropDown";
+import ProfileDropdown from "./profileDropdown";
 
 export default function Header() {
   return (
