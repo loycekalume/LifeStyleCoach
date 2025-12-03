@@ -35,7 +35,7 @@ export default function ScheduleItem({ item }: ScheduleItemProps) {
         </div>
       </div>
       <div className="schedule-actions">
-        <button className={`btn ${item.current ? "btn-primary" : "btn-outline"} btn-sm`}>
+        <button className={`btn ${item.current ? "btn-primary1" : "btn-outline1"} btn-sm`}>
           {item.current ? "Join Call" : "Prepare"}
         </button>
         <button className="btn btn-ghost btn-sm">

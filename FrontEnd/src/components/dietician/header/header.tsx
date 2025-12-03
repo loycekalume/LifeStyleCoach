@@ -13,11 +13,11 @@ export default function Header() {
           </div>
 
           <div className="header-actions">
-            <button className="btn btn-outline">
+            <button className="btn btn-outline1">
               <i className="fas fa-plus"></i> New Meal Plan
             </button>
 
-            <button className="btn btn-outline">
+            <button className="btn btn-outline1">
               <i className="fas fa-calendar-plus"></i> Schedule Consultation
             </button>
 
