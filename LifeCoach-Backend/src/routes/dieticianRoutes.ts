@@ -1,5 +1,5 @@
 import express, { Router } from "express"
-import { addDietician, deleteDietician, getDietician, getDieticianById, getDieticianProfile, updateDieticianProfile } from "../controllers/dieticianController"
+import { addDietician, deleteDietician, getDietician, getDieticianById, getDieticianProfile, getDieticianSpecialization, updateDieticianProfile, updateDieticianSpecialization } from "../controllers/dieticianController"
 import { protect } from "../middlewares/auth/protect" // 👈 Import
 
 const router = express.Router()
@@ -10,6 +10,10 @@ router.get("/", getDietician);
 //  Protect these routes
 router.get("/profile", protect, getDieticianProfile);
 router.put("/profile", protect, updateDieticianProfile);
+
+//  Specialization routes
+router.get("/specialization", protect, getDieticianSpecialization);
+router.put("/specialization", protect, updateDieticianSpecialization);
 
 router.get("/:id", getDieticianById)
 router.delete("/:id", deleteDietician)
