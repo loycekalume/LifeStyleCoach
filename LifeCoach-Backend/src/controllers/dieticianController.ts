@@ -134,6 +134,49 @@ export const deleteDietician=asyncHandler(async(req:Request,res:Response)=>{
    
 })
 
+// Get dietician specialization info
+export const getDieticianSpecialization = asyncHandler(async (req: UserRequest, res: Response) => {
+    const userId = req.user?.user_id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    const result = await pool.query(
+        "SELECT specialization, years_of_experience, clinic_name, clinic_address FROM dieticians WHERE user_id = $1",
+        [userId]
+    );
+
+    if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Specialization info not found" });
+    }
+
+    res.status(200).json(result.rows[0]);
+});
+
+// Update dietician specialization
+export const updateDieticianSpecialization = asyncHandler(async (req: UserRequest, res: Response) => {
+    const userId = req.user?.user_id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    const { specialization, years_of_experience, clinic_name, clinic_address } = req.body;
+
+    const updated = await pool.query(
+        `UPDATE dieticians 
+         SET specialization = COALESCE($1, specialization),
+             years_of_experience = COALESCE($2, years_of_experience),
+             clinic_name = COALESCE($3, clinic_name),
+             clinic_address = COALESCE($4, clinic_address),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $5
+         RETURNING specialization, years_of_experience, clinic_name, clinic_address`,
+        [specialization || null, years_of_experience || null, clinic_name || null, clinic_address || null, userId]
+    );
+
+    if (updated.rows.length === 0) {
+        return res.status(404).json({ message: "Dietician profile not found" });
+    }
+
+    res.status(200).json({ message: "Specialization updated", data: updated.rows[0] });
+});
+
 
 
 
