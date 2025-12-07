@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import ProfileModal from "./profileModal";
+import SpecializationModal from "./specializationModal";
 import "./../../../styles/header.css";
 
 export default function ProfileDropdown() {
   const [open, setOpen] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [userName, setUserName] = useState("Loading..."); 
+  const [showSpecializationModal, setShowSpecializationModal] = useState(false);
 
   const API_BASE = "http://localhost:3000";
 
@@ -53,9 +55,9 @@ export default function ProfileDropdown() {
           <i className="fas fa-user"></i> Profile Settings
         </button>
 
-        <button className="dropdown-item">
-          <i className="fas fa-bell"></i> Specialization
-        </button>
+<button className="dropdown-item" onClick={() => { setShowSpecializationModal(true); setOpen(false); }}>
+  <i className="fas fa-bell"></i> Specialization
+</button>
 
         <button className="dropdown-item">
           <i className="fas fa-chart-bar"></i> Pricing
@@ -75,6 +77,7 @@ export default function ProfileDropdown() {
           onUpdate={(updatedName) => setUserName(`Dr. ${updatedName}`)} //  Add "Dr." when updating
         />
       )}
+      {showSpecializationModal && <SpecializationModal onClose={() => setShowSpecializationModal(false)} />}
     </div>
   );
 }
