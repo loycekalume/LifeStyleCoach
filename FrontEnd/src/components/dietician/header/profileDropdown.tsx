@@ -4,6 +4,7 @@ import ProfileModal from "./profileModal";
 import SpecializationModal from "./specializationModal";
 import "./../../../styles/header.css";
 import PricingModal from "./pricingModal";
+import CertificationModal from "./certificationsModal";
 
 export default function ProfileDropdown() {
   const [open, setOpen] = useState(false);
@@ -11,6 +12,7 @@ export default function ProfileDropdown() {
   const [userName, setUserName] = useState("Loading...");
   const [showSpecializationModal, setShowSpecializationModal] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [showCertificationModal, setShowCertificationModal] = useState(false);
 
   const API_BASE = "http://localhost:3000";
 
@@ -58,7 +60,7 @@ export default function ProfileDropdown() {
         </button>
 
         <button className="dropdown-item" onClick={() => { setShowSpecializationModal(true); setOpen(false); }}>
-          <i className="fas fa-user-graduate"></i> Specialization
+          <i className="fas fa-stethoscope"></i> Specialization
         </button>
 
         <button
@@ -69,6 +71,16 @@ export default function ProfileDropdown() {
           }}
         >
           <i className="fas fa-tag"></i> Pricing
+        </button>
+
+           <button
+          className="dropdown-item"
+          onClick={() => {
+            setShowCertificationModal(true);
+            setOpen(false);
+          }}
+        >
+          <i className="fas fa-certificate"></i> Certification
         </button>
 
         <div className="dropdown-divider"></div>
@@ -92,6 +104,11 @@ export default function ProfileDropdown() {
       {/* pricing modal */}
       {showPricingModal && (
         <PricingModal onClose={() => setShowPricingModal(false)} />
+      )}
+
+       {/*  Certification Modal */}
+      {showCertificationModal && (
+        <CertificationModal onClose={() => setShowCertificationModal(false)} />
       )}
     </div>
   );
