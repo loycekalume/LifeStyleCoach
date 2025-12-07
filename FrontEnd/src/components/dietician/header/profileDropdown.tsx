@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import axiosInstance from "../../../utils/axiosInstance"; 
 import ProfileModal from "./profileModal";
 import SpecializationModal from "./specializationModal";
 import "./../../../styles/header.css";
@@ -14,15 +15,13 @@ export default function ProfileDropdown() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showCertificationModal, setShowCertificationModal] = useState(false);
 
-  const API_BASE = "http://localhost:3000";
+  const navigate = useNavigate();
 
   //  Fetch logged-in dietician profile on mount
   useEffect(() => {
     async function fetchUserName() {
       try {
-        const res = await axios.get(`${API_BASE}/dietician/profile`, {
-          withCredentials: true, // Send auth cookie
-        });
+        const res = await axiosInstance.get("/dietician/profile"); 
 
         const data = res.data;
         setUserName(`Dr. ${data.name || "User"}`);
@@ -35,6 +34,28 @@ export default function ProfileDropdown() {
     fetchUserName();
   }, []);
 
+  //  Sign Out Handler
+  const handleSignOut = async () => {
+    const confirmed = window.confirm("Are you sure you want to sign out?");
+    
+    if (!confirmed) return;
+
+    try {
+      await axiosInstance.post("/auth/logout"); // 👈 Changed
+
+      // Clear any local storage if you're using it
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Redirect to login page
+      navigate("/login");
+
+    } catch (error) {
+      console.error("Error signing out", error);
+      alert("Failed to sign out. Please try again.");
+    }
+  };
+
   return (
     <div className="profile-dropdown">
       {/* Dropdown Button */}
@@ -43,7 +64,7 @@ export default function ProfileDropdown() {
           src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=40&h=40&fit=crop&crop=face"
           alt="Dietician Profile"
         />
-        <span>{userName}</span> {/*  Will display "Dr. [Name]" */}
+        <span>{userName}</span>
         <i className="fas fa-chevron-down"></i>
       </button>
 
@@ -73,7 +94,7 @@ export default function ProfileDropdown() {
           <i className="fas fa-tag"></i> Pricing
         </button>
 
-           <button
+        <button
           className="dropdown-item"
           onClick={() => {
             setShowCertificationModal(true);
@@ -85,7 +106,12 @@ export default function ProfileDropdown() {
 
         <div className="dropdown-divider"></div>
 
-        <button className="dropdown-item">
+        {/* Sign Out Button */}
+        <button
+          className="dropdown-item"
+          onClick={handleSignOut}
+          style={{ color: "#ef4444" }}
+        >
           <i className="fas fa-sign-out-alt"></i> Sign Out
         </button>
       </div>
@@ -94,7 +120,7 @@ export default function ProfileDropdown() {
       {showProfileModal && (
         <ProfileModal
           onClose={() => setShowProfileModal(false)}
-          onUpdate={(updatedName) => setUserName(`Dr. ${updatedName}`)} //  Add "Dr." when updating
+          onUpdate={(updatedName) => setUserName(`Dr. ${updatedName}`)}
         />
       )}
       {/* specialization modal */}
@@ -106,7 +132,7 @@ export default function ProfileDropdown() {
         <PricingModal onClose={() => setShowPricingModal(false)} />
       )}
 
-       {/*  Certification Modal */}
+      {/*  Certification Modal */}
       {showCertificationModal && (
         <CertificationModal onClose={() => setShowCertificationModal(false)} />
       )}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import axiosInstance from "../../../utils/axiosInstance"; 
 
 interface SpecializationModalProps {
   onClose: () => void;
@@ -16,14 +16,12 @@ export default function SpecializationModal({ onClose }: SpecializationModalProp
     clinic_address: "",
   });
 
-  const API_BASE = "http://localhost:3000";
+
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await axios.get(`${API_BASE}/dietician/specialization`, {
-          withCredentials: true,
-        });
+        const res = await axiosInstance.get("dietician/specialization");
         setFormData({
           specialization: res.data.specialization || "",
           years_of_experience: res.data.years_of_experience || "",
@@ -46,7 +44,7 @@ export default function SpecializationModal({ onClose }: SpecializationModalProp
   const handleSave = async () => {
     try {
       setSaving(true);
-      await axios.put(`${API_BASE}/dietician/specialization`, formData, {
+      await axiosInstance.put("dietician/specialization", formData, {
         withCredentials: true,
       });
       alert("Specialization updated!");

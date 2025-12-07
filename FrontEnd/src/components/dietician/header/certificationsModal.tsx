@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import axiosInstance from "../../../utils/axiosInstance"; 
 import "./../../../styles/header.css";
 
 interface CertificationModalProps {
@@ -11,14 +11,11 @@ export default function CertificationModal({ onClose }: CertificationModalProps)
   const [saving, setSaving] = useState(false);
   const [certifications, setCertifications] = useState<string[]>([""]);
 
-  const API_BASE = "http://localhost:3000";
 
   useEffect(() => {
     async function fetchCertification() {
       try {
-        const res = await axios.get(`${API_BASE}/dietician/certification`, {
-          withCredentials: true,
-        });
+        const res = await axiosInstance.get("dietician/certification");
         
         const certs = res.data.certification;
         // If there are certifications, use them; otherwise start with one empty field
@@ -62,10 +59,10 @@ export default function CertificationModal({ onClose }: CertificationModalProps)
 
     try {
       setSaving(true);
-      await axios.put(
-        `${API_BASE}/dietician/certification`,
+      await axiosInstance.put(
+        "dietician/certification",
         { certification: validCerts },
-        { withCredentials: true }
+        
       );
       alert("Certifications updated successfully!");
       onClose();

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import axiosInstance from "../../../utils/axiosInstance"; 
 import "./../../../styles/header.css";
 
 interface PricingModalProps {
@@ -16,14 +16,12 @@ export default function PricingModal({ onClose }: PricingModalProps) {
     monthly_fee: "",
   });
 
-  const API_BASE = "http://localhost:3000";
+ 
 
   useEffect(() => {
     async function fetchPricing() {
       try {
-        const res = await axios.get(`${API_BASE}/dietician/pricing`, {
-          withCredentials: true,
-        });
+        const res = await axiosInstance.get("dietician/pricing" );
         
         setFormData({
           consultation_fee: res.data.consultation_fee || "",
@@ -68,8 +66,8 @@ export default function PricingModal({ onClose }: PricingModalProps) {
 
     try {
       setSaving(true);
-      await axios.put(
-        `${API_BASE}/dietician/pricing`,
+      await axiosInstance.put(
+        "dietician/pricing",
         {
           consultation_fee: formData.consultation_fee ? parseFloat(formData.consultation_fee) : null,
           session_fee: formData.session_fee ? parseFloat(formData.session_fee) : null,

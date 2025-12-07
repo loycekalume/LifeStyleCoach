@@ -61,13 +61,13 @@ export default function ProfileModal({ onClose, onUpdate }: ProfileModalProps) {
         `${API_BASE}/dietician/profile`,
         formData,
         {
-          withCredentials: true, // 🔥 Important
+          withCredentials: true, //  Important
         }
       );
 
       alert("Profile updated successfully!");
       
-      // 🔥 Call the onUpdate callback to update parent component
+      //  Call the onUpdate callback to update parent component
       if (onUpdate && res.data.user.name) {
         onUpdate(res.data.user.name);
       }
