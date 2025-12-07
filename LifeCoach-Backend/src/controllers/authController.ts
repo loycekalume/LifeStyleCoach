@@ -48,7 +48,6 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, password_hash } = req.body;
 
-    // 🛑 FIX: Consolidated the SQL query to prevent whitespace/indentation errors (42601)
     const userQuery = await pool.query(
       `SELECT 
          u.user_id, 
@@ -76,19 +75,26 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Retrieve the distinct instructorId (will be null for non-instructors)
     const instructorId = user.instructor_id || null;
+
+    // 🔥 GENERATE AND SET JWT TOKENS (this was missing!)
+    const { accessToken, refreshToken } = generateToken(
+      res, 
+      user.user_id.toString(), // Convert to string as your function expects
+      user.role_id
+    );
 
     // Send successful login response
     res.status(200).json({
       message: "Login successfully",
+      token: accessToken, // 👈 Optional: send token in response too
       user: {
         id: user.user_id,
         name: user.name,
         email: user.email,
         role_id: user.role_id,
         profile_complete: user.profile_complete,
-        instructor_id: instructorId, // only for instructors
+        instructor_id: instructorId,
       },
     });
   } catch (error) {

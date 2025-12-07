@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import pool from "../db.config"
 import asyncHandler from "../middlewares/asyncHandler";
+import { UserRequest } from "../utils/types/userTypes";
 
 export const addDietician = asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -26,10 +27,10 @@ export const addDietician = asyncHandler(async (req: Request, res: Response) => 
         ? specialization
         : "{}"; // fallback to empty Postgres array
 
-    // ✅ Clean up clinic_address input
+    //  Clean up clinic_address input
     const cleanClinicAddress = clinic_address?.trim() || null;
 
-    // ✅ Insert the dietician profile
+    //  Insert the dietician profile
     const newDietician = await pool.query(
       `INSERT INTO dieticians (
         user_id, specialization, years_of_experience, clinic_name, clinic_address, certification
@@ -39,7 +40,7 @@ export const addDietician = asyncHandler(async (req: Request, res: Response) => 
       [user_id, specializationArray, years_of_experience, clinic_name, cleanClinicAddress, certification]
     );
 
-    // ✅ Mark user profile as complete
+    //  Mark user profile as complete
     await pool.query("UPDATE users SET profile_complete = TRUE WHERE user_id = $1", [user_id]);
 
     res.status(200).json({
@@ -66,6 +67,42 @@ export const getDietician=asyncHandler(async(req:Request,res:Response)=>{
         res.status(500).json({ message: "Internal Server Error" })
     }
 })
+// dieticianController.ts
+export const getDieticianProfile = asyncHandler(async (req: UserRequest, res: Response) => {
+    const userId = req.user?.user_id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    const result = await pool.query(
+        "SELECT user_id, name, email, contact FROM users WHERE user_id = $1",
+        [userId]
+    );
+
+    if (result.rows.length === 0) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(result.rows[0]);
+});
+
+export const updateDieticianProfile = asyncHandler(async (req: UserRequest, res: Response) => {
+    const userId = req.user?.user_id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    const { name, email, contact } = req.body;
+
+    const updated = await pool.query(
+        `UPDATE users 
+         SET name = COALESCE($1, name),
+             email = COALESCE($2, email),
+             contact = COALESCE($3, contact)
+         WHERE user_id = $4
+         RETURNING user_id, name, email, contact`,
+        [name || null, email || null, contact || null, userId]
+    );
+
+    res.status(200).json({ message: "Profile updated", user: updated.rows[0] });
+});
+
 export const getDieticianById=asyncHandler(async(req:Request,res:Response)=>{
     try {
         const{id}=req.params
@@ -96,3 +133,7 @@ export const deleteDietician=asyncHandler(async(req:Request,res:Response)=>{
     }
    
 })
+
+
+
+
