@@ -240,3 +240,55 @@ export const updateDieticianPricing = asyncHandler(async (req: UserRequest, res:
 });
 
 
+// Get dietician certifications
+export const getDieticianCertification = asyncHandler(async (req: UserRequest, res: Response) => {
+    const userId = req.user?.user_id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    const result = await pool.query(
+        "SELECT certification FROM dieticians WHERE user_id = $1",
+        [userId]
+    );
+
+    if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Certification info not found" });
+    }
+
+    // Return array of certifications (or empty array if null)
+    res.status(200).json({ 
+        certification: result.rows[0].certification || [] 
+    });
+});
+
+// Update dietician certifications
+export const updateDieticianCertification = asyncHandler(async (req: UserRequest, res: Response) => {
+    const userId = req.user?.user_id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    const { certification } = req.body;
+
+    // Validate that certification is an array
+    if (!Array.isArray(certification)) {
+        return res.status(400).json({ message: "Certification must be an array" });
+    }
+
+    // Filter out empty strings and trim
+    const cleanedCerts = certification
+        .filter(cert => cert && cert.trim() !== "")
+        .map(cert => cert.trim());
+
+    const updated = await pool.query(
+        `UPDATE dieticians 
+         SET certification = $1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $2
+         RETURNING certification`,
+        [cleanedCerts, userId]
+    );
+
+    if (updated.rows.length === 0) {
+        return res.status(404).json({ message: "Dietician profile not found" });
+    }
+
+    res.status(200).json({ message: "Certifications updated", data: updated.rows[0] });
+});
