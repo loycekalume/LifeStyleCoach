@@ -177,6 +177,66 @@ export const updateDieticianSpecialization = asyncHandler(async (req: UserReques
     res.status(200).json({ message: "Specialization updated", data: updated.rows[0] });
 });
 
+// Get dietician pricing info
+export const getDieticianPricing = asyncHandler(async (req: UserRequest, res: Response) => {
+    const userId = req.user?.user_id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
+    const result = await pool.query(
+        "SELECT consultation_fee, session_fee, monthly_fee FROM dieticians WHERE user_id = $1",
+        [userId]
+    );
+
+    if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Pricing info not found" });
+    }
+
+    res.status(200).json(result.rows[0]);
+});
+
+// Update dietician pricing
+export const updateDieticianPricing = asyncHandler(async (req: UserRequest, res: Response) => {
+    const userId = req.user?.user_id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    const { consultation_fee, session_fee, monthly_fee } = req.body;
+
+    // Validate pricing values
+    const validatePrice = (price: any, name: string) => {
+        if (price !== null && price !== undefined && price !== "") {
+            const numPrice = parseFloat(price);
+            if (isNaN(numPrice) || numPrice < 0) {
+                throw new Error(`Invalid ${name} value`);
+            }
+            return numPrice;
+        }
+        return null;
+    };
+
+    try {
+        const validatedConsultation = validatePrice(consultation_fee, "consultation fee");
+        const validatedSession = validatePrice(session_fee, "session fee");
+        const validatedMonthly = validatePrice(monthly_fee, "monthly fee");
+
+        const updated = await pool.query(
+            `UPDATE dieticians 
+             SET consultation_fee = COALESCE($1, consultation_fee),
+                 session_fee = COALESCE($2, session_fee),
+                 monthly_fee = COALESCE($3, monthly_fee),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE user_id = $4
+             RETURNING consultation_fee, session_fee, monthly_fee`,
+            [validatedConsultation, validatedSession, validatedMonthly, userId]
+        );
+
+        if (updated.rows.length === 0) {
+            return res.status(404).json({ message: "Dietician profile not found" });
+        }
+
+        res.status(200).json({ message: "Pricing updated", data: updated.rows[0] });
+    } catch (error: any) {
+        return res.status(400).json({ message: error.message || "Invalid pricing values" });
+    }
+});
 
 
