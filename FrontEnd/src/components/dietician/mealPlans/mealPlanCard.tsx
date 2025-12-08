@@ -8,7 +8,7 @@ export interface MealPlan {
     calories: string;
     clientsCount?: number;
     favorite?: boolean;
-   
+    is_favorite: boolean
 }
 
 interface MealPlanCardProps {
@@ -18,10 +18,11 @@ interface MealPlanCardProps {
 }
 
 export default function MealPlanCard({ plan, onUpdate, onDelete }: MealPlanCardProps) {
-    const { openEditModal } = useModal(); //  Get from context
+    const { openEditModal } = useModal();
 
     const handleFavoriteToggle = () => {
-        onUpdate(plan.id, {favorite: !plan.favorite });
+        // 👇 Send is_favorite to match backend expectation
+        onUpdate(plan.id, { is_favorite: !plan.favorite });
     };
 
     return (
@@ -61,7 +62,7 @@ export default function MealPlanCard({ plan, onUpdate, onDelete }: MealPlanCardP
                         <button 
                             className="btn1 btn-outline1 btn-sm" 
                             style={{ flex: 1 }}
-                            onClick={() => openEditModal(plan)} // 👈 Open edit modal
+                            onClick={() => openEditModal(plan)}
                         >
                             Edit
                         </button>

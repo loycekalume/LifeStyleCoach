@@ -16,10 +16,11 @@ export default function MealPlanLibrary() {
         isEditModalOpen,
         editingPlan,
         closeEditModal
-    } = useModal(); //  Get edit modal state
+    } = useModal();
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
- const navigate = useNavigate(); 
+    const navigate = useNavigate(); 
+
     const fetchPlans = async () => {
         try {
             setIsLoading(true);
@@ -48,7 +49,6 @@ export default function MealPlanLibrary() {
         }
     };
 
-    //  Update to handle both edit and favorite toggle
     const handleUpdatePlan = async (id: number, updates: Partial<MealPlan>) => {
         try {
             const response = await axiosInstance.put(`meal-plans/${id}`, updates);
@@ -56,7 +56,6 @@ export default function MealPlanLibrary() {
                 plan.id === id ? { ...plan, ...response.data.mealPlan } : plan
             ));
             
-            // Show success message only for full edits (not favorite toggles)
             if (updates.title || updates.category || updates.description || updates.calories) {
                 alert("Meal plan updated successfully!");
             }
@@ -84,16 +83,18 @@ export default function MealPlanLibrary() {
         plan.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // 👇 Limit to 4 plans for dashboard view
+    const displayedPlans = filteredPlans.slice(0, 4);
+    const hasMorePlans = mealPlans.length > 4;
+
     return (
         <>
-            {/* Create Modal */}
             <CreateMealPlanModal 
                 isOpen={isMealPlanModalOpen}
                 onClose={closeMealPlanModal}
                 onSave={handleCreatePlan} 
             />
 
-            {/*  Edit Modal */}
             <EditMealPlanModal 
                 isOpen={isEditModalOpen}
                 onClose={closeEditModal}
@@ -138,13 +139,13 @@ export default function MealPlanLibrary() {
                             <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem' }}></i>
                             <p>Loading meal plans...</p>
                         </div>
-                    ) : filteredPlans.length === 0 ? (
+                    ) : displayedPlans.length === 0 ? ( // Changed to displayedPlans
                         <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
                             <i className="fas fa-clipboard-list" style={{ fontSize: '3rem', marginBottom: '10px' }}></i>
                             <p>{searchTerm ? 'No meal plans found matching your search' : 'No meal plans yet. Create your first one!'}</p>
                         </div>
                     ) : (
-                        filteredPlans.map((plan) => (
+                        displayedPlans.map((plan) => ( //  Changed to displayedPlans
                             <MealPlanCard 
                                 key={plan.id} 
                                 plan={plan} 
@@ -154,6 +155,25 @@ export default function MealPlanLibrary() {
                         ))
                     )}
                 </div>
+
+                {/*  Show "View All" link at bottom if there are more plans */}
+                {hasMorePlans && !isLoading && (
+                    <div style={{ 
+                        padding: '20px', 
+                        textAlign: 'center', 
+                        borderTop: '1px solid #eee',
+                        background: '#fafafa'
+                    }}>
+                        <button 
+                            className="btn btn-outline1 btn-sm"
+                            onClick={() => navigate('/meal-plans')}
+                            style={{ minWidth: '200px' }}
+                        >
+                            <i className="fas fa-arrow-right"></i>
+                            View All {mealPlans.length} Meal Plans
+                        </button>
+                    </div>
+                )}
             </div>
         </>
     );
