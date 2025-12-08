@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axiosInstance from '../../../utils/axiosInstance';
+import { useNavigate } from 'react-router-dom';
 import MealPlanCard from './mealPlanCard';
 import type { MealPlan } from './mealPlanCard';
 import CreateMealPlanModal from './createMealModal';
@@ -18,7 +19,7 @@ export default function MealPlanLibrary() {
     } = useModal(); //  Get edit modal state
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-
+ const navigate = useNavigate(); 
     const fetchPlans = async () => {
         try {
             setIsLoading(true);
@@ -113,6 +114,14 @@ export default function MealPlanLibrary() {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
+                        <button 
+                            className="btn btn-outline1 btn-sm"
+                            onClick={() => navigate('/meal-plans')}
+                            style={{ marginRight: '10px' }}
+                        >
+                            <i className="fas fa-eye"></i>
+                            View All
+                        </button>
                         <button 
                             className="btn btn-primary1 btn-sm"
                             onClick={openMealPlanModal}
