@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
-import axiosInstance from '../../../utils/axiosInstance'; 
+import axiosInstance from '../../../utils/axiosInstance';
 import MealPlanCard from './mealPlanCard';
 import type { MealPlan } from './mealPlanCard';
 import CreateMealPlanModal from './createMealModal';
+import { useModal } from '../../../contexts/modalContext'; 
 
 export default function MealPlanLibrary() {
     const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const { isMealPlanModalOpen, openMealPlanModal, closeMealPlanModal } = useModal(); 
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Fetch meal plans from backend
     const fetchPlans = async () => {
         try {
             setIsLoading(true);
@@ -28,7 +28,6 @@ export default function MealPlanLibrary() {
         fetchPlans();
     }, []);
 
-    // Create new meal plan
     const handleCreatePlan = async (data: any) => {
         try {
             const response = await axiosInstance.post('meal-plans', data);
@@ -40,7 +39,6 @@ export default function MealPlanLibrary() {
         }
     };
 
-    // Update meal plan (for edit or favorite toggle)
     const handleUpdatePlan = async (id: number, updates: Partial<MealPlan>) => {
         try {
             const response = await axiosInstance.put(`meal-plans/${id}`, updates);
@@ -53,7 +51,6 @@ export default function MealPlanLibrary() {
         }
     };
 
-    // Delete meal plan
     const handleDeletePlan = async (id: number) => {
         if (!window.confirm("Are you sure you want to delete this meal plan?")) return;
         
@@ -67,64 +64,66 @@ export default function MealPlanLibrary() {
         }
     };
 
-    // Filter meal plans based on search
     const filteredPlans = mealPlans.filter(plan =>
         plan.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         plan.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
-        <div className="card meal-plans-card" style={{ position: 'relative' }}>
+        <>
+            {/*  Modal - Render ONLY ONCE here, controlled by context */}
             <CreateMealPlanModal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
+                isOpen={isMealPlanModalOpen}
+                onClose={closeMealPlanModal}
                 onSave={handleCreatePlan} 
             />
 
-            <div className="card-header">
-                <h3><i className="fas fa-book"></i> Meal Plan Library</h3>
-                <div className="library-controls">
-                    <div className="search-box1">
-                        <i className="fas fa-search"></i>
-                        <input 
-                            type="text" 
-                            placeholder="Search meal plans..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+            <div className="card meal-plans-card" style={{ position: 'relative' }}>
+                <div className="card-header">
+                    <h3><i className="fas fa-book"></i> Meal Plan Library</h3>
+                    <div className="library-controls">
+                        <div className="search-box1">
+                            <i className="fas fa-search"></i>
+                            <input 
+                                type="text" 
+                                placeholder="Search meal plans..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <button 
+                            className="btn btn-primary1 btn-sm"
+                            onClick={openMealPlanModal} 
+                        >
+                            <i className="fas fa-plus"></i>
+                            Create New
+                        </button>
                     </div>
-                    <button 
-                        className="btn btn-primary1 btn-sm"
-                        onClick={() => setIsModalOpen(true)}
-                    >
-                        <i className="fas fa-plus"></i>
-                        Create New
-                    </button>
+                </div>
+
+                <div className="card-content meal-plan-grid">
+                    {isLoading ? (
+                        <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                            <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem' }}></i>
+                            <p>Loading meal plans...</p>
+                        </div>
+                    ) : filteredPlans.length === 0 ? (
+                        <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                            <i className="fas fa-clipboard-list" style={{ fontSize: '3rem', marginBottom: '10px' }}></i>
+                            <p>{searchTerm ? 'No meal plans found matching your search' : 'No meal plans yet. Create your first one!'}</p>
+                        </div>
+                    ) : (
+                        filteredPlans.map((plan) => (
+                            <MealPlanCard 
+                                key={plan.id} 
+                                plan={plan} 
+                                onUpdate={handleUpdatePlan}
+                                onDelete={handleDeletePlan}
+                            />
+                        ))
+                    )}
                 </div>
             </div>
-
-            <div className="card-content meal-plan-grid">
-                {isLoading ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-                        <i className="fas fa-spinner fa-spin" style={{ fontSize: '2rem' }}></i>
-                        <p>Loading meal plans...</p>
-                    </div>
-                ) : filteredPlans.length === 0 ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-                        <i className="fas fa-clipboard-list" style={{ fontSize: '3rem', marginBottom: '10px' }}></i>
-                        <p>{searchTerm ? 'No meal plans found matching your search' : 'No meal plans yet. Create your first one!'}</p>
-                    </div>
-                ) : (
-                    filteredPlans.map((plan) => (
-                        <MealPlanCard 
-                            key={plan.id} 
-                            plan={plan} 
-                            onUpdate={handleUpdatePlan}
-                            onDelete={handleDeletePlan}
-                        />
-                    ))
-                )}
-            </div>
-        </div>
+        </>
     );
 }
