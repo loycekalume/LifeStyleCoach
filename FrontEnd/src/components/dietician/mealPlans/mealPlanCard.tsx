@@ -1,3 +1,5 @@
+import { useModal } from '../../../contexts/modalContext';
+
 export interface MealPlan {
     id: number;
     title: string;
@@ -15,6 +17,8 @@ interface MealPlanCardProps {
 }
 
 export default function MealPlanCard({ plan, onUpdate, onDelete }: MealPlanCardProps) {
+    const { openEditModal } = useModal(); // 👈 Get from context
+
     const handleFavoriteToggle = () => {
         onUpdate(plan.id, { favorite: !plan.favorite });
     };
@@ -53,7 +57,13 @@ export default function MealPlanCard({ plan, onUpdate, onDelete }: MealPlanCardP
                     </div>
 
                     <div className="plan-actions" style={{ display: 'flex', gap: '10px' }}>
-                        <button className="btn1 btn-outline1 btn-sm" style={{ flex: 1 }}>Edit</button>
+                        <button 
+                            className="btn1 btn-outline1 btn-sm" 
+                            style={{ flex: 1 }}
+                            onClick={() => openEditModal(plan)} // 👈 Open edit modal
+                        >
+                            Edit
+                        </button>
                         <button 
                             className="btn1 btn-outline1 btn-sm" 
                             style={{ flex: 0, padding: '8px 12px', color: '#e74c3c' }}

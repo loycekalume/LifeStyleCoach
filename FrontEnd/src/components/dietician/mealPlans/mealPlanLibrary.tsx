@@ -3,11 +3,19 @@ import axiosInstance from '../../../utils/axiosInstance';
 import MealPlanCard from './mealPlanCard';
 import type { MealPlan } from './mealPlanCard';
 import CreateMealPlanModal from './createMealModal';
-import { useModal } from '../../../contexts/modalContext'; 
+import EditMealPlanModal from './editMealPlanModal'; 
+import { useModal } from '../../../contexts/modalContext';
 
 export default function MealPlanLibrary() {
     const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
-    const { isMealPlanModalOpen, openMealPlanModal, closeMealPlanModal } = useModal(); 
+    const { 
+        isMealPlanModalOpen, 
+        openMealPlanModal, 
+        closeMealPlanModal,
+        isEditModalOpen,
+        editingPlan,
+        closeEditModal
+    } = useModal(); //  Get edit modal state
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -39,12 +47,18 @@ export default function MealPlanLibrary() {
         }
     };
 
+    //  Update to handle both edit and favorite toggle
     const handleUpdatePlan = async (id: number, updates: Partial<MealPlan>) => {
         try {
             const response = await axiosInstance.put(`meal-plans/${id}`, updates);
             setMealPlans(mealPlans.map(plan => 
                 plan.id === id ? { ...plan, ...response.data.mealPlan } : plan
             ));
+            
+            // Show success message only for full edits (not favorite toggles)
+            if (updates.title || updates.category || updates.description || updates.calories) {
+                alert("Meal plan updated successfully!");
+            }
         } catch (error) {
             console.error("Error updating plan", error);
             alert("Failed to update meal plan");
@@ -71,11 +85,19 @@ export default function MealPlanLibrary() {
 
     return (
         <>
-            {/*  Modal - Render ONLY ONCE here, controlled by context */}
+            {/* Create Modal */}
             <CreateMealPlanModal 
                 isOpen={isMealPlanModalOpen}
                 onClose={closeMealPlanModal}
                 onSave={handleCreatePlan} 
+            />
+
+            {/*  Edit Modal */}
+            <EditMealPlanModal 
+                isOpen={isEditModalOpen}
+                onClose={closeEditModal}
+                onSave={handleUpdatePlan}
+                plan={editingPlan}
             />
 
             <div className="card meal-plans-card" style={{ position: 'relative' }}>
@@ -93,7 +115,7 @@ export default function MealPlanLibrary() {
                         </div>
                         <button 
                             className="btn btn-primary1 btn-sm"
-                            onClick={openMealPlanModal} 
+                            onClick={openMealPlanModal}
                         >
                             <i className="fas fa-plus"></i>
                             Create New
