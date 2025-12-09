@@ -15,19 +15,26 @@ import BookSessionModal from "../components/client/bookSessionModal";
 import LogMealModal from "../components/client/logMealModal";
 import { createMealLog } from "../Services/mealLogService";
 
-
-
 export default function ClientDashboard() {
   const [client, setClient] = useState<Client | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [mealLogOpen,setMealLogOpen]=useState(false);
+  const [mealLogOpen, setMealLogOpen] = useState(false);
+  const [userName, setUserName] = useState("User"); // Default name state
   const [currentPage, setCurrentPage] = useState<
     "dashboard" | "workouts" | "nutrition" | "instructors" | "schedule" | "progress"
   >("dashboard");
 
-  const userId = 13; // replace with real user ID
+  // FIX: Try to get the real User ID from login, fallback to 13 if missing
+  const userId = Number(localStorage.getItem("userId") || 13);
 
   useEffect(() => {
+    // 1. Set the Name immediately from storage
+    const storedName = localStorage.getItem("userName");
+    if (storedName) {
+      setUserName(storedName);
+    }
+
+    // 2. Load Client Data from Backend
     async function loadClient() {
       try {
         const data = await getClientById(userId);
@@ -37,35 +44,35 @@ export default function ClientDashboard() {
       }
     }
     loadClient();
-  }, []);
+  }, [userId]);
 
- const handleLogMeal = async (meal: { meal_time: string; description: string; calories: number }) => {
-  if (!client) return;
-  const { meal_time, description, calories } = meal;
-  try {
-    await createMealLog({
-      user_id: client.user_id, meal_time, description, calories,
-      log_id: 0
-    });
-    alert("Meal logged successfully!");
-  } catch (err) {
-    console.error(err);
-    alert("Failed to log meal");
-  }
-};
-
+  const handleLogMeal = async (meal: { meal_time: string; description: string; calories: number }) => {
+    if (!client) return;
+    const { meal_time, description, calories } = meal;
+    try {
+      await createMealLog({
+        user_id: client.user_id, meal_time, description, calories,
+        log_id: 0
+      });
+      alert("Meal logged successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to log meal");
+    }
+  };
 
   return (
     <>
-      <TopNav 
-      currentPage={currentPage}
-      onNavigate={(page) => setCurrentPage(page)} />
+      <TopNav
+        currentPage={currentPage}
+        onNavigate={(page) => setCurrentPage(page)} />
 
       {currentPage === "dashboard" && (
         <>
           <section className="welcome-section">
             <div className="welcome-content">
-              <h1>Welcome back, John! 👋</h1>
+              {/* DYNAMIC NAME HERE */}
+              <h1>Welcome back, {userName}! 👋</h1>
               <p>Ready to crush your fitness and health goals today?</p>
             </div>
             <div className="quick-actions">
@@ -77,21 +84,21 @@ export default function ClientDashboard() {
                 <i className="fas fa-calendar-plus"></i>
                 Book Session
               </button>
-              <BookSessionModal 
-              open={modalOpen} 
-              onClose={() => setModalOpen(false)} 
-               onNavigate={(page) => setCurrentPage(page)}
+              <BookSessionModal
+                open={modalOpen}
+                onClose={() => setModalOpen(false)}
+                onNavigate={(page) => setCurrentPage(page)}
               />
-              <button className="action-btn tertiary"  onClick={()=>setMealLogOpen(true)}>
+              <button className="action-btn tertiary" onClick={() => setMealLogOpen(true)}>
                 <i className="fas fa-camera"></i>
                 Log Meal
               </button>
               <LogMealModal
-              open={mealLogOpen}
-              onClose={()=>setMealLogOpen(false)}
+                open={mealLogOpen}
+                onClose={() => setMealLogOpen(false)}
                 onSubmit={handleLogMeal}
-              
-               />
+
+              />
             </div>
           </section>
 
@@ -117,7 +124,6 @@ export default function ClientDashboard() {
       {currentPage === "workouts" && (
         <section className="main-section">
           <h1>Workouts</h1>
-          {/* You can add workout-specific components here */}
           <p>Select a workout plan or start a session.</p>
         </section>
       )}
