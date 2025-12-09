@@ -15,11 +15,14 @@ import InstructorList from "./components/admin/instructorList";
 import ClientList from "./components/admin/clientsList";
 import { ToastContainer } from "react-toastify";
 import ClientsPage from "./components/ClientsView";
+import DieticiansDashboard from "./pages/dieticianDashboards";
+
 
 const App: React.FC = () => {
   return (
     <Router>
           <ToastContainer position="top-right" autoClose={2500} />
+         
       <Routes>
 
         <Route path="/" element={<Home />} />
@@ -28,6 +31,7 @@ const App: React.FC = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/client" element={<ClientDashboard />} />
+         <Route path="/dieticians" element={<DieticiansDashboard />} />
         <Route path="/instructor" element={<InstructorDashboard />} />
         <Route path="/dietician" element={<DieticianDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
@@ -38,11 +42,13 @@ const App: React.FC = () => {
      
         <Route
           path="/complete-profile"
-          element={<ProfileLoader />} // This now loads ClientProfileWizard OR InstructorProfileWizard
+          element={<ProfileLoader />} 
         />
         <Route path="/workouts" element={<Workouts />} />
         <Route path="/sessions" element={<SessionsPage />} />
+      
       </Routes>
+      
     </Router>
   );
 };
