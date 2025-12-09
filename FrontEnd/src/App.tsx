@@ -15,13 +15,15 @@ import ClientList from "./components/admin/clientsList";
 import { ToastContainer } from "react-toastify";
 import ClientsPage from "./components/ClientsView";
 import DieticiansDashboard from "./pages/dieticianDashboards";
+import { ModalProvider } from "./contexts/modalContext";
+import MealPlans from "./components/dietician/mealPlans/mealPlans";
 
 
 const App: React.FC = () => {
   return (
     <Router>
           <ToastContainer position="top-right" autoClose={2500} />
-         
+         <ModalProvider>
       <Routes>
 
         <Route path="/" element={<Home />} />
@@ -44,9 +46,10 @@ const App: React.FC = () => {
         />
         <Route path="/workouts" element={<Workouts />} />
         <Route path="/sessions" element={<SessionsPage />} />
-      
+
+       <Route path="/meal-plans" element={<MealPlans />} />
       </Routes>
-      
+      </ModalProvider>
     </Router>
   );
 };
