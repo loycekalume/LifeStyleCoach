@@ -481,7 +481,8 @@ const InstructorProfileWizard: React.FC = () => {
         );
         await Promise.all(pricingPromises);
       }
-      
+       localStorage.setItem("instructorId", String(instructor_id));
+      localStorage.setItem("profileComplete", "true");
       alert("Instructor profile and pricing saved successfully!");
       navigate("/instructor"); 
 
