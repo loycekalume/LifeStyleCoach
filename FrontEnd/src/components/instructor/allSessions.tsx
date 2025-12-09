@@ -81,7 +81,7 @@ const SessionsPage: React.FC = () => {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         ...formData,
-                        instructor_id: instructorId, // hardcoded
+                        instructor_id: instructorId, 
                     }),
                 });
             }
