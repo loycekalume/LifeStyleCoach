@@ -2,6 +2,7 @@ import asyncHandler from "../middlewares/asyncHandler";
 import { Request, Response } from "express"
 import pool from "../db.config"
 import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
 import { generateToken } from "../utils/helpers/generateToken";
 
 export const registerUser = asyncHandler(async (req: Request, res: Response) => {
@@ -48,7 +49,6 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, password_hash } = req.body;
 
-    // 🛑 FIX: Consolidated the SQL query to prevent whitespace/indentation errors (42601)
     const userQuery = await pool.query(
       `SELECT 
          u.user_id, 
@@ -76,19 +76,26 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Retrieve the distinct instructorId (will be null for non-instructors)
     const instructorId = user.instructor_id || null;
+
+    // 🔥 GENERATE AND SET JWT TOKENS (this was missing!)
+    const { accessToken, refreshToken } = generateToken(
+      res, 
+      user.user_id.toString(), // Convert to string as your function expects
+      user.role_id
+    );
 
     // Send successful login response
     res.status(200).json({
       message: "Login successfully",
+      token: accessToken, // 👈 Optional: send token in response too
       user: {
         id: user.user_id,
         name: user.name,
         email: user.email,
         role_id: user.role_id,
         profile_complete: user.profile_complete,
-        instructor_id: instructorId, // only for instructors
+        instructor_id: instructorId,
       },
     });
   } catch (error) {
@@ -117,3 +124,60 @@ export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
     })
  res.status(200).json({message:"User successfully logged out"})
 })
+
+// Refresh access token using refresh token
+export const refreshToken = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const refreshToken = req.cookies.refresh_token;
+
+    if (!refreshToken) {
+      return res.status(401).json({ message: "No refresh token provided" });
+    }
+
+    if (!process.env.REFRESH_TOKEN_SECRET) {
+      throw new Error("REFRESH_TOKEN_SECRET is not defined");
+    }
+
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET) as { userId: string };
+
+    // Get user from database to ensure they still exist
+    const userQuery = await pool.query(
+      "SELECT user_id, role_id FROM users WHERE user_id = $1",
+      [decoded.userId]
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    const user = userQuery.rows[0];
+
+    // Generate new access token only
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is not defined");
+    }
+
+    const newAccessToken = jwt.sign(
+      { userId: user.user_id, roleId: user.role_id },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" } // Keep it short
+    );
+
+    // Set new access token cookie
+    res.cookie("access_token", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== "development",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    res.status(200).json({ 
+      message: "Token refreshed successfully",
+      accessToken: newAccessToken 
+    });
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    return res.status(401).json({ message: "Invalid refresh token" });
+  }
+});

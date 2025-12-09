@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import {  useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
@@ -28,7 +29,7 @@ const Signup: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
-
+const navigate = useNavigate();
   // Toggle password visibility
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
@@ -64,7 +65,7 @@ const Signup: React.FC = () => {
   };
 
   // Handle submit
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
@@ -92,11 +93,17 @@ const Signup: React.FC = () => {
         "http://localhost:3000/auth/register",
         payload
       );
+      
       alert(res.data.message);
+      
+      // ✅ Redirect to login after successful signup
+      navigate("/login");
+      
     } catch (err: any) {
       alert(err.response?.data?.message || "Something went wrong");
     }
   };
+
 
   return (
     <div className="auth-container">

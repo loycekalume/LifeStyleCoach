@@ -102,8 +102,8 @@ const AssignWorkoutModal: React.FC<AssignWorkoutModalProps> = ({
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content"> {/* Changed from 'modal' to 'modal-content' for consistency */}
+        <div className="modal-overlay1">
+            <div className="modal-content1"> {/* Changed from 'modal' to 'modal-content' for consistency */}
                 <h2>Assign Workout</h2>
                 <p>
                     Workout: <strong>{selectedWorkout.title}</strong>
@@ -154,7 +154,7 @@ const AssignWorkoutModal: React.FC<AssignWorkoutModalProps> = ({
                 </div>
 
                 {/* ----------------- Actions ----------------- */}
-                <div className="modal-actions">
+                <div className="modal-actions1">
                     <button 
                         className="btn btn-primary" 
                         onClick={handleConfirm} 

@@ -130,36 +130,36 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* ===== Journey Section ===== */}
-      <section id="journey" className="journey">
+      <section id="journey1" className="journey1">
         <h2>Your Journey to Wellness</h2>
-        <p className="subtitle">
+        <p className="subtitle1">
           Four simple steps to transform your lifestyle and achieve your health goals
         </p>
 
-        <div className="steps">
-          <div className="step">
-            <div className="circle">
+        <div className="steps1">
+          <div className="step1">
+            <div className="circle1">
               <FaUserPlus /> <span>1</span>
             </div>
             <h3>Create Your Profile</h3>
             <p>Tell us about your health goals, dietary preferences, allergies, and budget. We'll customize everything for you.</p>
           </div>
-          <div className="step">
-            <div className="circle">
+          <div className="step1">
+            <div className="circle1">
               <FaBullseye /> <span>2</span>
             </div>
             <h3>Get Matched</h3>
             <p>Connect with expert dieticians and trainers who understand your unique needs and background.</p>
           </div>
-          <div className="step">
-            <div className="circle">
+          <div className="step1">
+            <div className="circle1">
               <FaCalendarCheck /> <span>3</span>
             </div>
             <h3>Follow Your Plan</h3>
             <p>Receive personalized meal plans, workout routines, and daily guidance.</p>
           </div>
-          <div className="step">
-            <div className="circle">
+          <div className="step1">
+            <div className="circle1">
               <FaAward /> <span>4</span>
             </div>
             <h3>Track & Achieve</h3>

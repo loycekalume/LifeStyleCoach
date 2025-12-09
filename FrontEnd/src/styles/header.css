@@ -1,0 +1,183 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6); /* 👈 Darker overlay */
+  backdrop-filter: blur(8px); /* 👈 Blur effect */
+  -webkit-backdrop-filter: blur(8px); /* Safari support */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999; /* 👈 Ensure it's on top */
+  animation: fadeIn 0.2s ease-in-out; /* 👈 Smooth fade-in */
+}
+
+.modal-container {
+  background: #fff;
+  padding: 30px;
+  width: 90%;
+  max-width: 500px; /* 👈 Responsive width */
+  border-radius: 16px; /* 👈 More rounded corners */
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); /* 👈 Nice shadow */
+  animation: slideUp 0.3s ease-out; /* 👈 Slide up animation */
+  max-height: 90vh; /* 👈 Prevent overflow on small screens */
+  overflow-y: auto; /* 👈 Scroll if content is too long */
+}
+
+.modal-container h2 {
+  margin: 0 0 20px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.modal-container label {
+  display: block;
+  margin: 15px 0 8px;
+  font-weight: 500;
+  color: #34495e;
+  font-size: 0.95rem;
+}
+
+.modal-container input,
+.modal-container select,
+.modal-container textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.modal-container input:focus,
+.modal-container select:focus,
+.modal-container textarea:focus {
+  outline: none;
+  border-color: #6c63ff;
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+}
+
+.modal-container textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.modal-actions {
+  margin-top: 25px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.cancel-btn {
+  background: #f0f0f0;
+  color: #555;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+.save-btn {
+  background: #6c63ff;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+}
+
+.save-btn:hover {
+  background: #5a52d5;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(108, 99, 255, 0.4);
+}
+
+.save-btn:active {
+  transform: translateY(0);
+}
+
+.save-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scrollbar styling for modal content */
+.modal-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.modal-container::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+
+.modal-container::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .modal-container {
+    width: 95%;
+    padding: 20px;
+    max-height: 85vh;
+  }
+
+  .modal-container h2 {
+    font-size: 1.3rem;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .cancel-btn,
+  .save-btn {
+    width: 100%;
+  }
+}

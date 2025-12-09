@@ -20,6 +20,8 @@ import chatRoutes from "../src/routes/chatRoutes"
 import clientWorkoutRoutes from "./routes/clientWorkoutRoutes"
 import clientRoutes from "./routes/clientRoutes"
 import sessionRoutes from "./routes/sessionRoutes"
+import mealplanRoutes from "./routes/mealplanRoutes"
+import dieticianSchedules from "./routes/dieticianSchedules"
 
 
 
@@ -59,6 +61,8 @@ app.use("/chat",chatRoutes)
 app.use("/client",clientRoutes)
 app.use("/clientWorkouts",clientWorkoutRoutes)
 app.use("/sessions",sessionRoutes)
+app.use("/meal-plans",mealplanRoutes)
+app.use("/consultations",dieticianSchedules)
 
 const port =process.env.PORT 
 

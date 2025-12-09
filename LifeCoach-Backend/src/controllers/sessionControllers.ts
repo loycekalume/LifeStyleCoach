@@ -1,8 +1,8 @@
 import asyncHandler from "../middlewares/asyncHandler";
 import { Request, Response } from "express";
-import pool from "../db.config"; // adjust path to your DB connection
+import pool from "../db.config";
 
-//  Create a new session
+// Create a new session
 export const createSession = asyncHandler(async (req: Request, res: Response) => {
   const { client_id, instructor_id, session_type, duration, scheduled_at, status, notes, meeting_link, chat_link } = req.body;
 
@@ -31,24 +31,37 @@ export const createSession = asyncHandler(async (req: Request, res: Response) =>
   res.status(201).json(result.rows[0]);
 });
 
-//  Get all sessions
+// ✅ UPDATED: Get sessions with optional instructor_id filter
 export const getSessions = asyncHandler(async (req: Request, res: Response) => {
-  const result = await pool.query(
-    `SELECT s.id, s.session_type, s.duration, s.scheduled_at, s.status, s.notes,
-            s.meeting_link, s.chat_link,
-            u.user_id AS client_id, u.name AS client_name, 
-            i.instructor_id, iu.name AS instructor_name
-     FROM sessions s
-     JOIN users u ON s.client_id = u.user_id
-     JOIN instructors i ON s.instructor_id = i.instructor_id
-     JOIN users iu ON i.user_id = iu.user_id
-     ORDER BY s.scheduled_at DESC`
-  );
+  const { instructor_id } = req.query; // Get instructor_id from query params
+
+  let query = `
+    SELECT s.id, s.session_type, s.duration, s.scheduled_at, s.status, s.notes,
+           s.meeting_link, s.chat_link,
+           u.user_id AS client_id, u.name AS client_name, 
+           i.instructor_id, iu.name AS instructor_name
+    FROM sessions s
+    JOIN users u ON s.client_id = u.user_id
+    JOIN instructors i ON s.instructor_id = i.instructor_id
+    JOIN users iu ON i.user_id = iu.user_id
+  `;
+
+  const params: any[] = [];
+
+  // ✅ Filter by instructor_id if provided
+  if (instructor_id) {
+    query += ` WHERE s.instructor_id = $1`;
+    params.push(instructor_id);
+  }
+
+  query += ` ORDER BY s.scheduled_at DESC`;
+
+  const result = await pool.query(query, params);
 
   res.json(result.rows);
 });
 
-//  Get single session by ID
+// Get single session by ID
 export const getSessionById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
@@ -73,7 +86,7 @@ export const getSessionById = asyncHandler(async (req: Request, res: Response) =
   res.json(result.rows[0]);
 });
 
-//  Update a session
+// Update a session
 export const updateSession = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { session_type, duration, scheduled_at, status, notes, meeting_link, chat_link } = req.body;
