@@ -4,9 +4,10 @@ import asyncHandler from "../middlewares/asyncHandler";
 
 
 export const upsertClient = asyncHandler(async (req: Request, res: Response) => {
- 
+  
   const { user_id, age, weight, height, goal, gender, allergies, budget, location } = req.body;
 
+  // 1. Insert or Update the Client details
   const result = await pool.query(
     `INSERT INTO clients (
         user_id, age, weight, height, weight_goal, gender, allergies, budget, location
@@ -24,6 +25,10 @@ export const upsertClient = asyncHandler(async (req: Request, res: Response) => 
      RETURNING *`,
     [user_id, age, weight, height, goal, gender, allergies, budget, location]
   );
+
+  // 2. ✅ FIX: Mark the user profile as complete in the USERS table
+  // This prevents the infinite redirect loop on the frontend
+  await pool.query("UPDATE users SET profile_complete = TRUE WHERE user_id = $1", [user_id]);
 
   res.status(200).json({
     message: "Client profile saved successfully",
