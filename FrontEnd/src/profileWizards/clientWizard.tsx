@@ -19,27 +19,23 @@ interface ProfileState {
   userId: number | null;
 }
 
-// Client Profile Data Structure (all fields stored as strings for input stability)
 interface ClientProfileData {
   user_id: number | null;
   age: string;
   weight: string;
   height: string;
-  goal: string; // Maps to weight_goal in backend
+  goal: string;
   gender: string;
-  allergies: string; // This field needs formatting
-  budget: string; // Stored as string ('Low', 'medium', 'high')
+  allergies: string;
+  budget: string;
   location: string;
 }
 
-// 🛑 FIX: PostgreSQL Array Formatting Utility
 const formatArray = (input: string | null): string => {
   if (!input) return "{}";
-  // Split by comma, trim whitespace, wrap elements in double quotes, and join into a PostgreSQL array literal.
   const elements = input.split(',').map(e => `"${e.trim()}"`).filter(e => e.length > 2);
   return `{${elements.join(',')}}`;
 };
-
 
 const ClientProfileWizard: React.FC = () => {
   const navigate = useNavigate();
@@ -58,15 +54,13 @@ const ClientProfileWizard: React.FC = () => {
     goal: "",
     gender: "",
     allergies: "",
-    budget: "", // Initial state is an empty string for the select
+    budget: "",
     location: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Validation and Initialization on Load
   useEffect(() => {
-    // Check if user ID is present AND if the role is correct for this wizard
     if (!userId || role !== "Client") {
       console.error("Client Wizard: Missing user details or incorrect role.");
       navigate("/login");
@@ -74,17 +68,16 @@ const ClientProfileWizard: React.FC = () => {
     setFormData((prev) => ({ ...prev, user_id: userId }));
   }, [userId, role, navigate]);
 
+  // ✅ FIX: Simplified handleChange - removed unnecessary state callback
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
+    setFormData({
+      ...formData,
       [name]: value,
-    }));
-    setError(null);
+    });
+    if (error) setError(null);
   };
 
   const validateStep = (currentStep: number): boolean => {
@@ -93,19 +86,16 @@ const ClientProfileWizard: React.FC = () => {
         setError("Please fill all required health metrics.");
         return false;
       }
-      // Simple numeric check using raw strings
       if (isNaN(parseFloat(formData.age)) || isNaN(parseFloat(formData.weight)) || isNaN(parseFloat(formData.height))) {
         setError("Age, Weight, and Height must be valid numbers.");
         return false;
       }
     }
     if (currentStep === 2) {
-      // ✅ FIX: Budget must be one of the specified strings
       if (!formData.goal || !formData.budget || !formData.location) {
         setError("Please set your goal, budget, and location.");
         return false;
       }
-      // Removed numeric budget check, as it's now a string select field
     }
     setError(null);
     return true;
@@ -141,25 +131,20 @@ const ClientProfileWizard: React.FC = () => {
         age: parseInt(formData.age, 10),
         weight: parseFloat(formData.weight),
         height: parseFloat(formData.height),
-        goal: formData.goal, // weight_goal in backend
+        goal: formData.goal,
         gender: formData.gender,
-        // ✅ FIX APPLIED: Format the allergies string into a PostgreSQL array literal
         allergies: formatArray(formData.allergies), 
-        // ✅ FIX APPLIED: Send the budget string directly
         budget: formData.budget, 
         location: formData.location,
       };
 
-      // Note: Assuming your backend endpoint is configured to handle the upsert and mark profile_complete=TRUE
       const res = await axios.post("http://localhost:3000/client", payload); 
       
-      // Since the backend should return the client_id, we save it here
       if (res.data.client && res.data.client.client_id) {
           localStorage.setItem("clientId", String(res.data.client.client_id));
       }
       
       alert(res.data.message);
-      // Profile complete, redirect to client dashboard
       navigate("/client");
     } catch (err: any) {
       console.error("Profile submission error:", err);
@@ -172,8 +157,8 @@ const ClientProfileWizard: React.FC = () => {
     }
   };
 
-  // --- Step 1: Health Metrics ---
-  const Step1: React.FC = () => (
+  // ✅ FIX: Moved Step components outside to prevent recreation on every render
+  const renderStep1 = () => (
     <>
       <h3 className="step-title">1. Health Metrics (Required)</h3>
       <div className="form-group">
@@ -235,8 +220,7 @@ const ClientProfileWizard: React.FC = () => {
     </>
   );
 
-  // --- Step 2: Goal & Lifestyle ---
-  const Step2: React.FC = () => (
+  const renderStep2 = () => (
     <>
       <h3 className="step-title">2. Goals & Lifestyle</h3>
       <div className="form-group">
@@ -248,7 +232,6 @@ const ClientProfileWizard: React.FC = () => {
           required
         >
           <option value="">Select Primary Fitness Goal *</option>
-          {/* ✅ FIX: Map user-friendly labels to strict lowercase DB values */}
           <option value="lose">Lose Weight</option>
           <option value="gain">Gain Muscle</option>
           <option value="maintain">Maintain Weight / Wellness</option>
@@ -267,7 +250,6 @@ const ClientProfileWizard: React.FC = () => {
         />
       </div>
       
-      {/* ✅ FIX: Changed from type="number" input to a SELECT based on DB constraint */}
       <div className="form-group half-width">
         <FontAwesomeIcon icon={faDollarSign} className="input-icon" />
         <select
@@ -277,13 +259,11 @@ const ClientProfileWizard: React.FC = () => {
           required
         >
           <option value="">Select Monthly Budget *</option>
-          {/* Values MUST match the DB CHECK constraint exactly */}
           <option value="Low">Low (Under $100)</option>
           <option value="medium">Medium ($100 - $300)</option>
           <option value="high">High (Over $300)</option>
         </select>
       </div>
-      {/* End of Fix */}
 
       <div className="form-group half-width">
         <FontAwesomeIcon icon={faMapMarkerAlt} className="input-icon" />
@@ -315,9 +295,9 @@ const ClientProfileWizard: React.FC = () => {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <Step1 />;
+        return renderStep1();
       case 2:
-        return <Step2 />;
+        return renderStep2();
       default:
         return <div>Profile Complete! Redirecting...</div>;
     }
