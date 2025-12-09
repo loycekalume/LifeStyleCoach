@@ -6,7 +6,7 @@ import {getClients, getInstructors, getDieticians} from "../controllers/usersCon
 const router=express.Router()
 
 
-router.post("/",protect, addUser);
+router.post("/", addUser);
 router.get("/", getUser)
 router.get("/instructors",  getInstructors);
 router.get("/dieticians", getDieticians);

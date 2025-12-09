@@ -76,17 +76,33 @@ export const addInstructor = asyncHandler(async (req: Request, res: Response) =>
 
 export const getInstructors = asyncHandler(async (req: Request, res: Response) => {
   try {
-    const result = await pool.query("SELECT * FROM instructors ")
+    // Join instructors with users to get the name
+    const result = await pool.query(`
+      SELECT 
+        i.instructor_id,
+        i.user_id,
+        u.name,
+        i.coaching_mode,
+        i.bio,
+        i.available_locations,
+        i.website_url,
+        i.profile_title,
+        i.years_of_experience,
+        i.specialization,
+        i.certifications
+      FROM instructors i
+      JOIN users u ON i.user_id = u.user_id
+    `);
 
     res.status(200).json({
       message: "Instructors retrieved",
       instructor: result.rows
-    })
+    });
   } catch (error) {
-    console.error("Error adding user:", error);
-    res.status(500).json({ message: "Internal server error" })
+    console.error("Error fetching instructors:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
-})
+});
 export const getInstuctorById = asyncHandler(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
