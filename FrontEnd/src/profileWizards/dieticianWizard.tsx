@@ -8,9 +8,8 @@ import {
   faClinicMedical,
   faMapMarkerAlt,
   faCertificate,
-  
 } from "@fortawesome/free-solid-svg-icons";
-import "../styles/instructorProfile.css"; // Reusing instructor wizard CSS
+import "../styles/instructorProfile.css"; 
 
 interface ProfileState {
   role: string;
@@ -19,20 +18,18 @@ interface ProfileState {
 
 interface DieticianProfileData {
   user_id: number | null;
-  specialization: string; // Comma-separated array
+  specialization: string; 
   certification: string;
   years_of_experience: string;
   clinic_name: string;
   clinic_address: string;
 }
 
-// PostgreSQL Array Formatting Utility (same as Instructor wizard)
 const formatArray = (input: string | null): string => {
   if (!input) return "{}";
   const elements = input.split(',').map(e => `"${e.trim()}"`).filter(e => e.length > 2);
   return `{${elements.join(',')}}`;
 };
-
 
 const DieticianProfileWizard: React.FC = () => {
   const navigate = useNavigate();
@@ -131,7 +128,7 @@ const DieticianProfileWizard: React.FC = () => {
       const payload = {
         user_id: formData.user_id,
         certification: formData.certification,
-        specialization: formatArray(formData.specialization), // Format as array literal
+        specialization: formatArray(formData.specialization),
         years_of_experience: parseInt(formData.years_of_experience, 10),
         clinic_name: formData.clinic_name,
         clinic_address: formData.clinic_address,
@@ -139,7 +136,6 @@ const DieticianProfileWizard: React.FC = () => {
 
       const res = await axios.post("http://localhost:3000/dietician", payload); 
       
-      // Save the specific dietician ID (assuming the backend returns it)
       if (res.data.dietician && res.data.dietician.dietician_id) {
           localStorage.setItem("dieticianId", String(res.data.dietician.dietician_id));
       }
@@ -157,120 +153,119 @@ const DieticianProfileWizard: React.FC = () => {
     }
   };
 
-  // --- Step 1: Credentials ---
-  const Step1: React.FC = () => (
-    <>
-      <h3 className="step-title">1. Certification & Experience</h3>
-      <div className="form-group">
-        <FontAwesomeIcon icon={faCertificate} className="input-icon" />
-        <input
-          type="text"
-          name="certification"
-          placeholder="Main Certification (e.g., RDN, LD) *"
-          value={formData.certification}
-          onChange={handleChange}
-          required
-          maxLength={255}
-        />
-      </div>
-      <div className="form-group">
-        <FontAwesomeIcon icon={faCalendarAlt} className="input-icon" />
-        <input
-          type="number"
-          name="years_of_experience"
-          placeholder="Years of Experience *"
-          value={formData.years_of_experience}
-          onChange={handleChange}
-          required
-          min="0"
-          max="50"
-        />
-      </div>
-      <div className="form-actions">
-        <button type="button" className="btn-primary" onClick={nextStep}>
-          Next: Specialization
-        </button>
-      </div>
-    </>
-  );
+  // --- RENDERING LOGIC FIXED BELOW ---
+  // We removed "const Step1 = ...". We now render the JSX directly inside the switch.
 
-  // --- Step 2: Specialization ---
-  const Step2: React.FC = () => (
-    <>
-      <h3 className="step-title">2. Areas of Expertise</h3>
-      <div className="form-group">
-        <FontAwesomeIcon icon={faGraduationCap} className="input-icon" />
-        <textarea
-          name="specialization"
-          placeholder="Specialization (e.g., Weight Management, Diabetes, Pediatric Nutrition) - Separate with commas *"
-          rows={4}
-          value={formData.specialization}
-          onChange={handleChange}
-          required
-        ></textarea>
-      </div>
-      <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={prevStep}>
-          Back
-        </button>
-        <button type="button" className="btn-primary" onClick={nextStep}>
-          Next: Clinic Details
-        </button>
-      </div>
-    </>
-  );
-  
-  // --- Step 3: Clinic Details ---
-  const Step3: React.FC = () => (
-    <>
-      <h3 className="step-title">3. Clinic / Practice Details</h3>
-      <div className="form-group">
-        <FontAwesomeIcon icon={faClinicMedical} className="input-icon" />
-        <input
-          type="text"
-          name="clinic_name"
-          placeholder="Clinic Name / Practice Name *"
-          value={formData.clinic_name}
-          onChange={handleChange}
-          required
-          maxLength={255}
-        />
-      </div>
-      <div className="form-group">
-        <FontAwesomeIcon icon={faMapMarkerAlt} className="input-icon" />
-        <input
-          type="text"
-          name="clinic_address"
-          placeholder="Clinic Address (City, State, or Remote Practice Name) *"
-          value={formData.clinic_address}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={prevStep}>
-          Back
-        </button>
-        <button
-          type="submit"
-          className="btn-primary"
-          onClick={handleSubmit}
-          disabled={isLoading || !formData.user_id}
-        >
-          {isLoading ? "Saving Profile..." : "Complete Dietician Profile"}
-        </button>
-      </div>
-    </>
-  );
-
-  const renderStep = () => {
+  const renderContent = () => {
     switch (step) {
       case 1:
-        return <Step1 />;
+        return (
+          <>
+            <h3 className="step-title">1. Certification & Experience</h3>
+            <div className="form-group">
+              <FontAwesomeIcon icon={faCertificate} className="input-icon" />
+              <input
+                type="text"
+                name="certification"
+                placeholder="Main Certification (e.g., RDN, LD) *"
+                value={formData.certification}
+                onChange={handleChange}
+                required
+                maxLength={255}
+                // Key fix: AutoFocus ensures if a re-render happens, we grab focus, 
+                // but strictly speaking, simply removing the sub-component wrapper solves the main issue.
+                autoFocus 
+              />
+            </div>
+            <div className="form-group">
+              <FontAwesomeIcon icon={faCalendarAlt} className="input-icon" />
+              <input
+                type="number"
+                name="years_of_experience"
+                placeholder="Years of Experience *"
+                value={formData.years_of_experience}
+                onChange={handleChange}
+                required
+                min="0"
+                max="50"
+              />
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn-primary" onClick={nextStep}>
+                Next: Specialization
+              </button>
+            </div>
+          </>
+        );
       case 2:
-        return <Step2 />;
+        return (
+          <>
+            <h3 className="step-title">2. Areas of Expertise</h3>
+            <div className="form-group">
+              <FontAwesomeIcon icon={faGraduationCap} className="input-icon" />
+              <textarea
+                name="specialization"
+                placeholder="Specialization (e.g., Weight Management, Diabetes, Pediatric Nutrition) - Separate with commas *"
+                rows={4}
+                value={formData.specialization}
+                onChange={handleChange}
+                required
+                autoFocus
+              ></textarea>
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn-secondary" onClick={prevStep}>
+                Back
+              </button>
+              <button type="button" className="btn-primary" onClick={nextStep}>
+                Next: Clinic Details
+              </button>
+            </div>
+          </>
+        );
       case 3:
-        return <Step3 />;
+        return (
+          <>
+            <h3 className="step-title">3. Clinic / Practice Details</h3>
+            <div className="form-group">
+              <FontAwesomeIcon icon={faClinicMedical} className="input-icon" />
+              <input
+                type="text"
+                name="clinic_name"
+                placeholder="Clinic Name / Practice Name *"
+                value={formData.clinic_name}
+                onChange={handleChange}
+                required
+                maxLength={255}
+                autoFocus
+              />
+            </div>
+            <div className="form-group">
+              <FontAwesomeIcon icon={faMapMarkerAlt} className="input-icon" />
+              <input
+                type="text"
+                name="clinic_address"
+                placeholder="Clinic Address (City, State, or Remote Practice Name) *"
+                value={formData.clinic_address}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn-secondary" onClick={prevStep}>
+                Back
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                onClick={handleSubmit}
+                disabled={isLoading || !formData.user_id}
+              >
+                {isLoading ? "Saving Profile..." : "Complete Dietician Profile"}
+              </button>
+            </div>
+          </>
+        );
       default:
         return <div>Profile Complete! Redirecting...</div>;
     }
@@ -288,7 +283,7 @@ const DieticianProfileWizard: React.FC = () => {
 
         {error && <p className="error-message">{error}</p>}
         <div className="wizard-content">
-          {renderStep()}
+          {renderContent()}
         </div>
       </form>
     </div>

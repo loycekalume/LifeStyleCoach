@@ -45,3 +45,5 @@ export const generateToken = (res: Response, userId: string, roleId: number) => 
         throw new Error("Error generating authentication tokens");
     }
 }
+
+

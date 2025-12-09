@@ -4,14 +4,12 @@ import pool from "../../db.config";
 import { UserRequest } from "../../utils/types/userTypes";
 import asyncHandler from "../asyncHandler";
 
-
-
 //Auth middleware to protect routes 
 export const protect = asyncHandler(async (req: UserRequest, res: Response, next: NextFunction) => {
     let token;
 
     //trying to get token from Authorization Header 
-      const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer")) {
         token = authHeader.split(" ")[1];
     }
@@ -23,11 +21,11 @@ export const protect = asyncHandler(async (req: UserRequest, res: Response, next
 
     //if no token found
     if (!token) {
-        res.status(401).json({ message: "Not authorized , no token" })
+        return res.status(401).json({ message: "Not authorized, no token" }); //  MUST have return
     }
 
     try {
-        //we have the token but we nneed to verify it 
+        //we have the token but we need to verify it 
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET is not defined in environment variables");
         }
@@ -43,20 +41,16 @@ export const protect = asyncHandler(async (req: UserRequest, res: Response, next
 
         
         if (userQuery.rows.length === 0) {
-            res.status(401).json({ message: "User not found" });
-            return;
+            return res.status(401).json({ message: "User not found" }); //  MUST have return
         }
 
-
         //attach the user to the request 
-        req.user = userQuery.rows[0]
+        req.user = userQuery.rows[0];
 
-        next() //proceed to next thing 
-
+        next(); //proceed to next thing 
 
     } catch (error) {
         console.error("JWT Error:", error);
-        res.status(401).json({ message: "Not authorized, token failed" });
+        return res.status(401).json({ message: "Not authorized, token failed" }); //  MUST have return
     }
-
-})
+});
