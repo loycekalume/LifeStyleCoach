@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import MealPlanLibrary from "../components/dietician/mealPlans/mealPlanLibrary";
 import ScheduleCard from "../components/dietician/schedules/scheduleCard";
 import RecentActivity from "../components/dietician/recentActivity";
@@ -39,10 +40,45 @@ const activities: ActivityItem[] = [
 ];
 
 const DieticianDashboard: React.FC = () => {
-    // Optional: Function to refresh consultation data when a new one is added
+    const [dieticianName, setDieticianName] = useState<string>("Dietician");
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchDieticianProfile = async () => {
+            try {
+                const userId = localStorage.getItem("userId");
+                if (!userId) {
+                    console.error("No userId found in localStorage");
+                    setLoading(false);
+                    return;
+                }
+
+                // Fetch user details from your backend
+                const response = await axios.get(`http://localhost:3000/users/${userId}`);
+                
+                if (response.data && response.data.name) {
+                    setDieticianName(response.data.name);
+                }
+            } catch (error) {
+                console.error("Error fetching dietician profile:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDieticianProfile();
+    }, []);
+
+    // Get greeting based on time of day
+    const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 16) return "Good afternoon";
+    return "Good evening"; 
+};
+
     const handleConsultationAdded = () => {
         console.log('New consultation added - refresh data if needed');
-        // You can add logic here to refresh the ScheduleCard component
     };
 
     return (
@@ -50,12 +86,17 @@ const DieticianDashboard: React.FC = () => {
             <div>
                 <Header />
                 
-                {/* Consultation Modal - Always mounted and controlled by context */}
                 <ConsultationModal onConsultationAdded={handleConsultationAdded} />
                 
                 <section className="welcome-section">
                     <div className="welcome-content">
-                        <h2>Good morning, Dr. Wilson! 🥗</h2>
+                        <h2>
+                            {loading ? (
+                                "Loading..."
+                            ) : (
+                                `${getGreeting()}, Dr. ${dieticianName}! 🥗`
+                            )}
+                        </h2>
                         <p>You have 8 consultations scheduled today and 3 meal plans pending review.</p>
                     </div>
                     {/* Quick Stats */}
