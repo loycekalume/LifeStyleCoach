@@ -123,7 +123,7 @@ const Login: React.FC = () => {
             navigate("/instructor");
             break;
           case "Dietician":
-            navigate("/dietician");
+            navigate("/dieticians");
             break;
           default:
             navigate("/login"); 
