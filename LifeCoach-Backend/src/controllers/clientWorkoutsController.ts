@@ -189,3 +189,70 @@ export const deleteClientWorkout = asyncHandler(async (req: Request, res: Respon
 
   res.status(200).json({ message: "Client workout unassigned successfully" });
 });
+
+
+export const getClientDashboardWorkouts = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params; // This will be the client's user_id
+
+  const query = `
+    SELECT 
+        cw.id AS assignment_id,
+        cw.status,
+        cw.assigned_date,
+        cw.notes,
+        w.workout_id,
+        w.title,
+        w.description,
+        w.plan, 
+        iu.name AS instructor_name
+    FROM client_workouts cw
+    JOIN workouts w ON cw.workout_id = w.workout_id
+    JOIN instructors i ON cw.instructor_id = i.instructor_id
+    JOIN users iu ON i.user_id = iu.user_id
+    WHERE cw.client_id = $1
+    ORDER BY cw.assigned_date DESC
+  `;
+
+  const result = await pool.query(query, [id]);
+
+  if (result.rows.length === 0) {
+    // Return empty array instead of 404 so the frontend just shows "No plans"
+    return res.status(200).json([]); 
+  }
+
+  res.status(200).json(result.rows);
+});
+
+
+export const getClientAssignedWorkoutsDetails = async (req: Request, res: Response) => {
+  const { clientId } = req.params;
+
+  try {
+    const query = `
+      SELECT 
+        cw.id AS assignment_id,
+        cw.status,
+        cw.assigned_date,
+        cw.notes AS instructor_notes, -- The note from the instructor
+        w.title,
+        w.description,
+        w.plan, -- This contains the JSON list of exercises (reps, sets, etc.)
+        u.name AS instructor_name
+      FROM client_workouts cw
+      JOIN workouts w ON cw.workout_id = w.workout_id
+      JOIN instructors i ON cw.instructor_id = i.instructor_id
+      JOIN users u ON i.user_id = u.user_id
+      WHERE cw.client_id = $1
+      ORDER BY cw.assigned_date DESC
+    `;
+
+    const result = await pool.query(query, [clientId]);
+    
+    // Return empty array if no workouts found (not 404)
+    res.status(200).json(result.rows);
+
+  } catch (error) {
+    console.error("Error fetching client assigned workouts:", error);
+    res.status(500).json({ message: "Server error fetching workouts" });
+  }
+};
