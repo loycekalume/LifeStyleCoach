@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from 'react';
-import type{  ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { MealPlan } from '../components/dietician/mealPlans/mealPlanCard';
 
 interface ModalContextType {
@@ -10,6 +10,9 @@ interface ModalContextType {
   editingPlan: MealPlan | null;
   openEditModal: (plan: MealPlan) => void;
   closeEditModal: () => void;
+  isConsultationModalOpen: boolean;
+  openConsultationModal: () => void;
+  closeConsultationModal: () => void;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -18,6 +21,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   const [isMealPlanModalOpen, setIsMealPlanModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<MealPlan | null>(null);
+  const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
 
   const openMealPlanModal = () => setIsMealPlanModalOpen(true);
   const closeMealPlanModal = () => setIsMealPlanModalOpen(false);
@@ -32,6 +36,9 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     setEditingPlan(null);
   };
 
+  const openConsultationModal = () => setIsConsultationModalOpen(true);
+  const closeConsultationModal = () => setIsConsultationModalOpen(false);
+
   return (
     <ModalContext.Provider value={{ 
       isMealPlanModalOpen, 
@@ -40,7 +47,10 @@ export function ModalProvider({ children }: { children: ReactNode }) {
       isEditModalOpen,
       editingPlan,
       openEditModal,
-      closeEditModal
+      closeEditModal,
+      isConsultationModalOpen,
+      openConsultationModal,
+      closeConsultationModal
     }}>
       {children}
     </ModalContext.Provider>
