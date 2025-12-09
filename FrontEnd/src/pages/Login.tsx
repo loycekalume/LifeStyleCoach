@@ -69,7 +69,7 @@ const Login: React.FC = () => {
       if (data.user) {
         const userId = data.user.id;
         const userRoleString = data.user.role_id ? getRoleString(data.user.role_id) : null;
-        
+        localStorage.setItem("userName", data.user.name);
         //  FIX: Store BOTH the generic userId and the specific instructorId
         localStorage.setItem("userId", String(userId));
         if (data.user.instructor_id) {
