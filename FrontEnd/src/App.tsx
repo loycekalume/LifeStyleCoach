@@ -8,7 +8,6 @@ import InstructorDashboard from "./pages/instructor"
 import Workouts from "./components/instructor/workouts";
 import SessionsPage from "./components/instructor/allSessions";
 import ProfileLoader from "./routes/profileRoutes";
-import DieticianDashboard from "./pages/dietician";
 import AdminDashboard from "./pages/admin";
 import DieticianList from "./components/admin/dieticianLists";
 import InstructorList from "./components/admin/instructorList";
@@ -33,7 +32,6 @@ const App: React.FC = () => {
         <Route path="/client" element={<ClientDashboard />} />
          <Route path="/dieticians" element={<DieticiansDashboard />} />
         <Route path="/instructor" element={<InstructorDashboard />} />
-        <Route path="/dietician" element={<DieticianDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/instructors" element={<InstructorList />} />
         <Route path="/admin/dieticians" element={<DieticianList />} />
