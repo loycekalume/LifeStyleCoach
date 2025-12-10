@@ -15,26 +15,27 @@ import BookSessionModal from "../components/client/bookSessionModal";
 import LogMealModal from "../components/client/logMealModal";
 import { createMealLog } from "../Services/mealLogService";
 
+// --- NEW IMPORT ---
+import ClientWorkouts from "../components/client/myWorkouts";
+// ------------------
+
 export default function ClientDashboard() {
   const [client, setClient] = useState<Client | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [mealLogOpen, setMealLogOpen] = useState(false);
-  const [userName, setUserName] = useState("User"); // Default name state
+  const [userName, setUserName] = useState("User");
   const [currentPage, setCurrentPage] = useState<
     "dashboard" | "workouts" | "nutrition" | "instructors" | "schedule" | "progress"
   >("dashboard");
 
-  // FIX: Try to get the real User ID from login, fallback to 13 if missing
   const userId = Number(localStorage.getItem("userId") || 13);
 
   useEffect(() => {
-    // 1. Set the Name immediately from storage
     const storedName = localStorage.getItem("userName");
     if (storedName) {
       setUserName(storedName);
     }
 
-    // 2. Load Client Data from Backend
     async function loadClient() {
       try {
         const data = await getClientById(userId);
@@ -71,12 +72,14 @@ export default function ClientDashboard() {
         <>
           <section className="welcome-section">
             <div className="welcome-content">
-              {/* DYNAMIC NAME HERE */}
               <h1>Welcome back, {userName}! 👋</h1>
               <p>Ready to crush your fitness and health goals today?</p>
             </div>
             <div className="quick-actions">
-              <button className="action-btn primary">
+              <button
+                className="action-btn primary"
+                onClick={() => setCurrentPage("workouts")} // <-- Add this line
+              >
                 <i className="fas fa-play"></i>
                 Start Workout
               </button>
@@ -97,7 +100,6 @@ export default function ClientDashboard() {
                 open={mealLogOpen}
                 onClose={() => setMealLogOpen(false)}
                 onSubmit={handleLogMeal}
-
               />
             </div>
           </section>
@@ -121,12 +123,13 @@ export default function ClientDashboard() {
         </>
       )}
 
+      {/* --- HERE IS THE UPDATED WORKOUTS SECTION --- */}
       {currentPage === "workouts" && (
         <section className="main-section">
-          <h1>Workouts</h1>
-          <p>Select a workout plan or start a session.</p>
+          <ClientWorkouts />
         </section>
       )}
+      {/* ------------------------------------------- */}
 
       {currentPage === "nutrition" && (
         <section className="main-section">
