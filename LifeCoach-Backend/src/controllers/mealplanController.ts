@@ -184,3 +184,90 @@ export const deleteMealPlan = asyncHandler(async (req: UserRequest, res: Respons
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+// @desc    Assign a meal plan to a client
+// @route   POST /api/meal-plans/assign
+export const assignMealPlan = asyncHandler(async (req: UserRequest, res: Response) => {
+  try {
+    const userId = req.user?.user_id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    // 1. Get dietician_id from the authenticated user
+    const dieticianQuery = await pool.query(
+      "SELECT dietician_id FROM dieticians WHERE user_id = $1",
+      [userId]
+    );
+
+    if (dieticianQuery.rows.length === 0) {
+      return res.status(404).json({ message: "Dietician profile not found" });
+    }
+
+    const dietician_id = dieticianQuery.rows[0].dietician_id;
+
+    // 2. Get data from body
+    const { client_id, meal_plan_id, start_date, notes } = req.body;
+
+    // Basic validation
+    if (!client_id || !meal_plan_id || !start_date) {
+      return res.status(400).json({ message: "Client, Meal Plan, and Start Date are required" });
+    }
+
+    // 3. Insert assignment
+    const result = await pool.query(
+      `INSERT INTO client_meal_plans 
+        (client_id, meal_plan_id, assigned_by, start_date, notes)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [client_id, meal_plan_id, dietician_id, start_date, notes]
+    );
+
+    res.status(201).json({
+      message: "Meal plan assigned successfully",
+      assignment: result.rows[0],
+    });
+
+  } catch (error) {
+    console.error("Error assigning meal plan:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// @desc    Get potential clients for assignment
+// @route   GET /api/dietician/clients
+export const getDieticianClients = asyncHandler(async (req: UserRequest, res: Response) => {
+  try {
+    const userId = req.user?.user_id;
+    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+    // 1. Verify Dietician exists
+    const dieticianQuery = await pool.query(
+      "SELECT dietician_id FROM dieticians WHERE user_id = $1",
+      [userId]
+    );
+
+    if (dieticianQuery.rows.length === 0) {
+      return res.status(404).json({ message: "Dietician profile not found" });
+    }
+
+    // 2. Fetch Clients
+    // This query gets all users who have a client profile
+    const result = await pool.query(
+      `SELECT 
+         u.user_id, 
+         u.name, 
+         u.email
+       FROM users u 
+       JOIN clients c ON u.user_id = c.user_id
+       ORDER BY u.name ASC`
+    );
+
+    res.status(200).json({
+      message: "Clients retrieved successfully",
+      clients: result.rows,
+    });
+
+  } catch (error) {
+    console.error("Error fetching clients:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
