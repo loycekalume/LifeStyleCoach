@@ -17,6 +17,7 @@ import ClientsPage from "./components/ClientsView";
 import DieticiansDashboard from "./pages/dieticianDashboards";
 import { ModalProvider } from "./contexts/modalContext";
 import MealPlans from "./components/dietician/mealPlans/mealPlans";
+import Chatbot from "./components/chatbot";
 
 
 const App: React.FC = () => {
@@ -24,6 +25,7 @@ const App: React.FC = () => {
     <Router>
           <ToastContainer position="top-right" autoClose={2500} />
          <ModalProvider>
+          <Chatbot />
       <Routes>
 
         <Route path="/" element={<Home />} />
