@@ -6,6 +6,7 @@ import {
   deleteMealPlan,
   getMyMealPlans,
   assignMealPlan,
+  getClientAssignedMealPlans,
 } from "../controllers/mealplanController";
 import { protect } from "../middlewares/auth/protect";
 
@@ -18,5 +19,6 @@ router.post("/assign", protect, assignMealPlan);
 router.get("/dietician/:id", protect, getDieticianMealPlans);
 router.put("/:id", protect, updateMealPlan);
 router.delete("/:id", protect, deleteMealPlan);
+router.get("/client/:clientId", protect, getClientAssignedMealPlans);
 
 export default router;

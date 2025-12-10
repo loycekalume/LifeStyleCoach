@@ -271,3 +271,48 @@ export const getDieticianClients = asyncHandler(async (req: UserRequest, res: Re
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+export const getClientAssignedMealPlans = asyncHandler(async (req: UserRequest, res: Response) => {
+  try {
+    // We get the clientId from the URL parameters
+    const { clientId } = req.params;
+
+    // Optional: Security check to ensure the logged-in user matches the requested client ID
+    const loggedInUserId = req.user?.user_id;
+    if (!loggedInUserId) {
+        return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+   
+
+    const result = await pool.query(
+      `SELECT 
+        cmp.id AS assignment_id,
+        cmp.status,
+        cmp.start_date,
+        cmp.notes AS dietician_notes,
+        mp.meal_plan_id,
+        mp.title,
+        mp.category,
+        mp.description,
+        mp.calories,
+        u.name AS dietician_name
+      FROM client_meal_plans cmp
+      JOIN meal_plans mp ON cmp.meal_plan_id = mp.meal_plan_id
+      JOIN dieticians d ON cmp.assigned_by = d.dietician_id
+      JOIN users u ON d.user_id = u.user_id
+      WHERE cmp.client_id = $1
+      ORDER BY cmp.start_date DESC`,
+      [clientId]
+    );
+
+    res.status(200).json({
+      message: "Assigned meal plans retrieved successfully",
+      plans: result.rows,
+    });
+
+  } catch (error) {
+    console.error("Error fetching client meal plans:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
