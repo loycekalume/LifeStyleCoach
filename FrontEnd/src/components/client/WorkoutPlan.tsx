@@ -22,6 +22,7 @@ export default function WorkoutPlan({ client }: Props) {
   const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  console.log(client)
 
   // Get User ID from storage (fallback to 13)
   const userId = localStorage.getItem("userId") || 13;
