@@ -18,6 +18,7 @@ import DieticiansDashboard from "./pages/dieticianDashboards";
 import { ModalProvider } from "./contexts/modalContext";
 import MealPlans from "./components/dietician/mealPlans/mealPlans";
 import Chatbot from "./components/chatbot";
+import DieticianClients from "./components/dietician/clients/dieticianClients";
 
 
 const App: React.FC = () => {
@@ -41,6 +42,7 @@ const App: React.FC = () => {
         <Route path="/admin/dieticians" element={<DieticianList />} />
         <Route path="/admin/clients" element={<ClientList />} />
          <Route path="clientsView" element={<ClientsPage />} />
+          <Route path="dietician/clients" element={<DieticianClients />} />
      
         <Route
           path="/complete-profile"
