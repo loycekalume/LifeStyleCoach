@@ -11,6 +11,7 @@ import {
   faAllergies,
   faDollarSign,
   faMapMarkerAlt,
+  faDumbbell, // 👈 NEW: Icon for fitness level
 } from "@fortawesome/free-solid-svg-icons";
 import "../styles/clientWizard.css"; 
 
@@ -19,12 +20,14 @@ interface ProfileState {
   userId: number | null;
 }
 
+// 👇 UPDATE 1: Add fitness_level to the Interface
 interface ClientProfileData {
   user_id: number | null;
   age: string;
   weight: string;
   height: string;
   goal: string;
+  fitness_level: string; // 👈 NEW FIELD
   gender: string;
   allergies: string;
   budget: string;
@@ -46,17 +49,21 @@ const ClientProfileWizard: React.FC = () => {
   };
 
   const [step, setStep] = useState(1);
+  
+  // 👇 UPDATE 2: Initialize the new field in State
   const [formData, setFormData] = useState<ClientProfileData>({
     user_id: userId,
     age: "",
     weight: "",
     height: "",
     goal: "",
+    fitness_level: "", // 👈 Initialize as empty
     gender: "",
     allergies: "",
     budget: "",
     location: "",
   });
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +75,6 @@ const ClientProfileWizard: React.FC = () => {
     setFormData((prev) => ({ ...prev, user_id: userId }));
   }, [userId, role, navigate]);
 
-  // ✅ FIX: Simplified handleChange - removed unnecessary state callback
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -92,8 +98,9 @@ const ClientProfileWizard: React.FC = () => {
       }
     }
     if (currentStep === 2) {
-      if (!formData.goal || !formData.budget || !formData.location) {
-        setError("Please set your goal, budget, and location.");
+      // 👇 UPDATE 3: Validate that Fitness Level is selected
+      if (!formData.goal || !formData.budget || !formData.location || !formData.fitness_level) {
+        setError("Please set your goal, fitness level, budget, and location.");
         return false;
       }
     }
@@ -126,12 +133,14 @@ const ClientProfileWizard: React.FC = () => {
     setError(null);
 
     try {
+      // 👇 UPDATE 4: Include fitness_level in the payload sent to Backend
       const payload = {
         user_id: formData.user_id,
         age: parseInt(formData.age, 10),
         weight: parseFloat(formData.weight),
         height: parseFloat(formData.height),
         goal: formData.goal,
+        fitness_level: formData.fitness_level, // 👈 SENDING IT HERE
         gender: formData.gender,
         allergies: formatArray(formData.allergies), 
         budget: formData.budget, 
@@ -157,7 +166,6 @@ const ClientProfileWizard: React.FC = () => {
     }
   };
 
-  // ✅ FIX: Moved Step components outside to prevent recreation on every render
   const renderStep1 = () => (
     <>
       <h3 className="step-title">1. Health Metrics (Required)</h3>
@@ -235,16 +243,33 @@ const ClientProfileWizard: React.FC = () => {
           <option value="lose">Lose Weight</option>
           <option value="gain">Gain Muscle</option>
           <option value="maintain">Maintain Weight / Wellness</option>
-          <option value="maintain">Improve Endurance</option>
-          <option value="maintain">Increase Mobility</option>
         </select>
       </div>
+
+      {/* 👇 UPDATE 5: New Fitness Level Dropdown */}
+      <div className="form-group">
+        <FontAwesomeIcon icon={faDumbbell} className="input-icon" />
+        <select
+          name="fitness_level"
+          value={formData.fitness_level}
+          onChange={handleChange}
+          required
+          style={{ borderLeft: "5px solid #007bff" }} // Optional visual highlight
+        >
+          <option value="">Select Your Experience Level *</option>
+          <option value="beginner">Beginner (New to fitness)</option>
+          <option value="intermediate">Intermediate (Consistent training)</option>
+          <option value="advanced">Advanced (High intensity / Athlete)</option>
+        </select>
+      </div>
+      {/* ------------------------------------- */}
+
       <div className="form-group">
         <FontAwesomeIcon icon={faAllergies} className="input-icon" />
         <input
           type="text"
           name="allergies"
-          placeholder="Food Allergies/Dietary Restrictions (e.g., Peanuts, Gluten) (Optional)"
+          placeholder="Food Allergies (Optional)"
           value={formData.allergies}
           onChange={handleChange}
         />
@@ -270,7 +295,7 @@ const ClientProfileWizard: React.FC = () => {
         <input
           type="text"
           name="location"
-          placeholder="City / Time Zone (e.g., London / EST) *"
+          placeholder="City / Time Zone *"
           value={formData.location}
           onChange={handleChange}
           required

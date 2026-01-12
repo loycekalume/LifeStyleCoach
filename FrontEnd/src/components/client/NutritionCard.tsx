@@ -15,6 +15,7 @@ export default function NutritionCard(): JSX.Element {
 
           <div className="calorie-ring">
             <div className="ring-chart">
+              
               <svg viewBox="0 0 36 36" className="circular-chart">
                 <path
                   className="circle-bg"
