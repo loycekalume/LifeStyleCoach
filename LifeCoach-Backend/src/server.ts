@@ -25,6 +25,7 @@ import dieticianSchedules from "./routes/dieticianSchedules"
 import recommendedWorkoutRoutes from "./routes/recommendedWorkoutRoutes"
 import workoutLogRoutes from "./routes/workoutLogRoutes"
 import recommendedMealplans from "./routes/recommendedMealplans"
+import recommendedMeal from "./routes/recommendedMeal"
 
 
 
@@ -65,6 +66,7 @@ app.use("/client",clientRoutes)
 app.use("/clientWorkouts",clientWorkoutRoutes)
 app.use("/sessions",sessionRoutes)
 app.use("/meal-plans",mealplanRoutes)
+app.use("/recommendedmeals",recommendedMeal)
 app.use("/consultations",dieticianSchedules)
 app.use("/recommendedWorkouts",recommendedWorkoutRoutes)
 app.use("/workoutLogs",workoutLogRoutes)
