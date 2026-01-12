@@ -22,6 +22,9 @@ import clientRoutes from "./routes/clientRoutes"
 import sessionRoutes from "./routes/sessionRoutes"
 import mealplanRoutes from "./routes/mealplanRoutes"
 import dieticianSchedules from "./routes/dieticianSchedules"
+import recommendedWorkoutRoutes from "./routes/recommendedWorkoutRoutes"
+import workoutLogRoutes from "./routes/workoutLogRoutes"
+import recommendedMealplans from "./routes/recommendedMealplans"
 
 
 
@@ -63,6 +66,10 @@ app.use("/clientWorkouts",clientWorkoutRoutes)
 app.use("/sessions",sessionRoutes)
 app.use("/meal-plans",mealplanRoutes)
 app.use("/consultations",dieticianSchedules)
+app.use("/recommendedWorkouts",recommendedWorkoutRoutes)
+app.use("/workoutLogs",workoutLogRoutes)
+app.use("/mealPlans",recommendedMealplans)
+
 
 const port =process.env.PORT 
 
