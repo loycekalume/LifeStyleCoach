@@ -8,7 +8,7 @@ import SessionsCard from "../components/client/SessionCard";
 import ProgressChart from "../components/client/progressChart";
 import WorkoutPlan from "../components/client/WorkoutPlan";
 import NutritionCard from "../components/client/NutritionCard";
-import ActivityCard from "../components/client/ActivityCard";
+import ActivityCard from "../components/client/recommendedMeals";
 import GoalsCard from "../components/client/GoalsCard";
 import InstructorsList from "../components/instructor/instructorList";
 import BookSessionModal from "../components/client/bookSessionModal";
