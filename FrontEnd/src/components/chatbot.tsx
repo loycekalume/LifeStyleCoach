@@ -1,13 +1,11 @@
+// components/Chatbot.tsx
 import React, { useState, useRef, useEffect } from "react";
 import type { ChangeEvent, MouseEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { X, MessageCircle, Send, Loader2 } from "lucide-react";
+import  api  from "../utils/axiosInstance"; // ✅ Import our axios instance
 import "../styles/Chatbot.css";
-
-// Constants
-const USER_ID = 27; // TODO: Replace with logic from your Auth Context
-const API_URL = "http://localhost:3000"; // Ensure this matches your backend
 
 interface Message {
   sender: "user" | "bot";
@@ -16,10 +14,11 @@ interface Message {
 
 const Chatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [messages, setMessages] = useState<Message[]>([]); // Start empty, will load history
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [hasFetchedHistory, setHasFetchedHistory] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -34,29 +33,43 @@ const Chatbot: React.FC = () => {
     if (isOpen && !hasFetchedHistory) {
       const fetchHistory = async () => {
         try {
-          const res = await fetch(`${API_URL}/chathistory/history/${USER_ID}`);
-          if (!res.ok) throw new Error("Failed to load history");
-          
-          const data = await res.json();
+          // No user_id needed - backend reads from cookie
+          const res = await api.get('/chathistory/history');
           
           // Transform DB format to UI format
           const historyMessages: Message[] = [];
-          data.forEach((row: any) => {
-             historyMessages.push({ sender: "user", text: row.question });
-             historyMessages.push({ sender: "bot", text: row.answer });
+          res.data.forEach((row: any) => {
+            historyMessages.push({ sender: "user", text: row.question });
+            historyMessages.push({ sender: "bot", text: row.answer });
           });
 
           // If no history, add default greeting
           if (historyMessages.length === 0) {
-            historyMessages.push({ sender: "bot", text: "Hello! Ask me anything about food, health, or fitness." });
+            historyMessages.push({ 
+              sender: "bot", 
+              text: "Hello! Ask me anything about food, health, or fitness." 
+            });
           }
 
           setMessages(historyMessages);
           setHasFetchedHistory(true);
-        } catch (err) {
+          setError(null);
+        } catch (err: any) {
           console.error("History fetch error:", err);
-          // Fallback greeting if error
-          setMessages([{ sender: "bot", text: "Hello! (Could not load history)" }]);
+          
+          if (err.response?.status === 401) {
+            setError("Session expired. Please log in again.");
+            setMessages([{ 
+              sender: "bot", 
+              text: "⚠️ Please log in to continue chatting." 
+            }]);
+          } else {
+            // Fallback greeting if error
+            setMessages([{ 
+              sender: "bot", 
+              text: "Hello! (Could not load history)" 
+            }]);
+          }
         }
       };
 
@@ -77,25 +90,34 @@ const Chatbot: React.FC = () => {
     // Add User Message Optimistically
     setMessages((prev) => [...prev, { sender: "user", text: userQuestion }]);
     setIsLoading(true);
+    setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: USER_ID, 
-          question: userQuestion,
-        }),
+      // ✅ No user_id needed - backend reads from cookie
+      const response = await api.post('/chat', {
+        question: userQuestion,
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      setMessages((prev) => [...prev, { 
+        sender: "bot", 
+        text: response.data.reply 
+      }]);
 
-      setMessages((prev) => [...prev, { sender: "bot", text: data.reply }]);
-
-    } catch (error) {
+    } catch (error: any) {
       console.error("Chat Error:", error);
-      setMessages((prev) => [...prev, { sender: "bot", text: "⚠️ Sorry, I couldn't reach the server." }]);
+      
+      if (error.response?.status === 401) {
+        setError("Session expired");
+        setMessages((prev) => [...prev, { 
+          sender: "bot", 
+          text: "⚠️ Your session expired. Please log in again." 
+        }]);
+      } else {
+        setMessages((prev) => [...prev, { 
+          sender: "bot", 
+          text: "⚠️ Sorry, I couldn't reach the server." 
+        }]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -139,6 +161,12 @@ const Chatbot: React.FC = () => {
                 </button>
               </div>
 
+              {error && (
+                <div className="chatbot-error">
+                  ⚠️ {error}
+                </div>
+              )}
+
               <div className="chatbot-messages">
                 {messages.map((msg, index) => (
                   <div
@@ -155,7 +183,9 @@ const Chatbot: React.FC = () => {
                 
                 {isLoading && (
                   <div className="message bot loading">
-                    <span className="dot">.</span><span className="dot">.</span><span className="dot">.</span>
+                    <span className="dot">.</span>
+                    <span className="dot">.</span>
+                    <span className="dot">.</span>
                   </div>
                 )}
                 
@@ -175,7 +205,11 @@ const Chatbot: React.FC = () => {
                   className="send-btn"
                   disabled={isLoading || !input.trim()}
                 >
-                  {isLoading ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
+                  {isLoading ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Send size={16} />
+                  )}
                 </button>
               </div>
             </motion.div>
