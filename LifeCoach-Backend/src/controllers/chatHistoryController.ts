@@ -83,3 +83,29 @@ export const deleteChatHistory =asyncHandler( async (req: Request, res: Response
         res.status(500).json({ message: "Internal Server Error" })
     }
 })
+
+// ... existing imports ...
+
+// NEW: Endpoint to get history
+export const getMyChatHistory = asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ error: "User ID is required" });
+  }
+
+  try {
+    // Get last 20 messages for the UI
+    const result = await pool.query(
+      `SELECT question, answer, created_at FROM chathistory 
+       WHERE user_id = $1 
+       ORDER BY id ASC`, // Oldest to newest for display
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("History Error:", error);
+    res.status(500).json({ error: "Failed to fetch history" });
+  }
+});
