@@ -4,6 +4,6 @@ import { protect } from "../middlewares/auth/protect";
 
 const router=express.Router()
 
-router.post("/", chatWithBot)
+router.post("/", protect, chatWithBot);
 
 export default router;

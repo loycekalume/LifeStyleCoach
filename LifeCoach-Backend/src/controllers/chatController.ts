@@ -1,23 +1,29 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import pool from "../db.config";
 import Groq from "groq-sdk";
 import dotenv from "dotenv";
 import asyncHandler from "../middlewares/asyncHandler";
+import { UserRequest } from "../utils/types/userTypes";
 
 dotenv.config();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-export const chatWithBot = asyncHandler(async (req: Request, res: Response) => {
-  const { user_id, question } = req.body;
+export const chatWithBot = asyncHandler(async (req: UserRequest, res: Response) => {
+  // ✅ Get user_id from authenticated token instead of request body
+  const user_id = req.user?.user_id;
+  const { question } = req.body;
 
-  if (!user_id || !question) {
-    return res.status(400).json({ error: "Both user_id and question are required" });
+  if (!user_id) {
+    return res.status(401).json({ error: "User not authenticated" });
+  }
+
+  if (!question) {
+    return res.status(400).json({ error: "Question is required" });
   }
 
   try {
     // 1. Fetch recent history (Limit to last 5 to save tokens/speed)
-    // We order by id DESC to get newest first, then reverse it to chronological order
     const historyResult = await pool.query(
       `SELECT question, answer FROM chathistory 
        WHERE user_id = $1 
@@ -27,7 +33,6 @@ export const chatWithBot = asyncHandler(async (req: Request, res: Response) => {
     );
 
     // 2. Format history for Groq
-    // Groq expects: [{ role: "user", content: "..." }, { role: "assistant", content: "..." }]
     const historyMessages = historyResult.rows.reverse().flatMap((row) => [
       { role: "user", content: row.question },
       { role: "assistant", content: row.answer },
@@ -43,12 +48,12 @@ export const chatWithBot = asyncHandler(async (req: Request, res: Response) => {
     const messages = [
       systemMessage,
       ...historyMessages,
-      { role: "user", content: question }, // The current question
+      { role: "user", content: question },
     ];
 
     // 5. Call Groq
     const completion = await groq.chat.completions.create({
-      messages: messages as any, // Type cast might be needed depending on SDK strictness
+      messages: messages as any,
       model: "llama-3.1-8b-instant",
       temperature: 0.7,
       max_tokens: 200,
