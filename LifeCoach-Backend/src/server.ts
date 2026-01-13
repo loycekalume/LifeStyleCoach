@@ -26,6 +26,7 @@ import recommendedWorkoutRoutes from "./routes/recommendedWorkoutRoutes"
 import workoutLogRoutes from "./routes/workoutLogRoutes"
 import recommendedMealplans from "./routes/recommendedMealplans"
 import recommendedMeal from "./routes/recommendedMeal"
+import matchInstructorRoutes from "./routes/matchInstructorRoutes"
 
 
 
@@ -53,6 +54,7 @@ app.use("/users",userRoutes);
 app.use("/mealLogs",MealLogRoutes)
 app.use("/recipes",recipeRoutes)
 app.use("/instructors",instructorRoutes)
+app.use("/matchinstructor",matchInstructorRoutes)
 app.use("/workout",workoutRoutes)
 app.use("/progress",progressLogRoutes)
 app.use("/messages",messageRoutes)
