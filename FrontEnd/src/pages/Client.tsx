@@ -10,7 +10,7 @@ import WorkoutPlan from "../components/client/WorkoutPlan";
 import NutritionCard from "../components/client/NutritionCard";
 import ActivityCard from "../components/client/recommendedMeals";
 import GoalsCard from "../components/client/GoalsCard";
-import InstructorsList from "../components/instructor/instructorList";
+import InstructorsList from "../components/client/instructorList";
 import BookSessionModal from "../components/client/bookSessionModal";
 import LogMealModal from "../components/client/logMealModal";
 import ClientWorkouts from "../components/client/myWorkouts";
