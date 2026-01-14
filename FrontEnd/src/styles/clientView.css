@@ -1,84 +1,41 @@
+/* --- Page Layout --- */
 .clients-page {
   padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Header & Toggle Section */
+.header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap; /* responsive on small screens */
+  gap: 1rem;
 }
 
 .page-title {
-  text-align: center;
-  margin-bottom: 1.5rem;
+  font-size: 2rem;
+  color: #1f2937;
+  font-weight: 700;
+  margin: 0; /* Override default margin since flex handles it */
 }
 
-.filters {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin-bottom: 2rem;
-}
-
-.filters input,
-.filters select {
-  padding: 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  outline: none;
-}
-
-.clients-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.5rem;
-}
-
-.client-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.client-header {
-  border-bottom: 1px solid #eee;
-  margin-bottom: 0.8rem;
-}
-
-.client-location {
-  color: #888;
-  font-size: 0.9rem;
-}
-
-.card-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
-}
-
-.btn-profile {
-  background: #007bff;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.btn-contact {
-  background: transparent;
-  color: #33cf4d;
-  border: 1px solid #15ff00cc;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
+/* Back Button */
 .back-btn {
   background: #f0f0f0;
   color: #333;
   border: 1px solid #ccc;
   border-radius: 6px;
   padding: 0.5rem 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   cursor: pointer;
   font-size: 0.95rem;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
 }
 
 .back-btn:hover {
@@ -87,32 +44,271 @@
   border-color: #007bff;
 }
 
-
-.pagination {
-  text-align: center;
-  margin-top: 2rem;
+/* --- Filters --- */
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 
-.pagination button {
-  margin: 0 4px;
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  background: white;
-  border-radius: 6px;
+.search-input {
+  padding: 0.8rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  width: 100%;
+  max-width: 400px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* --- Toggle Switch (New) --- */
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f9fafb;
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1px solid #e5e7eb;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch input { opacity: 0; width: 0; height: 0; }
+
+.slider {
+  position: absolute;
   cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
 }
 
-.pagination button.active {
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider { background-color: #2563eb; }
+input:checked + .slider:before { transform: translateX(20px); }
+
+.toggle-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+/* --- Grid & Cards --- */
+.clients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Slightly wider for better info fit */
+  gap: 1.5rem;
+}
+
+.client-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  position: relative; /* Critical for badge positioning */
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid transparent; /* Prevents layout shift when border adds on hover */
+  display: flex;
+  flex-direction: column;
+}
+
+.client-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Matched Card Highlight */
+.matched-card {
+  border: 2px solid #93c5fd; /* Soft Blue Border */
+  background-color: #eff6ff; /* Very Light Blue BG */
+}
+
+/* Match Score Badge */
+.match-score-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background-color: #16a34a; /* Green */
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 2;
+}
+
+/* --- Card Content --- */
+.client-header {
+  margin-bottom: 1rem;
+  padding-right: 60px; /* Make space for the badge so text doesn't overlap */
+}
+
+.client-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.25rem;
+  color: #111827;
+}
+
+.client-location {
+  color: #6b7280;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* AI Reasons Section */
+.match-reasons {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-message {
+  font-size: 0.85rem;
+  background-color: #ffffff;
+  color: #15803d; /* Dark green text */
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #bbf7d0; /* Light green border */
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+/* Client Info Grid */
+.client-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+  background-color: rgba(255,255,255,0.5); /* Semi-transparent for matched cards */
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-item label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.info-item span {
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* --- Actions --- */
+.card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto; /* Pushes buttons to bottom */
+}
+
+.btn-profile {
+  flex: 1;
   background: #007bff;
   color: white;
+  border: none;
+  padding: 0.7rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
 }
+
+.btn-profile:hover {
+  background: #0069d9;
+}
+
+.btn-contact {
+  flex: 1;
+  background: white;
+  color: #16a34a; /* Green text */
+  border: 1px solid #16a34a; /* Green border */
+  padding: 0.7rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-contact:hover {
+  background: #f0fdf4; /* Light green bg on hover */
+}
+
+/* --- Loading & Empty States --- */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px dashed #d1d5db;
+}
+
+/* --- Modal (Preserved from your code) --- */
 .modal-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.4);
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px); /* Modern blur effect */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -121,34 +317,42 @@
 
 .modal-card {
   background: #fff;
-  border-radius: 10px;
-  width: 400px;
-  padding: 1.5rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 450px;
+  padding: 2rem;
   position: relative;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   animation: fadeIn 0.2s ease;
+}
+
+.modal-details p {
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: space-between;
+}
+
+.modal-details p:last-child {
+  border-bottom: none;
 }
 
 .close-btn {
   position: absolute;
-  right: 10px;
-  top: 10px;
+  right: 16px;
+  top: 16px;
   border: none;
   background: transparent;
   font-size: 1.5rem;
+  color: #9ca3af;
   cursor: pointer;
+  transition: color 0.2s;
 }
 
-.modal-details p {
-  margin: 8px 0;
-}
+.close-btn:hover { color: #111827; }
 
 .modal-actions {
   display: flex;
-  justify-content: space-between;
+  gap: 1rem;
   margin-top: 1.5rem;
-}
-
-@keyframes fadeIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
 }

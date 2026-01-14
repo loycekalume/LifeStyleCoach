@@ -4,15 +4,17 @@ export interface Client {
   user_id: number;
   name: string;
   email: string;
-  role_name: string;
+  role_name?: string;
   weight_goal: string;
   age: number;
   gender: string;
-  weight: number;
-  height: number;
-  allergies: string;
+  weight?: number;
+  height?: number;
+  allergies?: string;
   budget: string;
   location: string;
+  match_score?: number;   // New field
+  match_reasons?: string[];
 }
 
 export interface ProgressLog {

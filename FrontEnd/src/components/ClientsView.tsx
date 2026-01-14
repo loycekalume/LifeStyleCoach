@@ -1,164 +1,194 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getClients } from "../Services/clientViewService";
-import type { Client } from "../Services/clientViewService";
+import axiosInstance from "../utils/axiosInstance"; 
 import ClientProfileModal from "./clientViewModal";
 import "../styles/clientView.css";
+
+// ✅ 1. Import the unified type from the service
+import type { Client } from "../Services/clientViewService";
 
 const ClientsPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
-  const [goalFilter, setGoalFilter] = useState("");
-  const [genderFilter, setGenderFilter] = useState("");
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const navigate = useNavigate();
-  const itemsPerPage = 6;
+  
+  // Toggles
+  const [showMatchedOnly, setShowMatchedOnly] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // ✅ Get user role from localStorage
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const navigate = useNavigate();
+
+  // Get user role
   const userRole = localStorage.getItem("userRole");
 
+  // Load clients whenever the toggle changes
   useEffect(() => {
-    loadClients();
-  }, []);
+    fetchData();
+  }, [showMatchedOnly]);
 
-  const loadClients = async () => {
+  const fetchData = async () => {
+    setIsLoading(true);
     try {
-      const data = await getClients();
+      let endpoint = "/client"; // Adjust if your route is just "/client"
+      
+      // If Instructor wants matches, switch endpoint
+      if (showMatchedOnly && userRole === "Instructor") {
+        endpoint = "/client/matches";
+      }
+
+      const response = await axiosInstance.get(endpoint);
+      
+      // Handle different response structures
+      const data = response.data.data || response.data.clients || response.data;
+      
       setClients(data);
       setFilteredClients(data);
     } catch (error) {
       console.error("Error loading clients:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Client-side Search Filtering
   useEffect(() => {
-    let filtered = clients;
+    let result = clients;
 
     if (search.trim()) {
-      filtered = filtered.filter(
+      result = result.filter(
         (c) =>
           c.name.toLowerCase().includes(search.toLowerCase()) ||
           c.location.toLowerCase().includes(search.toLowerCase())
       );
     }
+    setFilteredClients(result);
+  }, [search, clients]);
 
-    if (goalFilter) filtered = filtered.filter((c) => c.weight_goal === goalFilter);
-    if (genderFilter) filtered = filtered.filter((c) => c.gender === genderFilter);
 
-    setFilteredClients(filtered);
-    setCurrentPage(1);
-  }, [search, goalFilter, genderFilter, clients]);
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentClients = filteredClients.slice(startIndex, startIndex + itemsPerPage);
-
-  // ✅ Handle back navigation based on role
+  // Navigation Logic
   const handleBackNavigation = () => {
-    if (userRole === "Instructor") {
-      navigate("/instructor");
-    } else if (userRole === "Dietician") {
-      navigate("/dietician");
-    } else {
-      navigate("/clientsView"); // fallback in case role is missing
-    }
+    if (userRole === "Instructor") navigate("/instructor");
+    else if (userRole === "Dietician") navigate("/dietician");
+    else navigate("/clientsView");
   };
 
   return (
     <div className="clients-page">
-      {/* ✅ Dynamic Back Button */}
       <button className="back-btn" onClick={handleBackNavigation}>
-        ← Back to Profile
+        ← Back to Dashboard
       </button>
 
-      <h1 className="page-title">Client Directory</h1>
+      <div className="header-flex">
+          <h1 className="page-title">
+            {showMatchedOnly ? "Recommended Clients" : "Client Directory"}
+          </h1>
+          
+          {/* ✅ Toggle Switch for Instructors */}
+          {userRole === "Instructor" && (
+             <div className="toggle-container">
+                <label className="switch">
+                  <input 
+                    type="checkbox" 
+                    checked={showMatchedOnly} 
+                    onChange={() => setShowMatchedOnly(!showMatchedOnly)} 
+                  />
+                  <span className="slider round"></span>
+                </label>
+                <span className="toggle-label">Show Smart Matches</span>
+             </div>
+          )}
+      </div>
 
       <div className="filters">
         <input
           type="text"
-          placeholder="Search by name or location..."
+          placeholder="Search name or location..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          className="search-input"
         />
-
-        <select onChange={(e) => setGoalFilter(e.target.value)} defaultValue="">
-          <option value="">Filter by Goal</option>
-          <option value="Weight Loss">Weight Loss</option>
-          <option value="Muscle Gain">Muscle Gain</option>
-          <option value="Fitness Maintenance">Fitness Maintenance</option>
-        </select>
-
-        <select onChange={(e) => setGenderFilter(e.target.value)} defaultValue="">
-          <option value="">Gender</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-        </select>
       </div>
 
-      <div className="clients-grid">
-        {currentClients.length > 0 ? (
-          currentClients.map((client) => (
-            <div key={client.user_id} className="client-card">
-              <div className="client-header">
-                <h3>{client.name}</h3>
-                <p className="client-location">{client.location}</p>
-              </div>
-              <div className="client-info">
-                <p><strong>Goal:</strong> {client.weight_goal}</p>
-                <p><strong>Age:</strong> {client.age}</p>
-                <p><strong>Gender:</strong> {client.gender}</p>
-                <p><strong>Budget:</strong> ${client.budget}</p>
-              </div>
-              <div className="card-actions">
-                <button className="btn-profile" onClick={() => setSelectedClient(client)}>
-                  View Profile
-                </button>
-                <button
-                  className="btn-contact"
-                  onClick={() => window.open(`mailto:${client.email}`, "_blank")}
-                >
-                  Contact
-                </button>
-              </div>
-            </div>
-          ))
-        ) : (
-          <p className="no-results">No clients found.</p>
-        )}
-      </div>
+      {isLoading ? (
+         <div className="loading">
+             <div className="spinner"></div>
+             <p>Finding best matches...</p>
+         </div>
+      ) : (
+         <div className="clients-grid">
+           {filteredClients.length > 0 ? (
+             filteredClients.map((client) => (
+               <div key={client.user_id} className={`client-card ${client.match_score ? 'matched-card' : ''}`}>
+                 
+                 {/* ✅ Match Badge (Now positioned correctly by CSS) */}
+                 {showMatchedOnly && client.match_score && (
+                    <div className="match-score-badge">
+                        {client.match_score}% MATCH
+                    </div>
+                 )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => p - 1)}
-          >
-            &lt;
-          </button>
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <button
-              key={i}
-              className={currentPage === i + 1 ? "active" : ""}
-              onClick={() => setCurrentPage(i + 1)}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => p + 1)}
-          >
-            &gt;
-          </button>
-        </div>
+                 <div className="client-header">
+                   <h3>{client.name}</h3>
+                   <div className="client-location">📍 {client.location}</div>
+                 </div>
+
+                 {/* ✅ Updated AI Insight Box */}
+                 {showMatchedOnly && client.match_reasons && (
+                    <div className="match-reasons">
+                        {client.match_reasons.map((reason, i) => (
+                            <div key={i} className="ai-message">
+                                <span>💡</span>
+                                <span>{reason}</span>
+                            </div>
+                        ))}
+                    </div>
+                 )}
+
+                 {/* ✅ Clean Info Grid (Matches new CSS) */}
+                 <div className="client-info">
+                   <div className="info-item">
+                     <label>Goal</label>
+                     <span>{client.weight_goal || "Not specified"}</span>
+                   </div>
+                   <div className="info-item">
+                     <label>Age</label>
+                     <span>{client.age || "N/A"}</span>
+                   </div>
+                   <div className="info-item">
+                     <label>Budget</label>
+                     <span>{client.budget ? `$${client.budget}` : "Negotiable"}</span>
+                   </div>
+                   <div className="info-item">
+                     <label>Gender</label>
+                     <span>{client.gender}</span>
+                   </div>
+                 </div>
+
+                 <div className="card-actions">
+                   <button className="btn-profile" onClick={() => setSelectedClient(client)}>
+                     View Profile
+                   </button>
+                   <button
+                     className="btn-contact"
+                     onClick={() => window.open(`mailto:${client.email}`, "_blank")}
+                   >
+                     Email Client
+                   </button>
+                 </div>
+               </div>
+             ))
+           ) : (
+             <p className="no-results">No clients found matching your criteria.</p>
+           )}
+         </div>
       )}
 
       {selectedClient && (
-        <ClientProfileModal client={selectedClient} onClose={() => setSelectedClient(null)} />
+        <ClientProfileModal 
+            client={selectedClient} 
+            onClose={() => setSelectedClient(null)} 
+        />
       )}
     </div>
   );
