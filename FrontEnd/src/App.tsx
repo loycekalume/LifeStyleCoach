@@ -19,6 +19,7 @@ import { ModalProvider } from "./contexts/modalContext";
 import MealPlans from "./components/dietician/mealPlans/mealPlans";
 import Chatbot from "./components/chatbot";
 import DieticianClients from "./components/dietician/clients/dieticianClients";
+import ChatPage from "./pages/chatui";
 
 
 const App: React.FC = () => {
@@ -38,6 +39,7 @@ const App: React.FC = () => {
          <Route path="/dietician" element={<DieticiansDashboard />} />
         <Route path="/instructor" element={<InstructorDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/chat/:conversationId" element={<ChatPage />} />
         <Route path="/admin/instructors" element={<InstructorList />} />
         <Route path="/admin/dieticians" element={<DieticianList />} />
         <Route path="/admin/clients" element={<ClientList />} />

@@ -1,0 +1,127 @@
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 85vh; /* Takes up most of the screen */
+  max-width: 800px;
+  margin: 20px auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background-color: #fff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Header */
+.chat-header {
+  padding: 16px 24px;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+}
+
+.chat-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #111827;
+}
+
+/* Messages Area */
+.chat-body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Scrollbar styling */
+.chat-body::-webkit-scrollbar {
+  width: 6px;
+}
+.chat-body::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 4px;
+}
+
+/* Message Bubbles */
+.message-container {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+}
+
+.message-container.you {
+  align-self: flex-end; /* Push to right */
+  align-items: flex-end;
+}
+
+.message-container.other {
+  align-self: flex-start; /* Push to left */
+  align-items: flex-start;
+}
+
+.bubble {
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  position: relative;
+}
+
+.you .bubble {
+  background-color: #2563eb; /* Blue */
+  color: white;
+  border-bottom-right-radius: 2px;
+}
+
+.other .bubble {
+  background-color: #e5e7eb; /* Grey */
+  color: #1f2937;
+  border-bottom-left-radius: 2px;
+}
+
+.meta {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* Footer / Input Area */
+.chat-footer {
+  padding: 16px;
+  background-color: white;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 10px;
+}
+
+.chat-footer input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  font-size: 1rem;
+}
+
+.chat-footer input:focus {
+  border-color: #2563eb;
+}
+
+.send-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.send-btn:hover {
+  background-color: #1d4ed8;
+}
