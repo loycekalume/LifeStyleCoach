@@ -4,6 +4,7 @@ import { Server } from "socket.io"; // 2. IMPORT SOCKET.IO
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import pool from "./db.config";
 
 // Routes imports
 import userRoutes from "../src/routes/usersRoutes";
@@ -71,7 +72,6 @@ app.use("/instructors", instructorRoutes);
 app.use("/matchinstructor", matchInstructorRoutes);
 app.use("/workout", workoutRoutes);
 app.use("/progress", progressLogRoutes);
-app.use("/messages", messageRoutes);
 app.use("/chathistory", chatHistoryRoutes);
 app.use("/posts", communityPostRoutes);
 app.use("/admin", adminRoutes);
@@ -93,24 +93,39 @@ app.use("/mealPlans", recommendedMealplans);
 io.on("connection", (socket) => {
     console.log(`User Connected: ${socket.id}`);
 
-    // Join a specific chat room (e.g., conversation_id)
     socket.on("join_room", (room) => {
         socket.join(room);
         console.log(`User ${socket.id} joined room: ${room}`);
     });
 
-    // Send a message
-    socket.on("send_message", (data) => {
-        // data = { room, author, message, time }
-        // Send to everyone in the room EXCEPT the sender
-        socket.to(data.room).emit("receive_message", data);
+    // ✅ UPDATED: Save message to DB then Emit
+    socket.on("send_message", async (data) => {
+        // data = { room, author, message, senderId, time }
+        
+        try {
+            // 1. Save to Database
+            // Assuming table 'messages' has columns: conversation_id, sender_id, content
+            const saveQuery = `
+                INSERT INTO messages (conversation_id, sender_id, content) 
+                VALUES ($1, $2, $3)
+            `;
+            await pool.query(saveQuery, [data.room, data.senderId, data.message]);
+
+            // 2. Emit to others in room
+            socket.to(data.room).emit("receive_message", data);
+            
+            console.log("Message saved and sent:", data.message);
+
+        } catch (err) {
+            console.error("Socket Message Save Error:", err);
+            // Optional: Emit an error back to sender
+        }
     });
 
     socket.on("disconnect", () => {
         console.log("User Disconnected", socket.id);
     });
 });
-
 const port = process.env.PORT || 5000;
 
 // 6. LISTEN WITH 'server' INSTEAD OF 'app'
