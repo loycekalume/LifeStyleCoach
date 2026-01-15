@@ -4,7 +4,7 @@ import axiosInstance from "../utils/axiosInstance";
 import ClientProfileModal from "./clientViewModal";
 import "../styles/clientView.css";
 
-// ✅ 1. Import the unified type from the service
+// Import the unified type from the service
 import type { Client } from "../Services/clientViewService";
 
 const ClientsPage: React.FC = () => {
@@ -30,7 +30,7 @@ const ClientsPage: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      let endpoint = "/client"; // Adjust if your route is just "/client"
+      let endpoint = "/client"; 
       
       // If Instructor wants matches, switch endpoint
       if (showMatchedOnly && userRole === "Instructor") {
@@ -73,6 +73,23 @@ const ClientsPage: React.FC = () => {
     else navigate("/clientsView");
   };
 
+  // ✅ HANDLER: Start Chat with Client
+ const handleMessageClick = async (targetUserId: number) => {
+  try {
+    const response = await axiosInstance.post("/messages/start", {
+      client_id: targetUserId  
+    });
+
+    const { conversationId } = response.data;
+    if (conversationId) {
+      navigate(`/messages/${conversationId}`);
+    }
+  } catch (error) {
+    console.error("Failed to start chat:", error);
+    alert("Unable to open chat. Please try again.");
+  }
+};
+
   return (
     <div className="clients-page">
       <button className="back-btn" onClick={handleBackNavigation}>
@@ -84,7 +101,7 @@ const ClientsPage: React.FC = () => {
             {showMatchedOnly ? "Recommended Clients" : "Client Directory"}
           </h1>
           
-          {/* ✅ Toggle Switch for Instructors */}
+          {/* Toggle Switch for Instructors */}
           {userRole === "Instructor" && (
              <div className="toggle-container">
                 <label className="switch">
@@ -121,7 +138,7 @@ const ClientsPage: React.FC = () => {
              filteredClients.map((client) => (
                <div key={client.user_id} className={`client-card ${client.match_score ? 'matched-card' : ''}`}>
                  
-                 {/* ✅ Match Badge (Now positioned correctly by CSS) */}
+                 {/* Match Badge */}
                  {showMatchedOnly && client.match_score && (
                     <div className="match-score-badge">
                         {client.match_score}% MATCH
@@ -133,7 +150,7 @@ const ClientsPage: React.FC = () => {
                    <div className="client-location">📍 {client.location}</div>
                  </div>
 
-                 {/* ✅ Updated AI Insight Box */}
+                 {/* AI Insight Box */}
                  {showMatchedOnly && client.match_reasons && (
                     <div className="match-reasons">
                         {client.match_reasons.map((reason, i) => (
@@ -145,7 +162,7 @@ const ClientsPage: React.FC = () => {
                     </div>
                  )}
 
-                 {/* ✅ Clean Info Grid (Matches new CSS) */}
+                 {/* Info Grid */}
                  <div className="client-info">
                    <div className="info-item">
                      <label>Goal</label>
@@ -169,11 +186,13 @@ const ClientsPage: React.FC = () => {
                    <button className="btn-profile" onClick={() => setSelectedClient(client)}>
                      View Profile
                    </button>
+                   
+                   {/* ✅ REPLACED: Email button with Message Button */}
                    <button
                      className="btn-contact"
-                     onClick={() => window.open(`mailto:${client.email}`, "_blank")}
+                     onClick={() => handleMessageClick(client.user_id)}
                    >
-                     Email Client
+                     Message 💬
                    </button>
                  </div>
                </div>

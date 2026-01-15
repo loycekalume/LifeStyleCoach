@@ -25,36 +25,37 @@ import ChatPage from "./pages/chatui";
 const App: React.FC = () => {
   return (
     <Router>
-          <ToastContainer position="top-right" autoClose={2500} />
-         <ModalProvider>
-          <Chatbot />
-      <Routes>
+      <ToastContainer position="top-right" autoClose={2500} />
+      <ModalProvider>
+        <Chatbot />
+        <Routes>
 
-        <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home />} />
 
-        {/* Auth pages */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/client" element={<ClientDashboard />} />
-         <Route path="/dietician" element={<DieticiansDashboard />} />
-        <Route path="/instructor" element={<InstructorDashboard />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/chat/:conversationId" element={<ChatPage />} />
-        <Route path="/admin/instructors" element={<InstructorList />} />
-        <Route path="/admin/dieticians" element={<DieticianList />} />
-        <Route path="/admin/clients" element={<ClientList />} />
-         <Route path="clientsView" element={<ClientsPage />} />
+          {/* Auth pages */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/client" element={<ClientDashboard />} />
+          <Route path="/dietician" element={<DieticiansDashboard />} />
+          <Route path="/instructor" element={<InstructorDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/messages" element={<ChatPage />} />
+          <Route path="/messages/:conversationId" element={<ChatPage />} />
+          <Route path="/admin/instructors" element={<InstructorList />} />
+          <Route path="/admin/dieticians" element={<DieticianList />} />
+          <Route path="/admin/clients" element={<ClientList />} />
+          <Route path="clientsView" element={<ClientsPage />} />
           <Route path="dietician/clients" element={<DieticianClients />} />
-     
-        <Route
-          path="/complete-profile"
-          element={<ProfileLoader />} 
-        />
-        <Route path="/workouts" element={<Workouts />} />
-        <Route path="/sessions" element={<SessionsPage />} />
 
-       <Route path="/meal-plans" element={<MealPlans />} />
-      </Routes>
+          <Route
+            path="/complete-profile"
+            element={<ProfileLoader />}
+          />
+          <Route path="/workouts" element={<Workouts />} />
+          <Route path="/sessions" element={<SessionsPage />} />
+
+          <Route path="/meal-plans" element={<MealPlans />} />
+        </Routes>
       </ModalProvider>
     </Router>
   );

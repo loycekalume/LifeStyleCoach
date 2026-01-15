@@ -42,26 +42,26 @@ const InstructorCard: React.FC<InstructorCardProps> = ({ instructor }) => {
   const locations = parseArray(instructor.available_locations);
 
   // 4. Handle Contact Click Logic
-  const handleContactClick = async () => {
-    try {
-      // call the endpoint we created to get/start a conversation
-      // We send the instructor's USER_ID, not the instructor_id
-      const response = await axiosInstance.post("/messages/start", {
-        instructor_id: instructor.user_id, 
-      });
+const handleContactClick = async () => {
+  console.log('Instructor object:', instructor);
+  
+  try {
+    // Send instructor_id - the backend will look up the user_id
+    const response = await axiosInstance.post("/messages/start", {
+      instructor_id: instructor.instructor_id,
+    });
 
-      const { conversationId } = response.data;
+    console.log('Response:', response.data);
+    const { conversationId } = response.data;
 
-      if (conversationId) {
-        // Redirect to the chat page with the specific conversation ID
-        navigate(`/chat/${conversationId}`);
-      }
-    } catch (error) {
-      console.error("Failed to start conversation:", error);
-      alert("Unable to contact instructor at the moment. Please try again.");
+    if (conversationId) {
+     navigate(`/messages/${conversationId}`);
     }
-  };
-
+  } catch (error: any) {
+    console.error("Full error:", error.response?.data || error);
+    alert(`Error: ${error.response?.data?.message || 'Unable to contact instructor'}`);
+  }
+};
   return (
     <div className="instructor-card">
       
