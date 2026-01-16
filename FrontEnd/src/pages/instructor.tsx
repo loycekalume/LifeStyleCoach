@@ -4,7 +4,7 @@ import ProfileCard from "../components/instructor/profileCard";
 import ContactCard from "../components/instructor/contactCard";
 import Specializations from "../components/instructor/specializationCard";
 import PricingCard from "../components/instructor/pricingCard";
-import MonthlyStats from "../components/instructor/workoutCard";
+import MonthlyStats from "../components/instructor/assignedWorkouts";
 import UpcomingSessions from "../components/instructor/sessionsCard";
 import Reviews from "../components/instructor/reviewCard";
 import "../styles/instructor.css";
