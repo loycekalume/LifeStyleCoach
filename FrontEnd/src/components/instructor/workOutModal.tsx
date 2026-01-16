@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axiosInstance from "../../utils/axiosInstance"; // ✅ Correct Import
 import "../../styles/instructor.css";
 
 // ----------------------------------------------------------------------
@@ -18,6 +19,7 @@ interface Workout {
   title: string;
   description: string;
   video_url?: string;
+  total_duration?: number;
   plan: Exercise[];
 }
 
@@ -32,10 +34,14 @@ interface WorkoutsModalProps {
 // ----------------------------------------------------------------------
 
 const WorkoutsModal: React.FC<WorkoutsModalProps> = ({ isOpen, onClose, instructorId }) => {
+  // Local state for the list of workouts created in this session (optional display)
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  
+  // Form State
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [videoUrl, setVideoUrl] = useState(""); 
+  const [totalDuration, setTotalDuration] = useState<number | string>(""); 
   
   const [exercises, setExercises] = useState<Exercise[]>([{ exercise: "", sets: "", reps: "", duration: "" }]); 
 
@@ -88,15 +94,22 @@ const WorkoutsModal: React.FC<WorkoutsModalProps> = ({ isOpen, onClose, instruct
   };
 
 // ----------------------------------------------------------------------
-// 4. Submission Handler
+// 4. Submission Handler (Using Axios)
 // ----------------------------------------------------------------------
 
   const handleAddWorkout = async () => {
+    // Basic Validation
     if (!title.trim() || !description.trim()) {
         alert("Please provide a Title and Description.");
         return;
     }
 
+    if (!totalDuration || Number(totalDuration) <= 0) {
+        alert("Please specify a valid Total Duration (in minutes).");
+        return;
+    }
+
+    // Clean and validate the plan array
     const workoutPlan = exercises
       .filter(e => e.exercise.trim() && e.sets && (e.reps || e.duration))
       .map(e => {
@@ -125,27 +138,26 @@ const WorkoutsModal: React.FC<WorkoutsModalProps> = ({ isOpen, onClose, instruct
     }
 
     try {
-      const response = await fetch("http://localhost:3000/workout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // ✅ AXIOS CALL: Handles JSON headers and auth automatically
+      const response = await axiosInstance.post("/workout", {
           instructor_id: instructorId, 
           title,
           description,
           video_url: videoUrl,
+          total_duration: Number(totalDuration),
           plan: workoutPlan, 
-        }),
       });
 
-      if (!response.ok) throw new Error(`Failed to add workout`);
-
-      const newWorkout = await response.json();
+      // Axios throws an error automatically for non-200 responses, 
+      // so we can go straight to success logic here.
+      const newWorkout = response.data;
       setWorkouts([...workouts, newWorkout]);
       
-      // Reset
+      // Reset Form
       setTitle("");
       setDescription("");
       setVideoUrl("");
+      setTotalDuration(""); 
       setExercises([{ exercise: "", sets: "", reps: "", duration: "" }]);
       
       alert(`Workout "${newWorkout.title}" added successfully!`);
@@ -153,7 +165,7 @@ const WorkoutsModal: React.FC<WorkoutsModalProps> = ({ isOpen, onClose, instruct
 
     } catch (error) {
       console.error("Error adding workout:", error);
-      alert("Failed to add workout.");
+      alert("Failed to add workout. Please try again.");
     }
   };
 
@@ -163,7 +175,12 @@ const WorkoutsModal: React.FC<WorkoutsModalProps> = ({ isOpen, onClose, instruct
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content"
+        style={{
+          maxHeight: '90vh',      
+          overflowY: 'auto',      
+          display: 'block'        
+        }}>
         <h2>Create New Workout Plan</h2>
 
         <div className="workout-form">
@@ -175,12 +192,23 @@ const WorkoutsModal: React.FC<WorkoutsModalProps> = ({ isOpen, onClose, instruct
             onChange={(e) => setTitle(e.target.value)}
           />
 
-          <input
-            type="url"
-            placeholder="Video Demo URL (e.g. YouTube Link)"
-            value={videoUrl}
-            onChange={(e) => setVideoUrl(e.target.value)}
-          />
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <input
+              style={{ flex: 2 }}
+              type="url"
+              placeholder="Video Demo URL (e.g. YouTube Link)"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+            />
+            <input
+              style={{ flex: 1 }}
+              type="number"
+              placeholder="Total Time (Mins)"
+              min="1"
+              value={totalDuration}
+              onChange={(e) => setTotalDuration(e.target.value)}
+            />
+          </div>
 
           <textarea
             placeholder="Workout Description"
@@ -208,12 +236,9 @@ const WorkoutsModal: React.FC<WorkoutsModalProps> = ({ isOpen, onClose, instruct
                   onChange={(e) => handleExerciseChange(index, "sets", e.target.value)}
                 />
                 
-                {/* ✅ FIX: Removed 'disabled' attribute.
-                   Typing in one field will simply clear the other via handleExerciseChange.
-                */}
                 <input
                   type="number"
-                  placeholder="Reps (e.g., 10)"
+                  placeholder="Reps"
                   min="0"
                   value={exercise.reps}
                   onChange={(e) => handleExerciseChange(index, "reps", e.target.value)}
@@ -221,7 +246,7 @@ const WorkoutsModal: React.FC<WorkoutsModalProps> = ({ isOpen, onClose, instruct
                 
                 <input
                   type="number"
-                  placeholder="Duration (s) (e.g., 60)"
+                  placeholder="Duration (s)"
                   min="0"
                   value={exercise.duration}
                   onChange={(e) => handleExerciseChange(index, "duration", e.target.value)}
@@ -229,7 +254,7 @@ const WorkoutsModal: React.FC<WorkoutsModalProps> = ({ isOpen, onClose, instruct
                 
                 <input
                   type="number"
-                  placeholder="Rest (s) (Optional)"
+                  placeholder="Rest (s)"
                   min="0"
                   value={exercise.rest}
                   onChange={(e) => handleExerciseChange(index, "rest", e.target.value)}

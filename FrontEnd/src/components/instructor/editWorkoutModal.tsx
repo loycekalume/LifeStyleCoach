@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../../utils/axiosInstance";
 import type { Workout, PlanItem } from "../../types/workout"; 
-import "../../styles/editModal.css"; // ✅ Import the new CSS
+import "../../styles/editModal.css"; 
 
 interface Props {
   isOpen: boolean;
@@ -13,7 +13,9 @@ interface Props {
 const EditWorkoutModal: React.FC<Props> = ({ isOpen, onClose, workout, onSave }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [videoUrl, setVideoUrl] = useState(""); // ✅ New State
+  const [videoUrl, setVideoUrl] = useState(""); 
+  // ✅ New State for Duration
+  const [totalDuration, setTotalDuration] = useState<number | string>(""); 
   const [plan, setPlan] = useState<PlanItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -22,7 +24,9 @@ const EditWorkoutModal: React.FC<Props> = ({ isOpen, onClose, workout, onSave })
     if (workout) {
       setTitle(workout.title);
       setDescription(workout.description);
-      setVideoUrl(workout.video_url || ""); // ✅ Load existing video URL
+      setVideoUrl(workout.video_url || "");
+      // ✅ Load existing duration or default to empty
+      setTotalDuration(workout.total_duration || ""); 
       setPlan(workout.plan || []);
     }
   }, [workout]);
@@ -43,12 +47,20 @@ const EditWorkoutModal: React.FC<Props> = ({ isOpen, onClose, workout, onSave })
 
   const handleSave = async () => {
     if (!workout) return;
+    
+    // Simple Validation
+    if (!totalDuration || Number(totalDuration) <= 0) {
+        alert("Please specify a valid Total Duration.");
+        return;
+    }
+
     setIsSaving(true);
 
     const updatedWorkoutData = {
       title,
       description,
-      video_url: videoUrl, // ✅ Include in payload
+      video_url: videoUrl,
+      total_duration: Number(totalDuration), // ✅ Include duration in payload
       plan,
     };
 
@@ -77,7 +89,14 @@ const EditWorkoutModal: React.FC<Props> = ({ isOpen, onClose, workout, onSave })
 
   return (
     <div className="edit-modal-overlay">
-      <div className="edit-modal-content">
+      <div 
+        className="edit-modal-content"
+        style={{
+          maxHeight: '90vh',      
+          overflowY: 'auto',      
+          display: 'block'        
+        }}
+      >
         
         {/* Header */}
         <div className="edit-modal-header">
@@ -98,15 +117,29 @@ const EditWorkoutModal: React.FC<Props> = ({ isOpen, onClose, workout, onSave })
             />
           </div>
 
-          <div className="form-group">
-            <label>Video URL (Optional)</label>
-            <input
-              type="url"
-              className="form-input"
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="https://youtube.com/..."
-            />
+          {/* ✅ Video & Duration Row */}
+          <div className="form-group" style={{ display: 'flex', gap: '15px' }}>
+             <div style={{ flex: 2 }}>
+                <label>Video URL (Optional)</label>
+                <input
+                  type="url"
+                  className="form-input"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="https://youtube.com/..."
+                />
+             </div>
+             <div style={{ flex: 1 }}>
+                <label>Total Duration (Mins)</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={totalDuration}
+                  onChange={(e) => setTotalDuration(e.target.value)}
+                  placeholder="e.g. 45"
+                  min="1"
+                />
+             </div>
           </div>
 
           <div className="form-group">
