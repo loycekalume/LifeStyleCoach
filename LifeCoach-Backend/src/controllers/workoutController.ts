@@ -3,20 +3,21 @@ import pool from "../db.config";
 import asyncHandler from "../middlewares/asyncHandler";
 
 // Add new workout
+// src/controllers/workoutController.ts
+
 export const addWorkout = asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { instructor_id, plan, title, description, video_url } = req.body;
+    // ✅ Get total_duration from body
+    const { instructor_id, plan, title, description, video_url, total_duration } = req.body;
 
     if (!instructor_id || !title || !description || !plan) {
-      return res.status(400).json({ 
-          message: "instructor_id, title, description, and plan are required" 
-      });
+      return res.status(400).json({ message: "Missing required fields" });
     }
     
     const result = await pool.query(
-      `INSERT INTO workouts (instructor_id, plan, description, title, video_url) 
-       VALUES ($1, $2::jsonb, $3, $4, $5) RETURNING *`,
-      [instructor_id, JSON.stringify(plan), description, title, video_url || null]
+      `INSERT INTO workouts (instructor_id, plan, description, title, video_url, total_duration) 
+       VALUES ($1, $2::jsonb, $3, $4, $5, $6) RETURNING *`,
+      [instructor_id, JSON.stringify(plan), description, title, video_url, total_duration || 30]
     );
 
     res.status(201).json(result.rows[0]);
@@ -26,11 +27,13 @@ export const addWorkout = asyncHandler(async (req: Request, res: Response) => {
   }
 });
 
+// Update the updateWorkout function similarly to include total_duration in the UPDATE query
+
 // 2. UPDATE WORKOUT (Includes video_url)
 export const updateWorkout = asyncHandler(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { title, description, plan, video_url } = req.body;
+    const { title, description, plan, video_url,total_duration  } = req.body;
 
     if (!id) return res.status(400).json({ message: "Workout ID is required" });
 
@@ -39,10 +42,11 @@ export const updateWorkout = asyncHandler(async (req: Request, res: Response) =>
        SET title = COALESCE($1, title),
            description = COALESCE($2, description),
            plan = COALESCE($3::jsonb, plan),
-           video_url = COALESCE($4, video_url)
-       WHERE workout_id = $5
+           video_url = COALESCE($4, video_url),
+           total_duration  = COALESCE($5, total_duration)
+       WHERE workout_id = $6
        RETURNING *`,
-      [title, description, plan ? JSON.stringify(plan) : null, video_url, id]
+      [title, description, plan ? JSON.stringify(plan) : null, video_url,total_duration, id]
     );
 
     if (updated.rows.length === 0) return res.status(404).json({ message: "Workout not found" });
