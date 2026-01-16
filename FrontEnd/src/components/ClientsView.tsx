@@ -85,7 +85,7 @@ const ClientsPage: React.FC = () => {
     }
   };
 
-  // ✅ NEW ACTION: Hire Client
+  // ✅ ACTION: Hire Client
   const handleHireClick = async (clientName: string, clientId: number) => {
     if(!window.confirm(`Are you sure you want to add ${clientName} to your official roster?`)) return;
 
@@ -95,7 +95,6 @@ const ClientsPage: React.FC = () => {
       });
       
       alert(`Success! ${clientName} is now a client.`);
-      // Optional: Switch to 'hired' view or refresh
       fetchData(); 
     } catch (error) {
       console.error("Failed to hire client:", error);
@@ -199,8 +198,8 @@ const ClientsPage: React.FC = () => {
                    
                    {/* ✅ DYNAMIC ACTION BUTTONS */}
                    
-                   {/* Case 1: Leads Tab - Show HIRE Button */}
-                   {viewMode === 'leads' ? (
+                   {/* 1. LEADS TAB: Chat + Hire */}
+                   {viewMode === 'leads' && (
                      <div style={{display: 'flex', gap: '5px', flex: 1}}>
                         <button 
                             className="btn-contact"
@@ -217,13 +216,35 @@ const ClientsPage: React.FC = () => {
                             Hire +
                         </button>
                      </div>
-                   ) : (
-                     /* Case 2: Recommended & Hired Tabs - Show Normal Message/Chat Button */
+                   )}
+
+                   {/* 2. HIRED TAB: Chat + Progress (The New Update) */}
+                   {viewMode === 'hired' && (
+                     <div style={{display: 'flex', gap: '5px', flex: 1}}>
+                        <button 
+                            className="btn-contact"
+                            style={{ flex: 1, borderColor: '#ccc', color: '#333' }}
+                            onClick={() => handleMessageClick(client.user_id)}
+                        >
+                            Chat 💬
+                        </button>
+                        <button 
+                            className="btn-contact"
+                            style={{ flex: 1.5, background: '#2563eb', color: 'white', borderColor: '#2563eb' }}
+                            onClick={() => navigate(`/instructor/client-progress/${client.user_id}`)}
+                        >
+                            📈 Progress
+                        </button>
+                     </div>
+                   )}
+
+                   {/* 3. RECOMMENDED TAB: Message Only */}
+                   {viewMode === 'recommended' && (
                      <button 
                         className="btn-contact" 
                         onClick={() => handleMessageClick(client.user_id)}
                      >
-                        {viewMode === 'hired' ? 'Chat 💬' : 'Message'}
+                        Message
                      </button>
                    )}
 

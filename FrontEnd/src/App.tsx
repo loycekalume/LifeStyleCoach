@@ -20,6 +20,7 @@ import MealPlans from "./components/dietician/mealPlans/mealPlans";
 import Chatbot from "./components/chatbot";
 import DieticianClients from "./components/dietician/clients/dieticianClients";
 import ChatPage from "./pages/chatui";
+import ClientProgress from "./components/instructor/clientsProgress";
 
 
 const App: React.FC = () => {
@@ -38,6 +39,7 @@ const App: React.FC = () => {
           <Route path="/client" element={<ClientDashboard />} />
           <Route path="/dietician" element={<DieticiansDashboard />} />
           <Route path="/instructor" element={<InstructorDashboard />} />
+          <Route path="/instructor/client-progress/:clientId" element={<ClientProgress />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/messages" element={<ChatPage />} />
           <Route path="/messages/:conversationId" element={<ChatPage />} />
