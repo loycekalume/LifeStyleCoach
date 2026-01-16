@@ -5,30 +5,51 @@ import asyncHandler from "../middlewares/asyncHandler";
 // Add new workout
 export const addWorkout = asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { instructor_id, plan, title, description } = req.body;
+    const { instructor_id, plan, title, description, video_url } = req.body;
 
-    // Enhanced validation: Check all necessary fields
-    if (!instructor_id || !title || !description || !plan || (Array.isArray(plan) && plan.length === 0)) {
+    if (!instructor_id || !title || !description || !plan) {
       return res.status(400).json({ 
-          message: "instructor_id, title, description, and a non-empty plan are required" 
+          message: "instructor_id, title, description, and plan are required" 
       });
     }
     
-    // The rest of your existing, correct code:
     const result = await pool.query(
-      `INSERT INTO workouts (instructor_id, plan, description, title) 
-       VALUES ($1, $2::jsonb, $3, $4) RETURNING *`, // Assuming you removed created_at
-      [
-        instructor_id,
-        JSON.stringify(plan), 
-        description,
-        title
-      ]
+      `INSERT INTO workouts (instructor_id, plan, description, title, video_url) 
+       VALUES ($1, $2::jsonb, $3, $4, $5) RETURNING *`,
+      [instructor_id, JSON.stringify(plan), description, title, video_url || null]
     );
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error("Error adding workout:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// 2. UPDATE WORKOUT (Includes video_url)
+export const updateWorkout = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, description, plan, video_url } = req.body;
+
+    if (!id) return res.status(400).json({ message: "Workout ID is required" });
+
+    const updated = await pool.query(
+      `UPDATE workouts
+       SET title = COALESCE($1, title),
+           description = COALESCE($2, description),
+           plan = COALESCE($3::jsonb, plan),
+           video_url = COALESCE($4, video_url)
+       WHERE workout_id = $5
+       RETURNING *`,
+      [title, description, plan ? JSON.stringify(plan) : null, video_url, id]
+    );
+
+    if (updated.rows.length === 0) return res.status(404).json({ message: "Workout not found" });
+
+    res.status(200).json(updated.rows[0]);
+  } catch (error) {
+    console.error("Error updating workout:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -62,41 +83,7 @@ export const getWorkoutById = asyncHandler(async (req: Request, res: Response) =
 });
 
 
-export const updateWorkout = asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { title, description, plan } = req.body;
 
-    if (!id) {
-      return res.status(400).json({ message: "Workout ID is required" });
-    }
-
-    // fetch existing workout first
-    const existing = await pool.query(
-      `SELECT * FROM workouts WHERE workout_id = $1`,
-      [id]
-    );
-
-    if (existing.rows.length === 0) {
-      return res.status(404).json({ message: "Workout not found" });
-    }
-
-    const updated = await pool.query(
-      `UPDATE workouts
-       SET title = COALESCE($1, title),
-           description = COALESCE($2, description),
-           plan = COALESCE($3::jsonb, plan)
-       WHERE workout_id = $4
-       RETURNING *`,
-      [title, description, plan ? JSON.stringify(plan) : null, id]
-    );
-
-    res.status(200).json(updated.rows[0]);
-  } catch (error) {
-    console.error("Error updating workout:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
 
 // Delete workout
 export const deleteWorkout = asyncHandler(async (req: Request, res: Response) => {
