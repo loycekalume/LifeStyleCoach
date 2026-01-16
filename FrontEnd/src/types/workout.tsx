@@ -13,4 +13,5 @@ export interface Workout {
   description: string;
   plan: PlanItem[];
   created_at?: string; 
+  video_url?:string;
 }
