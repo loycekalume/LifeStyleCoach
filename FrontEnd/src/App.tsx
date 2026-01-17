@@ -21,41 +21,47 @@ import Chatbot from "./components/chatbot";
 import DieticianClients from "./components/dietician/clients/dieticianClients";
 
 
+
 const App: React.FC = () => {
   return (
     <Router>
-          <ToastContainer position="top-right" autoClose={2500} />
-         <ModalProvider>
+      <ToastContainer position="top-right" autoClose={2500} />
+      <ModalProvider>
+       
+          {/* Chatbot */}
           <Chatbot />
-      <Routes>
 
-        <Route path="/" element={<Home />} />
+          {/* Notifications dropdown */}
+          <div className="flex justify-end p-2">
+          
+          </div>
 
-        {/* Auth pages */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/client" element={<ClientDashboard />} />
-         <Route path="/dietician" element={<DieticiansDashboard />} />
-        <Route path="/instructor" element={<InstructorDashboard />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/instructors" element={<InstructorList />} />
-        <Route path="/admin/dieticians" element={<DieticianList />} />
-        <Route path="/admin/clients" element={<ClientList />} />
-         <Route path="clientsView" element={<ClientsPage />} />
-          <Route path="dietician/clients" element={<DieticianClients />} />
-     
-        <Route
-          path="/complete-profile"
-          element={<ProfileLoader />} 
-        />
-        <Route path="/workouts" element={<Workouts />} />
-        <Route path="/sessions" element={<SessionsPage />} />
+          {/* Routes */}
+          <Routes>
+            <Route path="/" element={<Home />} />
 
-       <Route path="/meal-plans" element={<MealPlans />} />
-      </Routes>
+            {/* Auth pages */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/client" element={<ClientDashboard />} />
+            <Route path="/dietician" element={<DieticiansDashboard />} />
+            <Route path="/instructor" element={<InstructorDashboard />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/instructors" element={<InstructorList />} />
+            <Route path="/admin/dieticians" element={<DieticianList />} />
+            <Route path="/admin/clients" element={<ClientList />} />
+            <Route path="clientsView" element={<ClientsPage />} />
+            <Route path="dietician/clients" element={<DieticianClients />} />
+            <Route path="/complete-profile" element={<ProfileLoader />} />
+            <Route path="/workouts" element={<Workouts />} />
+            <Route path="/sessions" element={<SessionsPage />} />
+            <Route path="/meal-plans" element={<MealPlans />} />
+          </Routes>
+       
       </ModalProvider>
     </Router>
   );
 };
+
 
 export default App;

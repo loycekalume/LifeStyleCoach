@@ -22,6 +22,7 @@ import clientRoutes from "./routes/clientRoutes"
 import sessionRoutes from "./routes/sessionRoutes"
 import mealplanRoutes from "./routes/mealplanRoutes"
 import dieticianSchedules from "./routes/dieticianSchedules"
+import "./jobs/notification.cron"
 
 
 
