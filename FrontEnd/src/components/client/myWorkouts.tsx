@@ -1,125 +1,283 @@
-import { useEffect, useState } from "react";
-import { FaDumbbell, FaUserTie, FaCalendarAlt, FaInfoCircle } from "react-icons/fa";
- // We'll assume basic styling or reuse your current CSS
+import React, { useEffect, useState, useRef } from "react";
+import axiosInstance from "../../utils/axiosInstance";
+import "../../styles/clientWorkouts.css";
 
-interface Exercise {
+// Interface matches your database exactly
+interface PlanItem {
   exercise: string;
-  sets?: number;
+  sets: number;
   reps?: number;
-  duration?: string;
-  rest?: string;
+  duration?: number; // seconds
+  rest?: number; // seconds
 }
 
-interface AssignedWorkout {
+interface Assignment {
   assignment_id: number;
   title: string;
   description: string;
+  video_url?: string;
+  plan: PlanItem[];
   instructor_name: string;
-  instructor_notes: string;
-  status: "scheduled" | "completed" | "missed";
-  assigned_date: string;
-  plan: Exercise[] | any; // Handle the JSONB here
+  status: string;
+  last_performed?: string; 
+  workout_id: number;      
+  total_duration?: number; // ✅ Added this field
 }
 
-export default function ClientWorkouts() {
-  const [workouts, setWorkouts] = useState<AssignedWorkout[]>([]);
-  const [loading, setLoading] = useState(true);
+const ClientWorkouts: React.FC = () => {
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [selectedWorkout, setSelectedWorkout] = useState<Assignment | null>(null);
+  
+  // Timer State (For Gamification/Locking)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [requiredSeconds, setRequiredSeconds] = useState(0);
+  const [isLocked, setIsLocked] = useState(true);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Get logged in user ID
-  const userId = localStorage.getItem("userId") || 13;
+  // Log Modal State
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [logData, setLogData] = useState({ duration: "", notes: "", rating: 3 });
 
+  // 1. Fetch Assignments
   useEffect(() => {
-    async function fetchWorkouts() {
-      try {
-        const res = await fetch(`http://localhost:3000/clientWorkouts/client/assigned-workouts/${userId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setWorkouts(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch workouts", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchWorkouts();
-  }, [userId]);
+    fetchAssignments();
+  }, []);
 
-  if (loading) return <div className="p-4">Loading your workouts...</div>;
+  const fetchAssignments = async () => {
+      try {
+        // ✅ Corrected Route: /clientWorkouts/my-assignments
+        const res = await axiosInstance.get("/workoutLogs/my-assignments");
+        setAssignments(res.data);
+      } catch (err) {
+        console.error("Error loading workouts", err);
+      }
+  };
+
+  // 2. Smart Timer Logic (Based on Total Duration)
+  useEffect(() => {
+    if (selectedWorkout && !isLogModalOpen) {
+      
+      // ✅ LOGIC UPDATE: Use the Instructor's set duration
+      // If total_duration is null/0, default to 30 mins (1800 seconds)
+      const durationMins = selectedWorkout.total_duration || 30;
+      const totalSeconds = durationMins * 60;
+      
+      const limit = Math.floor(totalSeconds * 0.75); // 🔒 Lock until 75% done
+      
+      setRequiredSeconds(limit);
+      setElapsedSeconds(0);
+      setIsLocked(true);
+
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds(prev => {
+          if (prev + 1 >= limit) setIsLocked(false); // 🔓 Unlock!
+          return prev + 1;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [selectedWorkout, isLogModalOpen]);
+
+  const handleOpenLog = () => setIsLogModalOpen(true);
+
+  // 3. Submit Log
+  const submitLog = async () => {
+    if (!selectedWorkout) return;
+    try {
+      // ✅ Corrected Route: /clientWorkouts/log-session
+      await axiosInstance.post("/workoutLogs/log-session", {
+        assignment_id: selectedWorkout.assignment_id,
+        workout_id: selectedWorkout.workout_id,
+        // Auto-fill duration from timer if user doesn't type one
+        duration: logData.duration || Math.ceil(elapsedSeconds / 60), 
+        notes: logData.notes,
+        rating: logData.rating
+      });
+      
+      alert("Great job! Session logged. 🔥");
+      setIsLogModalOpen(false);
+      setSelectedWorkout(null);
+      setLogData({ duration: "", notes: "", rating: 3 }); // Reset form
+      fetchAssignments(); // Refresh list to update "Last Performed" date
+    } catch (error) {
+      console.error("Log failed", error);
+      alert("Failed to save log.");
+    }
+  };
+
+  // YouTube Embed Helper
+  const getEmbedUrl = (url: string) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}?autoplay=1` : null;
+  };
+
+  const formatTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   return (
-    <div className="client-workouts-container" style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto" }}>
-      <h2>My Assigned Workouts</h2>
-      
-      {workouts.length === 0 ? (
-        <p>No workouts assigned yet.</p>
-      ) : (
-        workouts.map((workout) => (
-          <div key={workout.assignment_id} className="workout-detail-card" style={{
-            background: "white", borderRadius: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", marginBottom: "2rem", overflow: "hidden"
-          }}>
-            
-            {/* Header Section */}
-            <div className="card-header" style={{ background: "#f8f9fa", padding: "15px 20px", borderBottom: "1px solid #eee" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h3 style={{ margin: 0, color: "#333" }}><FaDumbbell style={{marginRight: "8px"}}/> {workout.title}</h3>
-                <span className={`status-badge ${workout.status}`} style={{
-                  padding: "4px 12px", borderRadius: "20px", fontSize: "0.85rem", fontWeight: "bold",
-                  background: workout.status === 'completed' ? '#d4edda' : '#fff3cd',
-                  color: workout.status === 'completed' ? '#155724' : '#856404'
-                }}>
-                  {workout.status.toUpperCase()}
-                </span>
+    <div className="client-workout-container">
+      <h1 className="page-title">My Assignments</h1>
+      <div className="workouts-grid">
+        {assignments.map(assign => (
+           <div key={assign.assignment_id} className="workout-card">
+              <div className="card-top">
+                 <h3>{assign.title}</h3>
+                 
+                 {/* ✅ REMOVED Instructor Name, ADDED Duration Badge */}
+                 <span className="duration-badge" style={{
+                     background: '#e0f2fe', color: '#0284c7', 
+                     padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 'bold'
+                 }}>
+                    ⏱ {assign.total_duration || 30} Mins
+                 </span>
               </div>
-              <div style={{ marginTop: "10px", fontSize: "0.9rem", color: "#666", display: "flex", gap: "15px" }}>
-                <span><FaUserTie /> Assigned by: {workout.instructor_name}</span>
-                <span><FaCalendarAlt /> Date: {new Date(workout.assigned_date).toLocaleDateString()}</span>
-              </div>
+              
+              {/* Last Performed Badge */}
+              {assign.last_performed ? (
+                 <p className="last-done-text">
+                    Last done: {new Date(assign.last_performed).toLocaleDateString()}
+                 </p>
+              ) : (
+                 <p className="last-done-text new">New Assignment! 🌟</p>
+              )}
+
+              <button className="btn-start" onClick={() => setSelectedWorkout(assign)}>
+                  Start Routine ▶
+              </button>
+           </div>
+        ))}
+        {assignments.length === 0 && <p>No workouts assigned yet.</p>}
+      </div>
+
+      {/* WORKOUT PLAYER MODAL */}
+      {selectedWorkout && !isLogModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content workout-modal">
+            <div className="modal-header">
+               <h2>{selectedWorkout.title}</h2>
+               <div className="timer-badge">
+                 ⏱ {formatTime(elapsedSeconds)} / {formatTime(requiredSeconds)}
+               </div>
             </div>
 
-            {/* Content Section */}
-            <div className="card-body" style={{ padding: "20px" }}>
-              <p><strong>Description:</strong> {workout.description}</p>
-              
-              {workout.instructor_notes && (
-                <div style={{ background: "#e3f2fd", padding: "10px", borderRadius: "5px", marginBottom: "15px", color: "#0d47a1" }}>
-                  <FaInfoCircle /> <strong>Note from Instructor:</strong> {workout.instructor_notes}
-                </div>
-              )}
+            <div className="modal-body-scroll">
+               {/* Progress Bar */}
+               <div className="progress-container">
+                  <div 
+                    className="progress-fill" 
+                    style={{width: `${Math.min((elapsedSeconds / requiredSeconds) * 100, 100)}%`}}
+                  ></div>
+               </div>
+               
+               <p className="lock-status">
+                  {isLocked 
+                    ? "Keep going! Button unlocks when you reach the target time." 
+                    : "Target reached! You can now finish."}
+               </p>
 
-              {/* Exercises Table */}
-              <h4 style={{ marginTop: "20px", borderBottom: "2px solid #eee", paddingBottom: "5px" }}>Exercise Routine</h4>
-              
-              {Array.isArray(workout.plan) && workout.plan.length > 0 ? (
-                <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
-                  <thead>
-                    <tr style={{ background: "#f1f1f1", textAlign: "left" }}>
-                      <th style={{ padding: "10px" }}>Exercise</th>
-                      <th style={{ padding: "10px" }}>Sets</th>
-                      <th style={{ padding: "10px" }}>Reps</th>
-                      <th style={{ padding: "10px" }}>Duration</th>
-                      <th style={{ padding: "10px" }}>Rest</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {workout.plan.map((ex, idx) => (
-                      <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
-                        <td style={{ padding: "10px", fontWeight: "500" }}>{ex.exercise}</td>
-                        <td style={{ padding: "10px" }}>{ex.sets || "-"}</td>
-                        <td style={{ padding: "10px" }}>{ex.reps || "-"}</td>
-                        <td style={{ padding: "10px" }}>{ex.duration || "-"}</td>
-                        <td style={{ padding: "10px" }}>{ex.rest || "-"}</td>
-                      </tr>
+               {/* Video */}
+               {selectedWorkout.video_url && (
+                 <div className="video-container">
+                   <iframe
+                     width="100%" height="315"
+                     src={getEmbedUrl(selectedWorkout.video_url)!}
+                     title="Video" frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen
+                   ></iframe>
+                 </div>
+               )}
+
+               {/* Plan Table */}
+               <table className="routine-table">
+                 <thead>
+                    <tr><th>Exercise</th><th>Sets</th><th>Target</th><th>Rest</th></tr>
+                 </thead>
+                 <tbody>
+                    {selectedWorkout.plan.map((item, i) => (
+                        <tr key={i}>
+                            <td>{item.exercise}</td>
+                            <td>{item.sets}</td>
+                            <td>{item.reps ? `${item.reps} reps` : `${item.duration}s`}</td>
+                            <td>{item.rest ? `${item.rest}s` : '-'}</td>
+                        </tr>
                     ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p style={{ color: "#888", fontStyle: "italic" }}>No specific exercises listed in plan.</p>
-              )}
+                 </tbody>
+               </table>
+            </div>
+
+            <div className="modal-footer">
+               <button className="btn-cancel" onClick={() => setSelectedWorkout(null)}>Exit</button>
+               
+               {/* 🔒 THE LOCKED BUTTON */}
+               <button 
+                 className={`btn-complete ${isLocked ? 'locked' : ''}`} 
+                 onClick={handleOpenLog}
+                 disabled={isLocked}
+               >
+                 {isLocked ? `🔒 Locked` : "✅ I Finished!"}
+               </button>
             </div>
           </div>
-        ))
+        </div>
+      )}
+
+      {/* LOG MODAL */}
+      {isLogModalOpen && (
+          <div className="modal-overlay" style={{zIndex: 1100}}>
+             <div className="modal-content small-modal">
+                <h3>Session Complete!</h3>
+                
+                <div className="form-group">
+                    <label>Duration (Minutes)</label>
+                    <input 
+                        type="number" 
+                        value={logData.duration} 
+                        onChange={(e) => setLogData({...logData, duration: e.target.value})}
+                        // Placeholder suggests estimated time
+                        placeholder={Math.ceil(elapsedSeconds / 60).toString()}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label>How hard was it? (1-5)</label>
+                    <div className="rating-row">
+                        {[1,2,3,4,5].map(num => (
+                            <button 
+                                key={num}
+                                className={`rate-btn ${logData.rating === num ? 'active' : ''}`}
+                                onClick={() => setLogData({...logData, rating: num})}
+                            >
+                                {num}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="form-group">
+                    <label>Notes (Optional)</label>
+                    <textarea 
+                        value={logData.notes}
+                        onChange={(e) => setLogData({...logData, notes: e.target.value})}
+                        placeholder="Any pain? Felt strong?"
+                    />
+                </div>
+
+                <div className="modal-actions">
+                    <button onClick={() => setIsLogModalOpen(false)} className="btn-cancel">Cancel</button>
+                    <button onClick={submitLog} className="btn-save">Save Log</button>
+                </div>
+             </div>
+          </div>
       )}
     </div>
   );
-}
+};
+
+export default ClientWorkouts;

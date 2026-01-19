@@ -579,4 +579,36 @@ export const updateInstructorProfile = asyncHandler(async (req: Request, res: Re
     res.status(500).json({ message: "Internal server error" });
   }
 });
+export const getInstructorAssignments = asyncHandler(async (req: Request, res: Response) => {
+    const { instructorId } = req.params;
 
+    if (!instructorId) {
+        return res.status(400).json({ message: "Instructor ID is required" });
+    }
+
+    try {
+        const query = `
+            SELECT 
+                cw.id as assignment_id,
+                u.name as client_name,
+                u.email as client_email,
+                w.title as workout_title,
+                cw.status,
+                cw.date_assigned, -- or created_at depending on your schema
+                cw.notes
+            FROM client_workouts cw
+            JOIN users u ON cw.client_id = u.user_id
+            JOIN workouts w ON cw.workout_id = w.workout_id
+            WHERE cw.instructor_id = $1
+            ORDER BY cw.date_assigned DESC
+            LIMIT 10; -- Limit to recent 10 for the dashboard widget
+        `;
+
+        const result = await pool.query(query, [instructorId]);
+
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error("Error fetching assignments:", error);
+        res.status(500).json({ message: "Server error fetching assignments" });
+    }
+});

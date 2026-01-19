@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import pool from "../db.config"
 import asyncHandler from "../middlewares/asyncHandler";
+import { UserRequest } from "../utils/types/userTypes";
 
 export const addChatHistory = asyncHandler(async(req: Request, res: Response) => {
     try {
@@ -83,3 +84,29 @@ export const deleteChatHistory =asyncHandler( async (req: Request, res: Response
         res.status(500).json({ message: "Internal Server Error" })
     }
 })
+
+// ... existing imports ...
+
+// NEW: Endpoint to get history
+export const getMyChatHistory = asyncHandler(async (req: UserRequest, res: Response) => {
+  const user_id = req.user?.user_id;
+
+  if (!user_id) {
+    return res.status(401).json({ error: "User not authenticated" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT id, question, answer, created_at 
+       FROM chathistory 
+       WHERE user_id = $1 
+       ORDER BY created_at ASC`,
+      [user_id]
+    );
+
+    res.json(result.rows);
+  } catch (error: any) {
+    console.error("History fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch chat history" });
+  }
+});

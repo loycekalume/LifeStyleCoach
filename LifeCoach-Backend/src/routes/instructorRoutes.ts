@@ -1,5 +1,5 @@
 import express from "express"
-import { addInstructor, addPricingOption, deleteInstuctor, deletePricingOption, getInstructorContact, getInstructorPricing, getInstructorProfile, getInstructors, getInstructorSpecializations, getInstuctorById, updateInstructor, updateInstructorContact, updateInstructorContacts, updateInstructorProfile, updateInstructorSpecializations, updatePricingOption, updatePricingOptions } from "../controllers/instructorsController";
+import { addInstructor, addPricingOption, deleteInstuctor, deletePricingOption, getInstructorAssignments, getInstructorContact, getInstructorPricing, getInstructorProfile, getInstructors, getInstructorSpecializations, getInstuctorById, updateInstructor, updateInstructorContact, updateInstructorContacts, updateInstructorProfile, updateInstructorSpecializations, updatePricingOption, updatePricingOptions } from "../controllers/instructorsController";
 import { protect } from './../middlewares/auth/protect';
 import { adminGuard } from "../middlewares/auth/roleMiddleware";
 
@@ -18,7 +18,7 @@ router.get("/:id/specializations", getInstructorSpecializations);
 router.put("/:id/specializations", updateInstructorSpecializations);
 router.get("/:id/profile",getInstructorProfile)
 router.put("/:id/profile", updateInstructorProfile);
-
+router.get("/assignments/:instructorId", getInstructorAssignments);
 router.get("/:id/pricing", getInstructorPricing);
 
 router.post("/pricing", addPricingOption);

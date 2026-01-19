@@ -1,12 +1,13 @@
-import express from 'express'
-import { addMealLog, deleteMealLog, getMealLogById, getMealLogByUserId, getMealLogs } from '../controllers/mealLogsController'
+import { Router } from "express";
+import { logMealWithAI, getDailyLog } from "../controllers/mealLogsController"; // Update path
+import {protect} from "../middlewares/auth/protect"; // Your auth middleware
 
-const router= express.Router()
-router.post("/",addMealLog)
-router.get("/",getMealLogs)
-router.get("/:id",getMealLogById)
-router.get("/users/:user_id/meal_logs",getMealLogByUserId)
-router.delete("/:id",deleteMealLog)
+const router = Router();
 
+// Existing routes...
 
-export default router
+// NEW Routes for manual logging
+router.post('/track', protect, logMealWithAI);
+router.get('/track/daily', protect, getDailyLog);
+
+export default router;

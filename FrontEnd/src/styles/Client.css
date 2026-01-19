@@ -228,6 +228,97 @@
 .macro-color.protein { background: #4ECDC4; }
 .macro-color.fat { background: #FFE66D; }
 
+/* Container for the list */
+.recent-meals-section h4 {
+    font-size: 0.9rem;
+    color: #888;
+    margin: 20px 0 10px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.recent-meals {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px; /* Optional: Scroll if list gets too long */
+    overflow-y: auto;
+}
+
+/* Individual Meal Item */
+.meal-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    transition: transform 0.2s;
+}
+
+.meal-item:hover {
+    transform: translateX(2px);
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Time Badge (Breakfast, Lunch...) */
+.meal-time-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #2e7d32;
+    background: #e8f5e9;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-right: 12px;
+    min-width: 70px;
+    text-align: center;
+}
+
+/* Middle Section */
+.meal-details-col {
+    flex: 1;
+}
+
+.meal-description {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.meal-portion {
+    font-size: 0.8rem;
+    color: #777;
+}
+
+/* Calories Right Side */
+.meal-calories {
+    font-weight: 700;
+    color: #555;
+    font-size: 1rem;
+}
+
+.meal-calories span {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: #999;
+}
+
+/* Empty State */
+.empty-logs {
+    text-align: center;
+    padding: 20px;
+    color: #aaa;
+    border: 2px dashed #eee;
+    border-radius: 10px;
+}
+
+.empty-logs i {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+    display: block;
+}
 /* ======================
    Progress Bars
 ====================== */

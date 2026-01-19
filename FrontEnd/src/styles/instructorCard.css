@@ -1,82 +1,202 @@
-/* Container for the list */
+/* --- Page Container --- */
 .instructors-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  padding: 20px;
-  background-color: #f5f7fa; /* Light gray-blue background for the list */
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Slightly wider cards */
+  gap: 24px;
+  padding: 40px 20px;
+  background-color: #f3f4f6; /* Soft gray background */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* Individual card */
+/* --- Card Base --- */
 .instructor-card {
-  background-color: #ffffff; /* White card */
-  border: 1px solid #e0e4e8; /* Soft border */
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  transition: transform 0.2s, box-shadow 0.2s;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px; /* Softer, rounder corners */
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  position: relative; /* For positioning absolute elements like badges */
+  overflow: hidden;
 }
 
 .instructor-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: #bfdbfe; /* Subtle blue border on hover */
 }
 
-/* Card headings */
+/* --- Header Section (Name & Title) --- */
+.card-header {
+  margin-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 12px;
+}
+
 .instructor-card h3 {
-  margin: 0 0 8px;
-  font-size: 1.2rem;
-  color: #1f2937; /* Dark gray */
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
 }
 
-/* Card text */
-.instructor-card p {
-  margin: 4px 0;
-  font-size: 0.95rem;
-  color: #4b5563; /* Medium gray */
-}
-
-/* Bio text */
-.instructor-card .bio {
-  margin-top: 8px;
-  font-style: italic;
-  color: #6b7280; /* Lighter gray for bio */
-}
-
-/* Links */
-.instructor-card a {
-  color: #3b82f6; /* Vibrant blue for links */
-  text-decoration: none;
+.instructor-title {
+  font-size: 0.875rem;
+  color: #6b7280;
   font-weight: 500;
+  margin-top: 4px;
+  display: block;
+}
+/* --- Page Layout --- */
+.match-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: 'Inter', sans-serif;
 }
 
-.instructor-card a:hover {
-  text-decoration: underline;
+/* --- Header Styling --- */
+.list-header {
+  margin-bottom: 32px;
+  text-align: center;
 }
 
-/* Highlight for key info */
-.instructor-card strong {
-  color: #111827; /* Darker gray for strong emphasis */
+.list-header h2 {
+  font-size: 2rem;
+  color: #111827;
+  margin-bottom: 8px;
+  font-weight: 800;
 }
 
-/* Responsive adjustments */
-@media (max-width: 600px) {
+.list-header p {
+  color: #6b7280;
+  font-size: 1.1rem;
+}
+
+/* --- Loading Spinner --- */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  color: #4b5563;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #2563eb; /* Blue spinner */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* --- No Results State --- */
+.no-results {
+  grid-column: 1 / -1; /* Span full width of grid */
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border-radius: 12px;
+  border: 1px dashed #d1d5db;
+  color: #6b7280;
+}
+/* --- Match Score Badge (New Feature) --- */
+.match-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background-color: #dcfce7; /* Light green bg */
+  color: #166534; /* Dark green text */
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 9999px; /* Pill shape */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* --- Information Section --- */
+.card-body {
+  flex-grow: 1;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.info-icon {
+  margin-right: 8px;
+  color: #9ca3af;
+}
+
+.bio-text {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #6b7280;
+  font-style: normal; /* Removed italic for better readability */
+  display: -webkit-box;
+  line-clamp: 3; /* Standard property for compatibility */
+  -webkit-line-clamp: 3; /* Limit bio to 3 lines */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --- Tags / Specializations --- */
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.tag {
+  background-color: #eff6ff; /* Light blue */
+  color: #1d4ed8; /* Strong blue */
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* --- Action Button (Your .contact class upgraded) --- */
+.contact-btn {
+  background-color: #2563eb; /* Primary Blue */
+  color: white;
+  text-decoration: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  margin-top: auto; /* Pushes button to bottom */
+  display: block;
+}
+
+.contact-btn:hover {
+  background-color: #1d4ed8; /* Darker Blue on hover */
+  text-decoration: none;
+}
+
+/* --- Responsive --- */
+@media (max-width: 640px) {
   .instructors-list {
-    grid-template-columns: 1fr; /* single column on small screens */
-    gap: 16px;
+    grid-template-columns: 1fr;
     padding: 16px;
   }
-
-  .instructor-card {
-    padding: 12px;
-  }
-}
-
-.contact{
-  background-color: aqua;
-  padding: 10px 0;
-  
 }

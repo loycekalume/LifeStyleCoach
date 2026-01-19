@@ -19,7 +19,8 @@ import { ModalProvider } from "./contexts/modalContext";
 import MealPlans from "./components/dietician/mealPlans/mealPlans";
 import Chatbot from "./components/chatbot";
 import DieticianClients from "./components/dietician/clients/dieticianClients";
-
+import ChatPage from "./pages/chatui";
+import ClientProgress from "./components/instructor/clientsProgress";
 
 
 const App: React.FC = () => {
@@ -27,37 +28,36 @@ const App: React.FC = () => {
     <Router>
       <ToastContainer position="top-right" autoClose={2500} />
       <ModalProvider>
-       
-          {/* Chatbot */}
-          <Chatbot />
+        <Chatbot />
+        <Routes>
 
-          {/* Notifications dropdown */}
-          <div className="flex justify-end p-2">
-          
-          </div>
+          <Route path="/" element={<Home />} />
 
-          {/* Routes */}
-          <Routes>
-            <Route path="/" element={<Home />} />
+          {/* Auth pages */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/client" element={<ClientDashboard />} />
+          <Route path="/dietician" element={<DieticiansDashboard />} />
+          <Route path="/instructor" element={<InstructorDashboard />} />
+          <Route path="/instructor/client-progress/:clientId" element={<ClientProgress />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/messages" element={<ChatPage />} />
+          <Route path="/messages/:conversationId" element={<ChatPage />} />
+          <Route path="/admin/instructors" element={<InstructorList />} />
+          <Route path="/admin/dieticians" element={<DieticianList />} />
+          <Route path="/admin/clients" element={<ClientList />} />
+          <Route path="clientsView" element={<ClientsPage />} />
+          <Route path="dietician/clients" element={<DieticianClients />} />
 
-            {/* Auth pages */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/client" element={<ClientDashboard />} />
-            <Route path="/dietician" element={<DieticiansDashboard />} />
-            <Route path="/instructor" element={<InstructorDashboard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/instructors" element={<InstructorList />} />
-            <Route path="/admin/dieticians" element={<DieticianList />} />
-            <Route path="/admin/clients" element={<ClientList />} />
-            <Route path="clientsView" element={<ClientsPage />} />
-            <Route path="dietician/clients" element={<DieticianClients />} />
-            <Route path="/complete-profile" element={<ProfileLoader />} />
-            <Route path="/workouts" element={<Workouts />} />
-            <Route path="/sessions" element={<SessionsPage />} />
-            <Route path="/meal-plans" element={<MealPlans />} />
-          </Routes>
-       
+          <Route
+            path="/complete-profile"
+            element={<ProfileLoader />}
+          />
+          <Route path="/workouts" element={<Workouts />} />
+          <Route path="/sessions" element={<SessionsPage />} />
+
+          <Route path="/meal-plans" element={<MealPlans />} />
+        </Routes>
       </ModalProvider>
     </Router>
   );

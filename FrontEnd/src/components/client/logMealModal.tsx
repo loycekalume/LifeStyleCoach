@@ -1,86 +1,114 @@
-import React, { useState } from "react";
-import "../../styles/logMealModal.css";
+import { useState } from "react";
+import axiosInstance from "../../utils/axiosInstance"; // Adjust path as needed
 
-interface LogMealModalProps {
-  open: boolean;
+
+interface MealLogModalProps {
+  isOpen: boolean;
   onClose: () => void;
-  onSubmit?: (meal: { meal_time: string; description: string; calories: number }) => void;
+  onSuccess: () => void; // Trigger to refresh the parent data
 }
 
-const LogMealModal: React.FC<LogMealModalProps> = ({ open, onClose, onSubmit }) => {
-  const [mealTime, setMealTime] = useState<"Breakfast" | "Lunch" | "Supper" | "">("");
-  const [description, setDescription] = useState("");
-  const [calories, setCalories] = useState<number | "">("");
+export default function MealLogModal({ isOpen, onClose, onSuccess }: MealLogModalProps) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    meal_type: "Breakfast",
+    meal_name: "",
+    portion_size: ""
+  });
+  const [error, setError] = useState<string | null>(null);
 
-  if (!open) return null;
+  if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mealTime || !description || !calories) {
-      alert("Please fill in all fields");
-      return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Use your configured axiosInstance (handles auth/refresh automatically)
+      // Assuming route is /recommendedmeals/track based on previous context
+      await axiosInstance.post('/meallogs/track', formData);
+      
+      onSuccess(); // Refresh parent data
+      onClose();   // Close modal
+      setFormData({ meal_type: "Breakfast", meal_name: "", portion_size: "" }); // Reset form
+    } catch (err: any) {
+      console.error("Logging error:", err);
+      setError("Failed to log meal. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    onSubmit?.({
-      meal_time: mealTime,
-      description,
-      calories: Number(calories),
-    });
-
-    // Reset fields after submission
-    setMealTime("");
-    setDescription("");
-    setCalories("");
-    onClose();
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-        <h2>Log a Meal</h2>
-        <form onSubmit={handleSubmit} className="log-meal-form">
-          <label>
-            Meal Time:
-            <select
-              value={mealTime}
-              onChange={(e) => setMealTime(e.target.value as "Breakfast" | "Lunch" | "Supper")}
-              required
-            >
-              <option value="">Select a meal</option>
-              <option value="Breakfast">Breakfast</option>
-              <option value="Lunch">Lunch</option>
-              <option value="Supper">Supper</option>
-            </select>
-          </label>
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3>Log a Meal</h3>
+          <button className="btn-close" onClick={onClose}>&times;</button>
+        </div>
 
-          <label>
-            Description:
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What did you eat?"
-              required
-            />
-          </label>
+        <form onSubmit={handleSubmit}>
+          
+          {/* Meal Type */}
+          <div className="form-group">
+            <label>When?</label>
+            <div className="meal-type-selector">
+              {['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((type) => (
+                <button
+                  type="button"
+                  key={type}
+                  className={`type-btn ${formData.meal_type === type ? 'active' : ''}`}
+                  onClick={() => setFormData({ ...formData, meal_type: type })}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          <label>
-            Calories:
+          {/* Meal Name */}
+          <div className="form-group">
+            <label>What did you eat?</label>
             <input
-              type="number"
-              value={calories}
-              onChange={(e) => setCalories(e.target.value ? Number(e.target.value) : "")}
-              placeholder="e.g. 350"
+              type="text"
+              placeholder="e.g. Ugali and Sukuma"
+              value={formData.meal_name}
+              onChange={(e) => setFormData({ ...formData, meal_name: e.target.value })}
               required
             />
-          </label>
+          </div>
 
-          <button type="submit" className="submit-btn">Log Meal</button>
+          {/* Portion Size */}
+          <div className="form-group">
+            <label>Portion Size (helps AI calculate calories)</label>
+            <input
+              type="text"
+              placeholder="e.g. 1 plate, 2 slices, 300g"
+              value={formData.portion_size}
+              onChange={(e) => setFormData({ ...formData, portion_size: e.target.value })}
+              required
+            />
+          </div>
+
+          {error && <div className="error-msg">{error}</div>}
+
+          <div className="modal-actions">
+            <button type="button" className="btn-cancel" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="btn-submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i> Calculating...
+                </>
+              ) : (
+                "Add Meal"
+              )}
+            </button>
+          </div>
         </form>
-
-        <button className="close-btn" onClick={onClose}>Close</button>
       </div>
     </div>
   );
-};
-
-export default LogMealModal;
+}
