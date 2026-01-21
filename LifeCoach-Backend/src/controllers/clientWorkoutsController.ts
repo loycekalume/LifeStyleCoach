@@ -256,3 +256,59 @@ export const getClientAssignedWorkoutsDetails = async (req: Request, res: Respon
     res.status(500).json({ message: "Server error fetching workouts" });
   }
 };
+
+// src/controllers/clientWorkoutController.ts
+
+// ... imports
+
+// ✅ NEW: Add Feedback & Notify Client
+export const addInstructorFeedback = asyncHandler(async (req: Request, res: Response) => {
+    const { log_id } = req.params;
+    const { feedback } = req.body;
+
+    try {
+        // 1. Update the Log entry with the feedback
+        const updateLogQuery = `
+            UPDATE workout_logs 
+            SET instructor_feedback = $1 
+            WHERE log_id = $2 
+            RETURNING *
+        `;
+        const logResult = await pool.query(updateLogQuery, [feedback, log_id]);
+
+        if (logResult.rows.length === 0) {
+             return res.status(404).json({ message: "Log not found" });
+        }
+
+        const log = logResult.rows[0];
+
+        // 2. Create a Notification for the Client
+        const notifQuery = `
+            INSERT INTO notifications (user_id, message, type)
+            VALUES ($1, $2, 'feedback')
+        `;
+        const message = `Coach posted feedback on your "${log.workout_id}" session: "${feedback.substring(0, 30)}..."`;
+        
+        await pool.query(notifQuery, [log.client_id, message]);
+
+        res.status(200).json({ message: "Feedback sent", log: log });
+    } catch (error) {
+        console.error("Error sending feedback:", error);
+        res.status(500).json({ message: "Failed to send feedback" });
+    }
+});
+
+// ✅ NEW: Get Notifications (For Client)
+export const getMyNotifications = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user.user_id;
+    const query = `SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10`;
+    const result = await pool.query(query, [userId]);
+    res.json(result.rows);
+});
+
+// ✅ NEW: Mark Notification Read
+export const markNotificationRead = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    await pool.query(`UPDATE notifications SET is_read = TRUE WHERE id = $1`, [id]);
+    res.json({ success: true });
+});

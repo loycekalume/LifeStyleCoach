@@ -8,28 +8,12 @@ import "./TopNav.css";
 
 // ✅ Import the new Notification Component
 // Adjust the path if your folders are structured differently (e.g. "../common/NotificationBell")
-import NotificationBell from "../notifications"; 
+import NotificationBell from "./../notifications"; 
 
 interface TopNavProps {
-  currentPage:
-    | "dashboard"
-    | "workouts"
-    | "nutrition"
-    | "instructors"
-    | "schedule"
-    | "progress";
-  onNavigate?: (
-    page:
-      | "dashboard"
-      | "workouts"
-      | "nutrition"
-      | "instructors"
-      | "schedule"
-      | "progress"
-  ) => void;
+  currentPage: "dashboard" | "workouts" | "nutrition" | "instructors" | "schedule" | "progress";
+  onNavigate?: (page: "dashboard" | "workouts" | "nutrition" | "instructors" | "schedule" | "progress") => void;
 }
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -40,37 +24,9 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
   // Fetch user details on load
   useEffect(() => {
     const storedName = localStorage.getItem("userName");
-    if (storedName) setUserName(storedName);
-  }, []);
-
-  // Fetch notifications (poll every minute)
-  useEffect(() => {
-    let interval: number;
-
-    const fetchNotifications = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        const res = await fetch(`${API_URL}/api/notifications`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) return;
-
-        const data = await res.json();
-        setNotifications(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("Failed to fetch notifications", error);
-      }
-    };
-
-    fetchNotifications();
-    interval = window.setInterval(fetchNotifications, 60000);
-
-    return () => clearInterval(interval);
+    if (storedName) {
+      setUserName(storedName);
+    }
   }, []);
 
   const handleLogout = () => {
@@ -81,7 +37,7 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        {/* Logo */}
+        {/* Logo / Brand */}
         <div className="nav-brand">
           <div className="logo">
             <FaHeart />
@@ -93,16 +49,10 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
         <div className="nav-menu">
           <a
             href="#"
-            className={`nav-link ${
-              currentPage === "dashboard" ? "active" : ""
-            }`}
-            onClick={(e) => {
-              e.preventDefault();
-              onNavigate?.("dashboard");
-            }}
+            className={`nav-link ${currentPage === "dashboard" ? "active" : ""}`}
+            onClick={(e) => { e.preventDefault(); onNavigate?.("dashboard"); }}
           >
-            <FaHome />
-            <span>Dashboard</span>
+            <FaHome /><span>Dashboard</span>
           </a>
 
           <a
@@ -110,22 +60,15 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
             className={`nav-link ${currentPage === "workouts" ? "active" : ""}`}
             onClick={(e) => { e.preventDefault(); onNavigate?.("workouts"); }}
           >
-            <FaDumbbell />
-            <span>Workouts</span>
+            <FaDumbbell /><span>Workouts</span>
           </a>
 
           <a
             href="#"
-            className={`nav-link ${
-              currentPage === "nutrition" ? "active" : ""
-            }`}
-            onClick={(e) => {
-              e.preventDefault();
-              onNavigate?.("nutrition");
-            }}
+            className={`nav-link ${currentPage === "nutrition" ? "active" : ""}`}
+            onClick={(e) => { e.preventDefault(); onNavigate?.("nutrition"); }}
           >
-            <FaUtensils />
-            <span>Nutrition</span>
+            <FaUtensils /><span>Nutrition</span>
           </a>
 
           <a
@@ -133,34 +76,23 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
             className={`nav-link ${currentPage === "instructors" ? "active" : ""}`}
             onClick={(e) => { e.preventDefault(); onNavigate?.("instructors"); }}
           >
-            <FaUsers />
-            <span>Instructors</span>
+            <FaUsers /><span>Instructors</span>
           </a>
 
           <a
             href="#"
-            className={`nav-link ${
-              currentPage === "schedule" ? "active" : ""
-            }`}
-            onClick={(e) => {
-              e.preventDefault();
-              onNavigate?.("schedule");
-            }}
+            className={`nav-link ${currentPage === "schedule" ? "active" : ""}`}
+            onClick={(e) => { e.preventDefault(); onNavigate?.("schedule"); }}
           >
-            <FaCalendar />
-            <span>Schedule</span>
+            <FaCalendar /><span>Schedule</span>
           </a>
 
           <a
             href="#"
             className="nav-link"
-            onClick={(e) => {
-              e.preventDefault();
-              onNavigate?.("progress");
-            }}
+            onClick={(e) => { e.preventDefault(); onNavigate?.("progress"); }}
           >
-            <FaChartLine />
-            <span>Progress</span>
+            <FaChartLine /><span>Progress</span>
           </a>
         </div>
 
@@ -179,8 +111,9 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
               {/* Dynamic Avatar */}
               <img 
                 src={`https://ui-avatars.com/api/?name=${userName}&background=random`}
-                alt="Profile"
+                alt="Profile" 
               />
+              {/* Dynamic Name */}
               <span>{userName}</span>
               <FaChevronDown />
             </button>

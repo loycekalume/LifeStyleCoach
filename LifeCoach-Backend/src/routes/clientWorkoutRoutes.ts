@@ -7,15 +7,22 @@ import {
   updateClientWorkoutStatus,
   getInstructorClients,
   getClientDashboardWorkouts,
-  getClientAssignedWorkoutsDetails
+  getClientAssignedWorkoutsDetails,
+  getMyNotifications,
+  markNotificationRead,
+  addInstructorFeedback
 } from "../controllers/clientWorkoutsController";
+import { protect } from "../middlewares/auth/protect";
 
 const router = Router();
 
 router.post("/", assignWorkoutToClient);
 
 
-router.get("/", getClientWorkouts);
+router.get("/", getClientWorkouts);// Instructor actions
+router.get("/notifications", protect, getMyNotifications);
+router.put("/log/:log_id/feedback", protect, addInstructorFeedback);
+router.put("/notifications/:id/read", protect, markNotificationRead);
 router.get("/:instructor_id/clients", getInstructorClients);
 
 router.get("/:id", getClientWorkoutById);
