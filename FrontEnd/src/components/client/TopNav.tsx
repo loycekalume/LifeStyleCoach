@@ -1,7 +1,14 @@
-import { useState, useEffect } from "react"; // Import useEffect
-import { FaHome, FaDumbbell, FaUtensils, FaUsers, FaCalendar, FaChartLine, FaChevronDown, FaUser, FaBell, FaCreditCard, FaSignOutAlt, FaHeart } from "react-icons/fa";
-import "./TopNav.css"
- // Assuming you use this for logout
+import { useState, useEffect } from "react";
+import { 
+  FaHome, FaDumbbell, FaUtensils, FaUsers, FaCalendar, 
+  FaChartLine, FaChevronDown, FaUser, FaCreditCard, 
+  FaSignOutAlt, FaHeart 
+} from "react-icons/fa"; // Removed FaBell since the component has its own
+import "./TopNav.css";
+
+// ✅ Import the new Notification Component
+// Adjust the path if your folders are structured differently (e.g. "../common/NotificationBell")
+import NotificationBell from "../notifications"; 
 
 interface TopNavProps {
   currentPage: "dashboard" | "workouts" | "nutrition" | "instructors" | "schedule" | "progress";
@@ -10,11 +17,11 @@ interface TopNavProps {
 
 export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [userName, setUserName] = useState("User"); // Default state
-  const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
-  // const navigate = useNavigate(); // Uncomment if you want logout logic
+  const [userName, setUserName] = useState("User");
 
-  // --- NEW: Fetch user details on load ---
+  const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
+
+  // Fetch user details on load
   useEffect(() => {
     const storedName = localStorage.getItem("userName");
     if (storedName) {
@@ -23,7 +30,6 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
   }, []);
 
   const handleLogout = () => {
-     // logical cleanup
      localStorage.clear();
      window.location.href = "/login"; 
   };
@@ -51,7 +57,7 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
 
           <a
             href="#"
-           className={`nav-link ${currentPage === "workouts" ? "active" : ""}`}
+            className={`nav-link ${currentPage === "workouts" ? "active" : ""}`}
             onClick={(e) => { e.preventDefault(); onNavigate?.("workouts"); }}
           >
             <FaDumbbell /><span>Workouts</span>
@@ -67,7 +73,7 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
 
           <a
             href="#"
-             className={`nav-link ${currentPage === "instructors" ? "active" : ""}`}
+            className={`nav-link ${currentPage === "instructors" ? "active" : ""}`}
             onClick={(e) => { e.preventDefault(); onNavigate?.("instructors"); }}
           >
             <FaUsers /><span>Instructors</span>
@@ -91,11 +97,18 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
         </div>
 
 
-        {/* Profile / Dropdown */}
-        <div className="nav-profile">
+        {/* Profile / Dropdown Section */}
+        <div className="nav-profile" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          
+          {/* ✅ 1. THE NOTIFICATION BELL */}
+          <div className="nav-bell-wrapper">
+             <NotificationBell />
+          </div>
+
+          {/* 2. PROFILE DROPDOWN */}
           <div className="profile-dropdown">
             <button className="profile-btn" onClick={toggleDropdown}>
-              {/* Dynamic Avatar based on Name */}
+              {/* Dynamic Avatar */}
               <img 
                 src={`https://ui-avatars.com/api/?name=${userName}&background=random`}
                 alt="Profile" 
@@ -104,13 +117,16 @@ export default function TopNav({ currentPage, onNavigate }: TopNavProps) {
               <span>{userName}</span>
               <FaChevronDown />
             </button>
+            
             {dropdownOpen && (
               <div className="dropdown-menu">
                 <a href="#" className="dropdown-item"><FaUser /> Profile Settings</a>
-                <a href="#" className="dropdown-item"><FaBell /> Notifications</a>
+                {/* Notification link removed (Redundant) */}
                 <a href="#" className="dropdown-item"><FaCreditCard /> Billing</a>
                 <div className="dropdown-divider"></div>
-                <button onClick={handleLogout} className="dropdown-item" style={{width:'100%', border:'none', background:'none', textAlign:'left', cursor:'pointer'}}><FaSignOutAlt /> Sign Out</button>
+                <button onClick={handleLogout} className="dropdown-item" style={{width:'100%', border:'none', background:'none', textAlign:'left', cursor:'pointer'}}>
+                    <FaSignOutAlt /> Sign Out
+                </button>
               </div>
             )}
           </div>

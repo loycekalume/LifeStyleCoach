@@ -13,6 +13,7 @@ interface Log {
     duration_minutes: number;
     rating: number; // 1-5
     client_notes: string;
+    instructor_feedback?: string; // ✅ Added to interface
 }
 
 const ClientProgress: React.FC = () => {
@@ -23,6 +24,27 @@ const ClientProgress: React.FC = () => {
     const [chartData, setChartData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ totalMinutes: 0, sessionCount: 0 });
+    
+    // Feedback State
+    const [activeFeedbackLog, setActiveFeedbackLog] = useState<number | null>(null);
+    const [feedbackText, setFeedbackText] = useState("");
+
+    const handleSubmitFeedback = async (logId: number) => {
+        if (!feedbackText.trim()) return;
+        try {
+            await axiosInstance.put(`/clientWorkouts/log/${logId}/feedback`, {
+                feedback: feedbackText
+            });
+            alert("Feedback sent & Client notified! 🔔");
+            setActiveFeedbackLog(null);
+            setFeedbackText("");
+            // Reload logs to see the new comment immediately
+            window.location.reload(); 
+        } catch (err) {
+            console.error(err);
+            alert("Failed to send feedback");
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -49,7 +71,7 @@ const ClientProgress: React.FC = () => {
             date: new Date(log.date_completed).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
             minutes: log.duration_minutes,
             intensity: log.rating,
-            title: log.workout_title // For tooltip
+            title: log.workout_title
         }));
 
         // 3. Calculate Totals
@@ -136,7 +158,7 @@ const ClientProgress: React.FC = () => {
                                 </ResponsiveContainer>
                             </div>
 
-                            {/* 2. LEGEND CONTAINER (Sits naturally below the chart) */}
+                            {/* 2. LEGEND CONTAINER */}
                             <div style={{
                                 display: 'flex',
                                 justifyContent: 'center',
@@ -145,19 +167,14 @@ const ClientProgress: React.FC = () => {
                                 paddingTop: '15px',
                                 borderTop: '1px solid #f3f4f6'
                             }}>
-                                {/* Light Item */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <span style={{ width: 16, height: 16, background: '#10b981', borderRadius: 4 }}></span>
                                     <span style={{ color: '#374151', fontSize: '0.9rem', fontWeight: 600 }}>Light</span>
                                 </div>
-
-                                {/* Moderate Item */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <span style={{ width: 16, height: 16, background: '#3b82f6', borderRadius: 4 }}></span>
                                     <span style={{ color: '#374151', fontSize: '0.9rem', fontWeight: 600 }}>Moderate</span>
                                 </div>
-
-                                {/* Hard Item */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <span style={{ width: 16, height: 16, background: '#ef4444', borderRadius: 4 }}></span>
                                     <span style={{ color: '#374151', fontSize: '0.9rem', fontWeight: 600 }}>Hard</span>
@@ -194,6 +211,38 @@ const ClientProgress: React.FC = () => {
                             {log.client_notes && (
                                 <div style={{ marginTop: '10px', background: '#f9fafb', padding: '10px', borderRadius: '6px', fontStyle: 'italic' }}>
                                     "{log.client_notes}"
+                                </div>
+                            )}
+
+                            {/* ✅ FEEDBACK SECTION */}
+                            {log.instructor_feedback ? (
+                                <div style={{ marginTop: '15px', padding: '10px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: '6px', fontSize: '0.9rem' }}>
+                                    <strong>👨‍🏫 Coach Feedback:</strong> "{log.instructor_feedback}"
+                                </div>
+                            ) : (
+                                /* ✅ Add Feedback Form */
+                                <div style={{ marginTop: '10px' }}>
+                                    {activeFeedbackLog === log.log_id ? (
+                                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                            <input
+                                                type="text"
+                                                value={feedbackText}
+                                                onChange={(e) => setFeedbackText(e.target.value)}
+                                                placeholder="Write comment..."
+                                                style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                                autoFocus
+                                            />
+                                            <button onClick={() => handleSubmitFeedback(log.log_id)} className="btn-small" style={{ background: '#2563eb', color: 'white', padding: '0 15px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Send</button>
+                                            <button onClick={() => { setActiveFeedbackLog(null); setFeedbackText(""); }} className="btn-small" style={{ background: '#e5e7eb', color: '#333', padding: '0 15px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setActiveFeedbackLog(log.log_id)}
+                                            style={{ fontSize: '0.8rem', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', marginTop: '5px' }}
+                                        >
+                                            + Add Feedback
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
