@@ -1,23 +1,26 @@
 import { useState, useEffect } from "react";
 import { 
   FaSearch, 
-  FaUser, 
-  FaEnvelope, 
-  FaMapMarkerAlt, 
   FaBullseye, 
   FaVenusMars,
-  
+  FaRobot, // Icon for AI
+  FaExclamationCircle
 } from "react-icons/fa";
+import axiosInstance from "../../../utils/axiosInstance";
 
-// 1. Define the interface to match your SQL response exactly
+// 1. Updated Interface including AI Fields
 interface ClientData {
   user_id: number;
-  name: string;        // From users table
-  email: string;       // From users table
-  age?: number;        // From clients table
-  gender?: string;     // From clients table
-  location?: string;   // From clients table
-  weight_goal?: string;// From clients table
+  name: string;
+  email: string;
+  age?: number;
+  gender?: string;
+  location?: string;
+  weight_goal?: string;
+  // ✅ New AI Fields
+  match_score?: number;
+  match_reason?: string;
+  health_conditions?: string[];
 }
 
 export default function DieticianClients() {
@@ -26,56 +29,46 @@ export default function DieticianClients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
 
-  // 2. Fetch Data on Component Mount
+  // 2. Fetch AI MATCHED Clients
   useEffect(() => {
-    async function fetchClients() {
-      const token = localStorage.getItem("token");
-      
-      // Safety check: ensure token exists
-      if (!token) {
-        setError("You are not authenticated. Please log in.");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const res = await fetch("http://localhost:3000/meal-plans/clients", {
-          headers: {
-            "Authorization": `Bearer ${token}`, // Matches 'req.user' in backend
-            "Content-Type": "application/json"
-          }
-        });
-
-        const data = await res.json();
-        
-        if (res.ok) {
-          // Robust handling: data might be the array directly or inside data.clients
-          const clientList = Array.isArray(data) ? data : (data.clients || []);
-          setClients(clientList);
-        } else {
-          setError(data.message || "Failed to load clients");
-        }
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError("Network error. Is the backend running?");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchClients();
+    fetchAiMatches();
   }, []);
 
-  // 3. Filter Logic (Search by Name or Email)
+  const fetchAiMatches = async () => {
+    try {
+      setLoading(true);
+      // Calls the AI Controller we built
+      const res = await axiosInstance.get("/dietician/match-ai"); 
+      
+      // The controller returns { data: [...] }
+      setClients(res.data.data);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError("Could not load matches. Is the AI service running?");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 3. Filter Logic
   const filteredClients = clients.filter(client => 
     (client.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (client.email || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Helper for Match Score Color
+  const getScoreColor = (score: number = 0) => {
+      if (score >= 80) return "#10b981"; // Green (High)
+      if (score >= 50) return "#f59e0b"; // Orange (Medium)
+      return "#ef4444"; // Red (Low)
+  };
+
   if (loading) return (
-    <div style={{ padding: "40px", textAlign: "center", color: "#666" }}>
+    <div style={{ padding: "60px", textAlign: "center", color: "#666" }}>
+      <div style={{ fontSize: "2rem", marginBottom: "20px" }}>🤖</div>
       <i className="fas fa-spinner fa-spin" style={{ marginRight: "10px" }}></i>
-      Loading your client list...
+      <strong>AI is analyzing client profiles...</strong>
+      <p style={{fontSize: "0.9rem", marginTop: "10px"}}>Finding the best matches for your specialization.</p>
     </div>
   );
 
@@ -83,9 +76,19 @@ export default function DieticianClients() {
     <div className="dietician-clients-page" style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
       
       {/* Page Header */}
-      <div style={{ marginBottom: "30px", borderBottom: "1px solid #eee", paddingBottom: "15px" }}>
-        <h1 style={{ color: "#2c3e50", margin: "0 0 10px 0" }}>My Clients</h1>
-        <p style={{ color: "#7f8c8d", margin: 0 }}>View and manage the clients in your system.</p>
+      <div style={{ marginBottom: "30px", borderBottom: "1px solid #eee", paddingBottom: "15px", display: 'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div>
+            <h1 style={{ color: "#2c3e50", margin: "0 0 10px 0", display:'flex', alignItems:'center', gap:'10px' }}>
+                <FaRobot style={{color: '#8b5cf6'}} /> Smart Client Matching
+            </h1>
+            <p style={{ color: "#7f8c8d", margin: 0 }}>AI-ranked opportunities based on your clinical specialization.</p>
+        </div>
+        <button 
+            onClick={fetchAiMatches}
+            style={{ padding: '10px 20px', background: '#8b5cf6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+            ↻ Refresh Analysis
+        </button>
       </div>
 
       {/* Search Bar */}
@@ -93,7 +96,7 @@ export default function DieticianClients() {
         <FaSearch style={{ position: "absolute", left: "15px", top: "50%", transform: "translateY(-50%)", color: "#95a5a6" }} />
         <input
           type="text"
-          placeholder="Search by Name or Email..."
+          placeholder="Filter matches..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
@@ -108,33 +111,16 @@ export default function DieticianClients() {
         />
       </div>
 
-      {/* Error Message */}
       {error && (
-        <div style={{ 
-          color: "#721c24", 
-          backgroundColor: "#f8d7da", 
-          padding: "15px", 
-          borderRadius: "5px", 
-          marginBottom: "20px",
-          border: "1px solid #f5c6cb"
-        }}>
+        <div style={{ color: "#721c24", backgroundColor: "#f8d7da", padding: "15px", borderRadius: "5px", marginBottom: "20px" }}>
           {error}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && !error && filteredClients.length === 0 && (
-        <div style={{ textAlign: "center", padding: "50px", background: "#f9f9f9", borderRadius: "10px", color: "#7f8c8d" }}>
-          <FaUser size={40} style={{ marginBottom: "15px", color: "#bdc3c7" }} />
-          <h3>No clients found.</h3>
-          <p>Try searching for a different name or email.</p>
         </div>
       )}
 
       {/* Client Cards Grid */}
       <div style={{ 
         display: "grid", 
-        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", 
+        gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", 
         gap: "25px" 
       }}>
         {filteredClients.map((client) => (
@@ -142,84 +128,93 @@ export default function DieticianClients() {
             background: "white",
             borderRadius: "12px",
             boxShadow: "0 4px 6px rgba(0,0,0,0.05)",
-            padding: "20px",
             border: "1px solid #f1f2f6",
             display: "flex",
             flexDirection: "column",
-            transition: "transform 0.2s ease"
+            overflow: "hidden",
+            position: 'relative'
           }}>
             
-            {/* 1. Avatar, Name & Email */}
-            <div style={{ display: "flex", alignItems: "center", gap: "15px", marginBottom: "15px" }}>
-              {/* Dynamic Avatar using Name */}
-              <img 
-                src={`https://ui-avatars.com/api/?name=${client.name}&background=2ecc71&color=fff&size=128`} 
-                alt={client.name}
-                style={{ width: "60px", height: "60px", borderRadius: "50%", objectFit: "cover" }}
-              />
-              <div style={{ overflow: "hidden" }}>
-                <h3 style={{ margin: "0 0 5px 0", fontSize: "1.15rem", color: "#2c3e50", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {client.name}
-                </h3>
-                <span style={{ fontSize: "0.9rem", color: "#7f8c8d", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <FaEnvelope size={12} /> 
-                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {client.email}
-                  </span>
-                </span>
-              </div>
+            {/* MATCH BADGE */}
+            {client.match_score && (
+                <div style={{
+                    position: 'absolute', top: '15px', right: '15px',
+                    background: getScoreColor(client.match_score),
+                    color: 'white', padding: '5px 10px', borderRadius: '20px',
+                    fontWeight: 'bold', fontSize: '0.85rem',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }}>
+                    {client.match_score}% Match
+                </div>
+            )}
+
+            <div style={{ padding: "20px" }}>
+                {/* 1. Header: Avatar & Name */}
+                <div style={{ display: "flex", alignItems: "center", gap: "15px", marginBottom: "15px" }}>
+                <img 
+                    src={`https://ui-avatars.com/api/?name=${client.name}&background=random&color=fff&size=128`} 
+                    alt={client.name}
+                    style={{ width: "60px", height: "60px", borderRadius: "50%", objectFit: "cover" }}
+                />
+                <div>
+                    <h3 style={{ margin: "0", fontSize: "1.15rem", color: "#2c3e50" }}>{client.name}</h3>
+                    <span style={{ fontSize: "0.9rem", color: "#7f8c8d" }}>{client.location || "Remote"}</span>
+                </div>
+                </div>
+
+                {/* 2. AI Reasoning Box */}
+                {client.match_reason && (
+                    <div style={{
+                        background: '#f0f9ff', borderLeft: '4px solid #3b82f6',
+                        padding: '10px', fontSize: '0.9rem', color: '#1e3a8a',
+                        marginBottom: '15px', borderRadius: '4px'
+                    }}>
+                        <strong>💡 Why:</strong> {client.match_reason}
+                    </div>
+                )}
+
+                <hr style={{ border: "0", borderTop: "1px solid #eee", margin: "15px 0" }} />
+
+                {/* 3. Details Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "0.9rem", color: "#555" }}>
+                    <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+                        <FaBullseye style={{color:'#10b981'}} /> {client.weight_goal || "Wellness"}
+                    </div>
+                    <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+                        <FaVenusMars style={{color:'#6366f1'}} /> {client.gender || "N/A"}, {client.age || "?"}
+                    </div>
+                    {/* Health Conditions Tag */}
+                    {client.health_conditions && client.health_conditions.length > 0 && (
+                        <div style={{ gridColumn: '1 / -1', marginTop:'5px' }}>
+                            <FaExclamationCircle style={{color:'#ef4444', marginRight:'5px'}} />
+                            <span style={{color:'#ef4444', fontWeight:'500'}}>
+                                {Array.isArray(client.health_conditions) 
+                                    ? client.health_conditions.join(", ") 
+                                    : client.health_conditions}
+                            </span>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <hr style={{ border: "0", borderTop: "1px solid #eee", width: "100%", margin: "0 0 15px 0" }} />
-
-            {/* 2. Client Details (Goals, Location, etc) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "0.9rem", color: "#555", marginBottom: "20px" }}>
-               
-               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <FaVenusMars style={{ color: "#3498db" }} /> 
-                  <span>{client.gender || "Unknown"}</span>
-               </div>
-
-               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <FaMapMarkerAlt style={{ color: "#e74c3c" }} /> 
-                  <span>{client.location || "Remote"}</span>
-               </div>
-               
-               {/* Full width row for Goal */}
-               <div style={{ display: "flex", alignItems: "center", gap: "8px", gridColumn: "1 / -1", background: "#f8f9fa", padding: "8px", borderRadius: "6px" }}>
-                  <FaBullseye style={{ color: "#27ae60" }} /> 
-                  <strong>Goal:</strong> {client.weight_goal || "General Wellness"}
-               </div>
-
-            </div>
-
-            {/* 3. Action Button */}
+            {/* 4. Action Button */}
             <button style={{
               marginTop: "auto",
-              padding: "12px",
-              background: "white",
+              padding: "15px",
+              background: "#f8fafc",
+              borderTop: "1px solid #eee",
               color: "#3498db",
-              border: "2px solid #3498db",
-              borderRadius: "8px",
+              border: "none",
               cursor: "pointer",
               fontWeight: "600",
-              fontSize: "0.95rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              transition: "all 0.2s"
+              width: "100%",
+              textAlign: "center",
+              transition: "background 0.2s"
             }}
-            onMouseOver={(e) => {
-                e.currentTarget.style.background = "#3498db";
-                e.currentTarget.style.color = "white";
-            }}
-            onMouseOut={(e) => {
-                e.currentTarget.style.background = "white";
-                e.currentTarget.style.color = "#3498db";
-            }}
+            onMouseOver={(e) => e.currentTarget.style.background = "#f1f5f9"}
+            onMouseOut={(e) => e.currentTarget.style.background = "#f8fafc"}
             >
-              <FaUser /> View Full Profile
+              Send Proposal ➜
             </button>
           </div>
         ))}
