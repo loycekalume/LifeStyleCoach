@@ -1,18 +1,13 @@
-import express from 'express';
+import { Router } from "express";
+import { protect } from "../middlewares/auth/protect";
 import {
-  getAllNotificationsForUser,
-  markNotificationAsRead,
-  addNotification,
-  deleteNotification,
-  getAllNotifications,
-} from '../controllers/notificationController';
+  getMyNotifications,
+  markAsRead,
+} from "../controllers/notificationController";
 
-const router = express.Router();
+const router = Router();
 
-router.get('/:user_id', getAllNotificationsForUser);
-router.put('/read/:id', markNotificationAsRead);
-router.post('/', addNotification);
-router.get("/",getAllNotifications)
-router.delete('/:id', deleteNotification);
+router.get("/my", protect, getMyNotifications);
+router.patch("/:id/read", protect, markAsRead);
 
 export default router;
