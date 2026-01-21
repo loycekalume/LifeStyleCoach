@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "../../../utils/axiosInstance"; 
+import axiosInstance from "../../../utils/axiosInstance";
 import ProfileModal from "./profileModal";
 import SpecializationModal from "./specializationModal";
 import "./../../../styles/header.css";
@@ -21,7 +21,7 @@ export default function ProfileDropdown() {
   useEffect(() => {
     async function fetchUserName() {
       try {
-        const res = await axiosInstance.get("/dietician/profile"); 
+        const res = await axiosInstance.get("/dietician/profile");
 
         const data = res.data;
         setUserName(`Dr. ${data.name || "User"}`);
@@ -37,7 +37,7 @@ export default function ProfileDropdown() {
   //  Sign Out Handler
   const handleSignOut = async () => {
     const confirmed = window.confirm("Are you sure you want to sign out?");
-    
+
     if (!confirmed) return;
 
     try {
@@ -59,7 +59,10 @@ export default function ProfileDropdown() {
   return (
     <div className="profile-dropdown">
       {/* Dropdown Button */}
-      <button className="profile-btn" onClick={() => setOpen(!open)}>
+      <button className="profile-btn" onClick={() => {
+        console.log('Button clicked, current open state:', open);
+        setOpen(!open);
+      }}>
         <img
           src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=40&h=40&fit=crop&crop=face"
           alt="Dietician Profile"
