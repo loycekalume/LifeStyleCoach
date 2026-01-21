@@ -57,9 +57,9 @@ export default function ProfileDropdown() {
   };
 
   return (
-    <div className="profile-dropdown">
+    <div className="profile-dropdown2">
       {/* Dropdown Button */}
-      <button className="profile-btn" onClick={() => {
+      <button className="profile-btn2" onClick={() => {
         console.log('Button clicked, current open state:', open);
         setOpen(!open);
       }}>
@@ -72,9 +72,9 @@ export default function ProfileDropdown() {
       </button>
 
       {/* Dropdown Menu */}
-      <div className={`dropdown-menu ${open ? "show" : ""}`}>
+      <div className={`dropdown-menu2 ${open ? "show" : ""}`}>
         <button
-          className="dropdown-item"
+          className="dropdown-item2"
           onClick={() => {
             setShowProfileModal(true);
             setOpen(false);
@@ -83,12 +83,12 @@ export default function ProfileDropdown() {
           <i className="fas fa-user"></i> Profile Settings
         </button>
 
-        <button className="dropdown-item" onClick={() => { setShowSpecializationModal(true); setOpen(false); }}>
+        <button className="dropdown-item2" onClick={() => { setShowSpecializationModal(true); setOpen(false); }}>
           <i className="fas fa-stethoscope"></i> Specialization
         </button>
 
         <button
-          className="dropdown-item"
+          className="dropdown-item2"
           onClick={() => {
             setShowPricingModal(true);
             setOpen(false);
@@ -98,7 +98,7 @@ export default function ProfileDropdown() {
         </button>
 
         <button
-          className="dropdown-item"
+          className="dropdown-item2"
           onClick={() => {
             setShowCertificationModal(true);
             setOpen(false);
@@ -107,11 +107,11 @@ export default function ProfileDropdown() {
           <i className="fas fa-certificate"></i> Certification
         </button>
 
-        <div className="dropdown-divider"></div>
+        <div className="dropdown-divider2"></div>
 
         {/* Sign Out Button */}
         <button
-          className="dropdown-item"
+          className="dropdown-item2"
           onClick={handleSignOut}
           style={{ color: "#ef4444" }}
         >
