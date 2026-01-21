@@ -3,11 +3,25 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../../utils/axiosInstance';
 import MealPlanCard from './mealPlanCard';
-import type { MealPlan } from './mealPlanCard';
 import CreateMealPlanModal from './createMealModal';
 import EditMealPlanModal from './editMealPlanModal';
 import { useModal } from '../../../contexts/modalContext';
 import '../../../styles/mealPlan.css';
+
+
+interface MealPlan {
+    meal_plan_id: number;
+    title: string;
+    category: string;
+    description: string;
+    total_calories: number;
+    protein_g: number; 
+    carbs_g: number;   
+    fats_g: number;    
+    is_favorite: boolean;
+    created_at: string;
+    clientsCount?: number;
+}
 
 export default function MealPlansPage() {
     const navigate = useNavigate();
@@ -30,6 +44,7 @@ export default function MealPlansPage() {
         try {
             setIsLoading(true);
             const response = await axiosInstance.get('meal-plans');
+            // The controller returns { mealPlans: [...] }
             setMealPlans(response.data.mealPlans);
         } catch (error) {
             console.error("Error fetching plans", error);
@@ -56,14 +71,14 @@ export default function MealPlansPage() {
 
     const handleUpdatePlan = async (id: number, updates: Partial<MealPlan>) => {
         try {
+            // Use meal_plan_id passed as id
             const response = await axiosInstance.put(`meal-plans/${id}`, updates);
+            
             setMealPlans(mealPlans.map(plan => 
-                plan.id === id ? { ...plan, ...response.data.mealPlan } : plan
+                plan.meal_plan_id === id ? { ...plan, ...response.data.mealPlan } : plan
             ));
             
-            if (updates.title || updates.category || updates.description || updates.calories) {
-                alert("Meal plan updated successfully!");
-            }
+            alert("Meal plan updated successfully!");
         } catch (error) {
             console.error("Error updating plan", error);
             alert("Failed to update meal plan");
@@ -75,7 +90,7 @@ export default function MealPlansPage() {
         
         try {
             await axiosInstance.delete(`meal-plans/${id}`);
-            setMealPlans(mealPlans.filter(plan => plan.id !== id));
+            setMealPlans(mealPlans.filter(plan => plan.meal_plan_id !== id));
             alert("Meal plan deleted successfully!");
         } catch (error) {
             console.error("Error deleting plan", error);
@@ -87,16 +102,16 @@ export default function MealPlansPage() {
     const filteredAndSortedPlans = mealPlans
         .filter(plan => {
             const matchesSearch = plan.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                plan.category.toLowerCase().includes(searchTerm.toLowerCase());
+                                  plan.category.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesCategory = selectedCategory === 'All' || plan.category === selectedCategory;
             return matchesSearch && matchesCategory;
         })
         .sort((a, b) => {
             switch (sortBy) {
                 case 'newest':
-                    return b.id - a.id;
+                    return b.meal_plan_id - a.meal_plan_id;
                 case 'oldest':
-                    return a.id - b.id;
+                    return a.meal_plan_id - b.meal_plan_id;
                 case 'name':
                     return a.title.localeCompare(b.title);
                 default:
@@ -104,9 +119,9 @@ export default function MealPlansPage() {
             }
         });
 
-    const categories = ['All', 'Weight Loss', 'Diabetes', 'Sports Nutrition', 'Keto', 'Vegan'];
+    const categories = ['All', 'Weight Loss', 'Diabetes','Hypertension' ,'Sports Nutrition', 'Keto', 'Vegan', 'Maintenance'];
     const totalPlans = mealPlans.length;
-    const favoritePlans = mealPlans.filter(plan => plan.favorite).length;
+    const favoritePlans = mealPlans.filter(plan => plan.is_favorite).length;
 
     return (
         <>
@@ -120,7 +135,7 @@ export default function MealPlansPage() {
                 isOpen={isEditModalOpen}
                 onClose={closeEditModal}
                 onSave={handleUpdatePlan}
-                plan={editingPlan}
+                plan={editingPlan as unknown as MealPlan}
             />
 
             <div className="meal-plans-page">
@@ -129,7 +144,7 @@ export default function MealPlansPage() {
                     <div className="header-left">
                         <button 
                             className="back-btn"
-                            onClick={() => navigate('/dieticians')}
+                            onClick={() => navigate('/dietician')}
                         >
                             <i className="fas fa-arrow-left"></i>
                             Back to Dashboard
@@ -220,7 +235,7 @@ export default function MealPlansPage() {
                 <div className="plans-grid">
                     {isLoading ? (
                         <div className="loading-state">
-                            <i className="fas fa-spinner fa-spin"></i>
+                            <div className="spinner"></div>
                             <p>Loading meal plans...</p>
                         </div>
                     ) : filteredAndSortedPlans.length === 0 ? (
@@ -245,8 +260,8 @@ export default function MealPlansPage() {
                     ) : (
                         filteredAndSortedPlans.map((plan) => (
                             <MealPlanCard 
-                                key={plan.id} 
-                                plan={plan} 
+                                key={plan.meal_plan_id} 
+                                plan={plan as any} 
                                 onUpdate={handleUpdatePlan}
                                 onDelete={handleDeletePlan}
                             />
