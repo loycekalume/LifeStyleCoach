@@ -7,22 +7,64 @@ import "../styles/chatui.css";
 
 const SOCKET_URL = "http://localhost:3000"; 
 
+// --- 🕒 HELPER: WhatsApp-style Date Formatting ---
+const formatDateForSidebar = (isoDateString?: string) => {
+  if (!isoDateString) return "";
+  
+  const date = new Date(isoDateString);
+  const now = new Date();
+  
+  // Check if valid date
+  if (isNaN(date.getTime())) return "";
+
+  const isToday = date.getDate() === now.getDate() &&
+                  date.getMonth() === now.getMonth() &&
+                  date.getFullYear() === now.getFullYear();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.getDate() === yesterday.getDate() &&
+                      date.getMonth() === yesterday.getMonth() &&
+                      date.getFullYear() === yesterday.getFullYear();
+
+  // 1. If Today -> Show Time (10:30 AM)
+  if (isToday) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // 2. If Yesterday -> Show "Yesterday"
+  if (isYesterday) {
+    return "Yesterday";
+  }
+
+  // 3. If within last 7 days -> Show Day Name (Monday, Tuesday...)
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 7) {
+    return date.toLocaleDateString([], { weekday: 'long' });
+  }
+
+  // 4. Older -> Show Date (22/01/2026)
+  return date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+// --- Interfaces ---
 interface Conversation {
   conversation_id: number;
   other_person_name: string;
   other_person_id: number;
   other_person_avatar?: string;
   last_message: string;
-  last_message_time: string;
+  last_message_time: string; // We will store the RAW ISO string here mostly, or formatted
   unread_count: number;
-  // ✅ ADDED: Role field to distinguish Dietician vs Instructor
   other_person_role?: string; 
 }
 
 interface Message {
   sender_id: number;
   content: string;
-  time?: string;
+  time: string; // Display time (10:30 AM)
 }
 
 const MessagesPage: React.FC = () => {
@@ -67,10 +109,12 @@ const MessagesPage: React.FC = () => {
     if (!socket) return;
 
     socket.on("receive_message", (data: any) => {
+      const timeFormatted = new Date(data.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
       const newMessage: Message = {
         sender_id: data.senderId,
         content: data.message,
-        time: data.time
+        time: timeFormatted
       };
       
       // Append to chat window if open
@@ -78,10 +122,12 @@ const MessagesPage: React.FC = () => {
          setMessageList((list) => [...list, newMessage]);
       }
       
-      // Update sidebar preview
+      // Update sidebar preview with WhatsApp style date (Today = Time)
+      const sidebarTime = formatDateForSidebar(new Date().toISOString());
+
       setConversations(prev => prev.map(conv => 
         conv.conversation_id === data.room
-          ? { ...conv, last_message: data.message, last_message_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+          ? { ...conv, last_message: data.message, last_message_time: sidebarTime }
           : conv
       ));
     });
@@ -100,10 +146,17 @@ const MessagesPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await axiosInstance.get("/messages/conversations");
-      setConversations(response.data);
       
-      if (!activeConversation && response.data.length > 0) {
-        setActiveConversation(response.data[0].conversation_id);
+      // ✅ Apply WhatsApp Formatting to Sidebar
+      const formattedConversations = response.data.map((conv: any) => ({
+        ...conv,
+        last_message_time: formatDateForSidebar(conv.last_message_time)
+      }));
+
+      setConversations(formattedConversations);
+      
+      if (!activeConversation && formattedConversations.length > 0) {
+        setActiveConversation(formattedConversations[0].conversation_id);
       }
     } catch (error) {
       console.error("Error fetching conversations:", error);
@@ -118,7 +171,7 @@ const MessagesPage: React.FC = () => {
       const history = res.data.map((msg: any) => ({
         sender_id: msg.sender_id,
         content: msg.content,
-        // Ensure proper date formatting
+        // Chat bubbles just show Time (HH:MM)
         time: msg.sent_at 
             ? new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
             : "" 
@@ -143,13 +196,18 @@ const MessagesPage: React.FC = () => {
   const sendMessage = async () => {
     if (currentMessage.trim() === "" || !socket || !activeConversation) return;
 
-    const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Current time for the bubble (10:30 AM)
+    const timeNowRaw = new Date();
+    const timeForBubble = timeNowRaw.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // Current time for the sidebar (Just now = Time)
+    const timeForSidebar = formatDateForSidebar(timeNowRaw.toISOString());
 
     const messageData = {
       room: activeConversation,
       message: currentMessage,
       senderId: myUserId,
-      time: timeNow,
+      time: timeNowRaw.toISOString(), // Send ISO to socket for accuracy
     };
 
     socket.emit("send_message", messageData);
@@ -158,13 +216,13 @@ const MessagesPage: React.FC = () => {
     setMessageList((list) => [...list, { 
       sender_id: myUserId, 
       content: currentMessage, 
-      time: timeNow 
+      time: timeForBubble 
     }]);
     
     // Update sidebar preview
     setConversations(prev => prev.map(conv =>
       conv.conversation_id === activeConversation
-        ? { ...conv, last_message: currentMessage, last_message_time: timeNow }
+        ? { ...conv, last_message: currentMessage, last_message_time: timeForSidebar }
         : conv
     ));
     
@@ -228,7 +286,6 @@ const MessagesPage: React.FC = () => {
                   <div className="conversation-header">
                     <h3 className="conversation-name">
                         {conv.other_person_name}
-                        {/* ✅ RENDER BADGE IN SIDEBAR */}
                         {renderRoleBadge(conv.other_person_role)}
                     </h3>
                     <span className="conversation-time">{conv.last_message_time}</span>
@@ -258,7 +315,6 @@ const MessagesPage: React.FC = () => {
               <div className="chat-header-info">
                 <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
                     <h2>{activeConv?.other_person_name || "Unknown User"}</h2>
-                    {/* ✅ RENDER BADGE IN HEADER */}
                     {renderRoleBadge(activeConv?.other_person_role)}
                 </div>
                 <p className="status-online">Active now</p>
