@@ -3,92 +3,108 @@ import pool from "../db.config";
 
 export const startConversation = async (req: Request, res: Response) => {
     const myId = (req as any).user.user_id;
-    let { target_user_id } = req.body;
+    let { target_user_id, instructor_id, dietician_id } = req.body;
 
-    // Look up user_id from instructor_id
-    if (!target_user_id && req.body.instructor_id) {
-        try {
-            const query = `SELECT user_id FROM instructors WHERE instructor_id = $1`;
-            const result = await pool.query(query, [req.body.instructor_id]);
-            
-            if (result.rows.length > 0) {
-                target_user_id = result.rows[0].user_id;
-            }
-        } catch (err) {
-            console.error("Error looking up instructor:", err);
-        }
-    }
-
-    // Use client_id directly as user_id
-    if (!target_user_id && req.body.client_id) {
-        target_user_id = req.body.client_id;
-    }
-
+    // 1. If we only have a profile ID (from frontend), resolve it to a User ID first
+    // (This helps us identify roles later)
     if (!target_user_id) {
-        return res.status(400).json({ message: "Target user ID is required" });
+        try {
+            if (instructor_id) {
+                const r = await pool.query(`SELECT user_id FROM instructors WHERE instructor_id = $1`, [instructor_id]);
+                if (r.rows.length) target_user_id = r.rows[0].user_id;
+            } else if (dietician_id) {
+                const r = await pool.query(`SELECT user_id FROM dieticians WHERE dietician_id = $1`, [dietician_id]);
+                if (r.rows.length) target_user_id = r.rows[0].user_id;
+            }
+        } catch (err) { console.error("Lookup error:", err); }
     }
+
+    // Default legacy support
+    if (!target_user_id && req.body.client_id) target_user_id = req.body.client_id;
+    if (!target_user_id) return res.status(400).json({ message: "Target user ID required" });
 
     try {
-        // A. Determine Roles
+        // 2. Identify Roles for both users
         const roleQuery = `
             SELECT u.user_id, r.role_name 
-            FROM users u 
-            JOIN user_roles r ON u.role_id = r.role_id 
+            FROM users u JOIN user_roles r ON u.role_id = r.role_id 
             WHERE u.user_id IN ($1, $2)
         `;
         const roleRes = await pool.query(roleQuery, [myId, target_user_id]);
         
-        if (roleRes.rows.length < 2) {
-            return res.status(404).json({ message: "One or both users not found" });
-        }
-
         const userA = roleRes.rows.find((u: any) => u.user_id === myId);
         const userB = roleRes.rows.find((u: any) => u.user_id === target_user_id);
 
-        let clientId, instructorId;
+        if (!userA || !userB) return res.status(404).json({ message: "User not found" });
 
-        if (userA.role_name === 'Client') {
-            clientId = myId;
-            instructorId = target_user_id;
-        } else if (userB.role_name === 'Client') {
-            clientId = target_user_id;
-            instructorId = myId;
-        } else {
-            // Fallback: treat the initiator as client
-            clientId = myId;
-            instructorId = target_user_id;
+        // Variables to hold the final IDs for the INSERT statement
+        let finalClientId = null;      // This will be a user_id
+        let finalInstructorId = null;  // This will be an instructor_id
+        let finalDieticianId = null;   // This will be a dietician_id
+
+        // Helper to process a user based on their role
+        const processUser = async (user: any) => {
+            const role = (user.role_name || "").toLowerCase().trim();
+            
+            if (role === 'client') {
+                // For Clients, the ID in 'conversations' IS the user_id
+                finalClientId = user.user_id;
+            } 
+            else if (role === 'instructor') {
+                // For Instructors, we must fetch the instructor_id
+                const r = await pool.query(`SELECT instructor_id FROM instructors WHERE user_id = $1`, [user.user_id]);
+                if (r.rows.length > 0) finalInstructorId = r.rows[0].instructor_id;
+            } 
+            else if (role === 'dietician') {
+                // For Dieticians, we must fetch the dietician_id
+                const r = await pool.query(`SELECT dietician_id FROM dieticians WHERE user_id = $1`, [user.user_id]);
+                if (r.rows.length > 0) finalDieticianId = r.rows[0].dietician_id;
+            }
+        };
+
+        // Process both users to fill the variables
+        await processUser(userA);
+        await processUser(userB);
+
+        // Fallback: If roles are ambiguous (e.g. Admin chatting), treat initiator as client
+        if (!finalClientId && !finalInstructorId && !finalDieticianId) {
+             finalClientId = myId;
         }
 
-        // ✅ B. Check for Existing Conversation (IMPROVED - checks both ways)
+        // Safety Check
+        if (!finalInstructorId && !finalDieticianId) {
+            return res.status(400).json({ message: "Chat must include at least one Professional (Instructor or Dietician)." });
+        }
+
+        console.log(`✨ Chat IDs -> Client: ${finalClientId}, Instructor: ${finalInstructorId}, Dietician: ${finalDieticianId}`);
+
+        // 3. Check for Existing Conversation
         const checkQuery = `
-            SELECT conversation_id 
-            FROM conversations 
+            SELECT conversation_id FROM conversations 
             WHERE (client_id = $1 AND instructor_id = $2)
-               OR (client_id = $2 AND instructor_id = $1)
+               OR (client_id = $1 AND dietician_id = $3)
             LIMIT 1
         `;
-        const existing = await pool.query(checkQuery, [clientId, instructorId]);
+        const existing = await pool.query(checkQuery, [finalClientId, finalInstructorId, finalDieticianId]);
 
         if (existing.rows.length > 0) {
-            console.log(`✅ Found existing conversation: ${existing.rows[0].conversation_id}`);
             return res.json({ conversationId: existing.rows[0].conversation_id });
         }
 
-        // C. Create New Conversation
-        console.log(`✨ Creating new conversation between client ${clientId} and instructor ${instructorId}`);
+        // 4. Create New Conversation
         const insertQuery = `
-            INSERT INTO conversations (client_id, instructor_id) 
-            VALUES ($1, $2) 
+            INSERT INTO conversations (client_id, instructor_id, dietician_id) 
+            VALUES ($1, $2, $3) 
             RETURNING conversation_id
         `;
-        const newConv = await pool.query(insertQuery, [clientId, instructorId]);
+        const newConv = await pool.query(insertQuery, [finalClientId, finalInstructorId, finalDieticianId]);
 
         res.json({ conversationId: newConv.rows[0].conversation_id });
 
     } catch (err) {
         console.error("Start Chat Error:", err);
         const message = err instanceof Error ? err.message : String(err);
-        res.status(500).json({ message: "Server Error", error: message });
+        res.status(500).json({ message: "Server Error", detail: message });
     }
 };
 // 2. Fetch Chat History
@@ -198,62 +214,69 @@ export const getUserConversations = async (req: Request, res: Response) => {
                 c.conversation_id,
                 c.client_id,
                 c.instructor_id,
+                c.dietician_id,
                 c.created_at,
-                -- Get the OTHER person's details with COALESCE for safety
+                
+                -- 1. Determine ROLE
+                CASE 
+                    WHEN c.client_id = $1 THEN 
+                        CASE 
+                            WHEN c.instructor_id IS NOT NULL THEN 'Instructor' 
+                            ELSE 'Dietician' 
+                        END
+                    ELSE 'Client' 
+                END as other_person_role,
+
+                -- 2. Determine NAME (The Fix is here!)
                 COALESCE(
                     CASE 
-                        WHEN c.client_id = $1 THEN i_user.name
-                        ELSE c_user.name
+                        WHEN c.client_id = $1 THEN 
+                            -- If I am Client, get name via Profile Tables
+                            COALESCE(i_user.name, d_user.name) 
+                        ELSE 
+                            -- If I am Pro, get Client name directly
+                            c_user.name 
                     END,
                     'Unknown User'
                 ) as other_person_name,
+
+                -- 3. Determine ID
                 CASE 
-                    WHEN c.client_id = $1 THEN i_user.user_id
+                    WHEN c.client_id = $1 THEN 
+                        COALESCE(i_user.user_id, d_user.user_id)
                     ELSE c_user.user_id
                 END as other_person_id,
-                -- Get last message
-                COALESCE(
-                    (
-                        SELECT content 
-                        FROM messages m 
-                        WHERE m.conversation_id = c.conversation_id 
-                        ORDER BY m.sent_at DESC 
-                        LIMIT 1
-                    ),
-                    'No messages yet'
-                ) as last_message,
-                -- Get last message time - CHANGED TO sent_at
-                (
-                    SELECT sent_at 
-                    FROM messages m 
-                    WHERE m.conversation_id = c.conversation_id 
-                    ORDER BY m.sent_at DESC 
-                    LIMIT 1
-                ) as last_message_time,
-                -- Count unread messages
-                COALESCE(
-                    (
-                        SELECT COUNT(*)::int
-                        FROM messages m 
-                        WHERE m.conversation_id = c.conversation_id 
-                          AND m.sender_id != $1 
-                          AND m.is_read = FALSE
-                    ),
-                    0
-                ) as unread_count
+
+                -- 4. Last Message info
+                COALESCE((SELECT content FROM messages m WHERE m.conversation_id = c.conversation_id ORDER BY m.sent_at DESC LIMIT 1), 'No messages yet') as last_message,
+                (SELECT sent_at FROM messages m WHERE m.conversation_id = c.conversation_id ORDER BY m.sent_at DESC LIMIT 1) as last_message_time,
+                COALESCE((SELECT COUNT(*)::int FROM messages m WHERE m.conversation_id = c.conversation_id AND m.sender_id != $1 AND m.is_read = FALSE), 0) as unread_count
+
             FROM conversations c
+            
+            -- JOIN CLIENT (Direct user_id)
             LEFT JOIN users c_user ON c.client_id = c_user.user_id
-            LEFT JOIN users i_user ON c.instructor_id = i_user.user_id
-            WHERE c.client_id = $1 OR c.instructor_id = $1
+            
+            -- JOIN INSTRUCTOR (Jump from Profile -> User)
+            LEFT JOIN instructors i ON c.instructor_id = i.instructor_id
+            LEFT JOIN users i_user ON i.user_id = i_user.user_id
+            
+            -- JOIN DIETICIAN (Jump from Profile -> User)
+            LEFT JOIN dieticians d ON c.dietician_id = d.dietician_id
+            LEFT JOIN users d_user ON d.user_id = d_user.user_id
+
+            -- Filter: Show where I am involved (Check my ID against Client ID or the Profile's User ID)
+            WHERE c.client_id = $1 
+               OR i.user_id = $1 
+               OR d.user_id = $1
+            
             ORDER BY last_message_time DESC NULLS LAST
         `;
 
         const result = await pool.query(query, [userId]);
-
         res.status(200).json(result.rows);
     } catch (error) {
         console.error("Error fetching conversations:", error);
-        const errMsg = error instanceof Error ? error.message : String(error);
-        res.status(500).json({ message: "Error fetching conversations", error: errMsg });
+        res.status(500).json({ message: "Error fetching conversations" });
     }
 };
