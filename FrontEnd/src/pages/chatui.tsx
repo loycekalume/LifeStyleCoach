@@ -1,4 +1,4 @@
-// src/pages/MessagesPage.tsx (Replace your ChatPage.tsx)
+// src/pages/MessagesPage.tsx
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import io, { Socket } from "socket.io-client";
@@ -15,6 +15,8 @@ interface Conversation {
   last_message: string;
   last_message_time: string;
   unread_count: number;
+  // ✅ ADDED: Role field to distinguish Dietician vs Instructor
+  other_person_role?: string; 
 }
 
 interface Message {
@@ -30,7 +32,6 @@ const MessagesPage: React.FC = () => {
   const [currentMessage, setCurrentMessage] = useState("");
   const [messageList, setMessageList] = useState<Message[]>([]);
   
-  // NEW: Conversations state
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<number | null>(
     conversationId ? parseInt(conversationId) : null
@@ -41,11 +42,10 @@ const MessagesPage: React.FC = () => {
   const userRole = localStorage.getItem("userRole");
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // 1. Fetch Conversations on Mount
+  // 1. Fetch Conversations & Connect Socket
   useEffect(() => {
     fetchConversations();
     
-    // Connect Socket
     const newSocket = io(SOCKET_URL);
     setSocket(newSocket);
     
@@ -58,8 +58,6 @@ const MessagesPage: React.FC = () => {
       fetchHistory(activeConversation);
       socket?.emit("join_room", activeConversation);
       markAsRead(activeConversation);
-      
-      // Update URL
       navigate(`/messages/${activeConversation}`, { replace: true });
     }
   }, [activeConversation]);
@@ -75,12 +73,15 @@ const MessagesPage: React.FC = () => {
         time: data.time
       };
       
-      setMessageList((list) => [...list, newMessage]);
+      // Append to chat window if open
+      if (activeConversation === data.room || (!activeConversation && data.room)) {
+         setMessageList((list) => [...list, newMessage]);
+      }
       
-      // Update last message in sidebar
+      // Update sidebar preview
       setConversations(prev => prev.map(conv => 
-        conv.conversation_id === activeConversation
-          ? { ...conv, last_message: data.message, last_message_time: new Date().toLocaleTimeString() }
+        conv.conversation_id === data.room
+          ? { ...conv, last_message: data.message, last_message_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
           : conv
       ));
     });
@@ -93,14 +94,14 @@ const MessagesPage: React.FC = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messageList]);
 
-  // Fetch all conversations
+  // --- API CALLS ---
+
   const fetchConversations = async () => {
     setLoading(true);
     try {
       const response = await axiosInstance.get("/messages/conversations");
       setConversations(response.data);
       
-      // If no active conversation but there are conversations, select the first one
       if (!activeConversation && response.data.length > 0) {
         setActiveConversation(response.data[0].conversation_id);
       }
@@ -111,14 +112,16 @@ const MessagesPage: React.FC = () => {
     }
   };
 
-  // Fetch message history
   const fetchHistory = async (convId: number) => {
     try {
       const res = await axiosInstance.get(`/messages/${convId}/messages`);
       const history = res.data.map((msg: any) => ({
         sender_id: msg.sender_id,
         content: msg.content,
-        time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        // Ensure proper date formatting
+        time: msg.sent_at 
+            ? new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+            : "" 
       }));
       setMessageList(history);
     } catch (err) {
@@ -126,7 +129,6 @@ const MessagesPage: React.FC = () => {
     }
   };
 
-  // Mark messages as read
   const markAsRead = async (convId: number) => {
     try {
       await axiosInstance.put(`/messages/${convId}/read`);
@@ -138,29 +140,31 @@ const MessagesPage: React.FC = () => {
     }
   };
 
-  // Send Message
   const sendMessage = async () => {
     if (currentMessage.trim() === "" || !socket || !activeConversation) return;
+
+    const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const messageData = {
       room: activeConversation,
       message: currentMessage,
       senderId: myUserId,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: timeNow,
     };
 
     socket.emit("send_message", messageData);
 
+    // Optimistic UI update
     setMessageList((list) => [...list, { 
       sender_id: myUserId, 
       content: currentMessage, 
-      time: messageData.time 
+      time: timeNow 
     }]);
     
-    // Update last message in sidebar
+    // Update sidebar preview
     setConversations(prev => prev.map(conv =>
       conv.conversation_id === activeConversation
-        ? { ...conv, last_message: currentMessage, last_message_time: messageData.time }
+        ? { ...conv, last_message: currentMessage, last_message_time: timeNow }
         : conv
     ));
     
@@ -176,11 +180,21 @@ const MessagesPage: React.FC = () => {
 
   const activeConv = conversations.find(c => c.conversation_id === activeConversation);
 
+  // --- HELPER FOR BADGES ---
+  const renderRoleBadge = (role?: string) => {
+      if (role === 'Dietician') {
+          return <span style={{fontSize:'0.7rem', backgroundColor:'#10b981', color:'white', padding:'2px 6px', borderRadius:'4px', marginLeft:'6px'}}>Dietician</span>;
+      }
+      if (role === 'Instructor') {
+          return <span style={{fontSize:'0.7rem', backgroundColor:'#3b82f6', color:'white', padding:'2px 6px', borderRadius:'4px', marginLeft:'6px'}}>Instructor</span>;
+      }
+      return null;
+  };
+
   return (
     <div className="messages-page-container">
       {/* Sidebar - Conversations List */}
       <div className="conversations-sidebar">
-        {/* Header */}
         <div className="sidebar-header">
           <button onClick={handleBackToDashboard} className="back-button">
             ← Back to Dashboard
@@ -189,7 +203,6 @@ const MessagesPage: React.FC = () => {
           <p className="sidebar-subtitle">{conversations.length} conversations</p>
         </div>
 
-        {/* Conversations List */}
         <div className="conversations-list">
           {loading ? (
             <div className="loading-state">Loading...</div>
@@ -213,7 +226,11 @@ const MessagesPage: React.FC = () => {
                 </div>
                 <div className="conversation-details">
                   <div className="conversation-header">
-                    <h3 className="conversation-name">{conv.other_person_name}</h3>
+                    <h3 className="conversation-name">
+                        {conv.other_person_name}
+                        {/* ✅ RENDER BADGE IN SIDEBAR */}
+                        {renderRoleBadge(conv.other_person_role)}
+                    </h3>
                     <span className="conversation-time">{conv.last_message_time}</span>
                   </div>
                   <div className="conversation-preview">
@@ -234,16 +251,19 @@ const MessagesPage: React.FC = () => {
         {activeConversation ? (
           <>
             {/* Chat Header */}
-           {/* Chat Header */}
-<div className="chat-header">
-  <div className="chat-header-avatar">
-    {(activeConv?.other_person_name || "?").charAt(0).toUpperCase()}
-  </div>
-  <div className="chat-header-info">
-    <h2>{activeConv?.other_person_name || "Unknown User"}</h2>
-    <p className="status-online">Active now</p>
-  </div>
-</div>
+            <div className="chat-header">
+              <div className="chat-header-avatar">
+                {(activeConv?.other_person_name || "?").charAt(0).toUpperCase()}
+              </div>
+              <div className="chat-header-info">
+                <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                    <h2>{activeConv?.other_person_name || "Unknown User"}</h2>
+                    {/* ✅ RENDER BADGE IN HEADER */}
+                    {renderRoleBadge(activeConv?.other_person_role)}
+                </div>
+                <p className="status-online">Active now</p>
+              </div>
+            </div>
 
             {/* Messages Area */}
             <div className="chat-body">
