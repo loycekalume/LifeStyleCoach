@@ -71,14 +71,21 @@ const ClientsPage: React.FC = () => {
     else navigate("/clientsView");
   };
 
-  // ✅ ACTION: Start/Continue Chat
+
+//  ACTION: Start/Continue Chat (FIXED)
   const handleMessageClick = async (targetUserId: number) => {
     try {
+      // FIX: Use 'target_user_id' instead of 'instructor_id'
+      // This works for chatting with ANY user (Client, Dietician, or Instructor)
       const response = await axiosInstance.post("/messages/start", {
-         instructor_id: targetUserId 
+         target_user_id: targetUserId 
       });
+
       const { conversationId } = response.data;
-      if (conversationId) navigate(`/messages/${conversationId}`);
+      
+      if (conversationId) {
+          navigate(`/messages/${conversationId}`);
+      }
     } catch (error) {
       console.error("Failed to start chat:", error);
       alert("Unable to open chat.");
