@@ -1,7 +1,19 @@
 import React from "react";
+import type { Client } from "../../Services/clientViewService"; // 1. Import Type
 import "./GoalsCard.css";
 
-const GoalsCard: React.FC = () => {
+// 2. Define Interface
+interface GoalsCardProps {
+  client: Client;
+}
+
+// 3. Update component to accept the prop
+const GoalsCard: React.FC<GoalsCardProps> = ({ client }) => {
+  
+  // 4. Use the client data (This fixes "value never read" error)
+  // We use their actual weight goal, or a default if missing
+  const primaryGoal = client.weight_goal || "Improve Overall Health";
+
   return (
     <div className="card goals-card">
       <div className="card-header">
@@ -14,10 +26,11 @@ const GoalsCard: React.FC = () => {
       <div className="card-content">
         <div className="goals-list">
 
-          {/* Goal 1 */}
+          {/* Goal 1 - Linked to Real Client Data */}
           <div className="goal-item">
             <div className="goal-info">
-              <div className="goal-title">Lose 10 lbs</div>
+              {/* ✅ USING THE PROP HERE */}
+              <div className="goal-title">{primaryGoal}</div> 
               <div className="goal-progress">
                 <div className="progress-bar">
                   <div
@@ -25,15 +38,15 @@ const GoalsCard: React.FC = () => {
                     style={{ width: "60%" }}
                   ></div>
                 </div>
-                <span>6 lbs lost</span>
+                <span>In Progress</span>
               </div>
             </div>
             <div className="goal-status">
-              <span className="goal-deadline">4 weeks left</span>
+              <span className="goal-deadline">Active Goal</span>
             </div>
           </div>
 
-          {/* Goal 2 */}
+          {/* Goal 2 (Static Example) */}
           <div className="goal-item">
             <div className="goal-info">
               <div className="goal-title">Run 5K under 25 minutes</div>
@@ -52,7 +65,7 @@ const GoalsCard: React.FC = () => {
             </div>
           </div>
 
-          {/* Completed Goal */}
+          {/* Completed Goal (Static Example) */}
           <div className="goal-item completed">
             <div className="goal-info">
               <div className="goal-title">Complete 30-day challenge</div>

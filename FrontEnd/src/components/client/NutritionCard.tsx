@@ -3,17 +3,26 @@ import type { JSX } from "react/jsx-runtime";
 import MealLogModal from "../client/logMealModal";
 import { useMealLogs } from "../../hooks/useMealLogs"; 
 
-export default function NutritionCard(): JSX.Element {
+// 1. Import the Client type
+import type { Client } from "../../Services/clientViewService";
+
+// 2. Define the interface for the props
+interface NutritionCardProps {
+  client: Client;
+}
+
+// 3. Update the function to accept the props
+export default function NutritionCard({ client }: NutritionCardProps): JSX.Element {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // 1. Use the hook to get real data
+  console.log(client)
+  // Use the hook to get real data
   const { logs, totalCalories, loading, refetch } = useMealLogs();
 
   // Daily Goal (You can make this dynamic later based on user profile)
+  // Example: const DAILY_GOAL = client.target_calories || 2100;
   const DAILY_GOAL = 2100; 
 
   const handleMealAdded = () => {
-    // 2. Refetch data immediately after adding a meal
     console.log("Meal added! Refreshing data...");
     refetch();
   };
@@ -63,9 +72,8 @@ export default function NutritionCard(): JSX.Element {
               </div>
             </div>
 
-            {/* Macros - (You can wire these up later if your backend returns them) */}
             <div className="macro-breakdown">
-                {/* ... (Keep your macro HTML here as placeholders or logic) ... */}
+                {/* Macro placeholders */}
             </div>
           </div>
 
@@ -81,7 +89,6 @@ export default function NutritionCard(): JSX.Element {
                     <p>No meals logged yet today.</p>
                  </div>
               ) : (
-                /* 3. Map through the real logs */
                 logs.map((log) => (
                   <div className="meal-item" key={log.log_id}>
                     <div className="meal-time-badge">{log.meal_type}</div>
@@ -104,7 +111,7 @@ export default function NutritionCard(): JSX.Element {
       </div>
 
       <MealLogModal 
-        isOpen={isModalOpen} 
+        open={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleMealAdded}
       />

@@ -20,7 +20,7 @@ import ClientMealPlans from "../components/client/clientMealPlans";
 // Services & Types
 import type { Client } from "../Services/clientViewService";
 import { getClientById } from "../Services/clientViewService";
-import { createMealLog } from "../Services/mealLogService";
+
 
 // Define valid page types to avoid Type errors
 type PageType = "dashboard" | "workouts" | "nutrition" | "instructors" | "schedule" | "progress";
@@ -31,10 +31,10 @@ export default function ClientDashboard() {
   const [mealLogOpen, setMealLogOpen] = useState(false);
   const [userName, setUserName] = useState("User");
   const navigate = useNavigate();
+
   // Initialize state from LocalStorage so it remembers where you were on refresh
   const [currentPage, setCurrentPage] = useState<PageType>(() => {
     const savedPage = localStorage.getItem("clientCurrentPage");
-    // Validate that the saved page is a valid PageType, otherwise default to dashboard
     return (savedPage as PageType) || "dashboard";
   });
 
@@ -62,22 +62,7 @@ export default function ClientDashboard() {
     loadClient();
   }, [userId]);
 
-  const handleLogMeal = async (meal: { meal_time: string; description: string; calories: number }) => {
-    if (!client) return;
-    try {
-      await createMealLog({
-        user_id: client.user_id,
-        meal_time: meal.meal_time,
-        description: meal.description,
-        calories: meal.calories,
-        log_id: 0
-      });
-      alert("Meal logged successfully!");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to log meal");
-    }
-  };
+  
 
   // Helper function to handle navigation changes and reset sub-views
   const handleNavigation = (page: PageType) => {
@@ -85,10 +70,16 @@ export default function ClientDashboard() {
     setNutritionView("overview");
   };
 
-  // Main content renderer based on current page state
+  // Main content renderer
   const renderContent = () => {
+    // ✅ FIX: If client data isn't loaded yet, show a loader instead of crashing
+    if (!client && (currentPage === "dashboard" || currentPage === "progress")) {
+       return <div style={{ padding: "50px", textAlign: "center" }}>Loading your data...</div>;
+    }
+
     switch (currentPage) {
       case "dashboard":
+        // TypeScript now knows 'client' is not null here because of the check above
         return (
           <>
             <section className="welcome-section">
@@ -112,30 +103,35 @@ export default function ClientDashboard() {
 
                 <button
                   className="action-btn tertiary"
-                  onClick={() => navigate("/messages")} // Navigates to the main chat inbox
+                  onClick={() => navigate("/messages")} 
                 >
                   <i className="fas fa-comments"></i> My Chats
                 </button>
-                <LogMealModal
-                  open={mealLogOpen}
-                  onClose={() => setMealLogOpen(false)}
-                  onSubmit={handleLogMeal}
-                />
+            <LogMealModal
+  open={mealLogOpen}
+  onClose={() => setMealLogOpen(false)}
+  onSuccess={() => {
+     alert("Meal logged!");
+     // Optional: If you have a function to reload dashboard stats, call it here.
+     // e.g., loadClient(); 
+  }}
+/>
               </div>
             </section>
 
+            {/* ✅ client! is safe here, or simple passing 'client' works because we checked it */}
             <div className="dashboard-grid">
               <div className="dashboard-left">
-                <SessionsCard client={client} />
-                <WorkoutPlan client={client} />
+                <SessionsCard client={client!} />
+                <WorkoutPlan client={client!} />
               </div>
               <div className="dashboard-middle">
-                <ProgressChart client={client} />
-                <NutritionCard client={client} />
+                <ProgressChart client={client!} />
+                <NutritionCard client={client!} />
               </div>
               <div className="dashboard-right">
-                <ActivityCard client={client} />
-                <GoalsCard client={client} />
+                <ActivityCard client={client!} />
+                <GoalsCard client={client!} />
               </div>
             </div>
           </>
@@ -164,7 +160,8 @@ export default function ClientDashboard() {
                     My Meal Plans
                   </button>
                 </div>
-                <NutritionCard client={client} />
+                {/* ✅ Check client exists before rendering NutritionCard */}
+                {client ? <NutritionCard client={client} /> : <p>Loading Nutrition Data...</p>}
               </>
             ) : (
               <>
@@ -203,7 +200,7 @@ export default function ClientDashboard() {
         return (
           <section className="main-section">
             <h1>Progress</h1>
-            <ProgressChart client={client} />
+            <ProgressChart client={client!} />
           </section>
         );
 
@@ -219,7 +216,6 @@ export default function ClientDashboard() {
         onNavigate={(page) => handleNavigation(page as PageType)}
       />
 
-      {/* Render the active page content */}
       {renderContent()}
 
       <MobileNav />

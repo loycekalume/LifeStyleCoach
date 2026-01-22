@@ -1,14 +1,13 @@
 import { useState } from "react";
-import axiosInstance from "../../utils/axiosInstance"; // Adjust path as needed
-
+import axiosInstance from "../../utils/axiosInstance";
 
 interface MealLogModalProps {
-  isOpen: boolean;
+  open: boolean;          // ✅ Renamed from isOpen to match your Parent component
   onClose: () => void;
-  onSuccess: () => void; // Trigger to refresh the parent data
+  onSuccess?: () => void; // Made optional, triggers data refresh
 }
 
-export default function MealLogModal({ isOpen, onClose, onSuccess }: MealLogModalProps) {
+export default function MealLogModal({ open, onClose, onSuccess }: MealLogModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     meal_type: "Breakfast",
@@ -17,7 +16,7 @@ export default function MealLogModal({ isOpen, onClose, onSuccess }: MealLogModa
   });
   const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  if (!open) return null; // ✅ Updated check
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,11 +24,10 @@ export default function MealLogModal({ isOpen, onClose, onSuccess }: MealLogModa
     setError(null);
 
     try {
-      // Use your configured axiosInstance (handles auth/refresh automatically)
-      // Assuming route is /recommendedmeals/track based on previous context
+      // Logic handled HERE inside the modal
       await axiosInstance.post('/meallogs/track', formData);
       
-      onSuccess(); // Refresh parent data
+      if (onSuccess) onSuccess(); // Refresh parent data
       onClose();   // Close modal
       setFormData({ meal_type: "Breakfast", meal_name: "", portion_size: "" }); // Reset form
     } catch (err: any) {

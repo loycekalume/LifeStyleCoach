@@ -1,9 +1,11 @@
 import Logo from "./logo";
 import ProfileDropdown from "./profileDropdown";
-import { useModal } from "./../../../contexts/modalContext"; 
+import { useModal } from "./../../../contexts/modalContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Header() {
-  const { openMealPlanModal, openConsultationModal } = useModal(); 
+  const {  openConsultationModal } = useModal();
+  const navigate = useNavigate();
 
   return (
     <header className="header1">
@@ -16,14 +18,15 @@ export default function Header() {
           </div>
 
           <div className="header1-actions">
-            <button 
+            <button
               className="btn btn-outline1"
-              onClick={openMealPlanModal} 
+              onClick={() => navigate('/messages')}
             >
-              <i className="fas fa-plus"></i> New Meal Plan
+              {/* Changed icon to a chat bubble */}
+              <i className="fas fa-comments"></i> My Chats
             </button>
 
-            <button 
+            <button
               className="btn btn-outline1"
               onClick={openConsultationModal}
             >

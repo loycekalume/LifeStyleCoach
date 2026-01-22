@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Line } from "react-chartjs-2";
-import { type ProgressLog, getProgressLogsByUserId } from "../../Services/clientViewService";
+// 1. Import Client type
+import { type ProgressLog, getProgressLogsByUserId, type Client } from "../../Services/clientViewService";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -17,12 +18,19 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 type ChartKey = "weight" | "workouts" | "streak";
 
-export default function ProgressChart() {
+// 2. Define the interface
+interface ProgressChartProps {
+  client: Client;
+}
+
+// 3. Accept the prop
+export default function ProgressChart({ client }: ProgressChartProps) {
   const [logs, setLogs] = useState<ProgressLog[]>([]);
   const [currentChart, setCurrentChart] = useState<ChartKey>("weight");
   const [loading, setLoading] = useState(true);
 
-  const userId = 13; // Hardcoded user_id
+  // 4. Use the real ID from the prop
+  const userId = client.user_id;
 
   useEffect(() => {
     async function loadLogs() {
@@ -35,8 +43,11 @@ export default function ProgressChart() {
         setLoading(false);
       }
     }
-    loadLogs();
-  }, []); // no dependency on client
+    
+    if (userId) {
+        loadLogs();
+    }
+  }, [userId]); // 5. Add userId as dependency so it updates if client changes
 
   const chartConfig = useMemo(() => {
     if (logs.length === 0) return null;
@@ -93,8 +104,20 @@ export default function ProgressChart() {
     }
   }, [logs, currentChart]);
 
-  if (loading || !chartConfig) {
+  if (loading) {
     return <div className="card p-4 flex justify-center">Loading progress...</div>;
+  }
+
+  // Handle empty state if no logs found
+  if (!chartConfig) {
+      return (
+        <div className="card chart-card">
+            <div className="card-header"><h3>Progress</h3></div>
+            <div className="card-content" style={{padding: '20px', textAlign: 'center', color: '#666'}}>
+                No progress data logged yet.
+            </div>
+        </div>
+      );
   }
 
   return (

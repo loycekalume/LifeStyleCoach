@@ -1,11 +1,21 @@
 import React from "react";
+// Removed useNavigate since we are going back to AI generation
 import { useMeals } from "../../hooks/useMeals";
-import "../../styles/mealCard.css"; // Import the CSS file (create this file)
+import "../../styles/mealCard.css"; 
 
-export default function MealRecommendationCard(): React.JSX.Element {
-  // Assuming you updated useMeals to return 'location'
+// 1. Keep Client Type to prevent Dashboard errors
+import type { Client } from "../../Services/clientViewService";
+
+// 2. Keep Interface
+interface MealRecommendationCardProps {
+  client: Client;
+}
+
+// 3. Component
+export default function MealRecommendationCard({ client }: MealRecommendationCardProps): React.JSX.Element {
+  // usage of generatePlan from the hook
   const { meals, loading, generating, error, generatePlan, logMeal, location } = useMeals();
-
+console.log(client)
   const getIcon = (type: string): string => {
     switch(type) {
       case 'Breakfast': return 'fa-mug-hot';
@@ -28,7 +38,7 @@ export default function MealRecommendationCard(): React.JSX.Element {
                 Today's Nutrition
             </h3>
             
-            {/* NEW: Location Sub-header */}
+            {/* Location Sub-header */}
             {!loading && location && (
                 <div className="location-subtitle">
                     <i className="fas fa-map-marker-alt"></i>
@@ -37,9 +47,12 @@ export default function MealRecommendationCard(): React.JSX.Element {
             )}
         </div>
         
-        {/* Generate Button */}
+        {/* ✅ RESTORED BUTTON: AI Generate Plan */}
         {meals.length === 0 && !loading && !generating && (
-          <button onClick={generatePlan} className="btn-generate">
+          <button 
+            onClick={generatePlan} 
+            className="btn-generate"
+          >
             <i className="fas fa-magic"></i> Generate Plan
           </button>
         )}
@@ -47,7 +60,7 @@ export default function MealRecommendationCard(): React.JSX.Element {
 
       <div className="meal-card-content">
         
-        {/* Loading State with simple pulse animation */}
+        {/* Loading State */}
         {loading && (
           <div className="state-message">
             <div className="spinner"></div>
@@ -75,6 +88,7 @@ export default function MealRecommendationCard(): React.JSX.Element {
           <div className="empty-state">
             <i className="fas fa-utensils"></i>
             <p>No meals planned yet.</p>
+            {/* Restored Original Text */}
             <span>Tap "Generate" to get a location-based plan.</span>
           </div>
         )}

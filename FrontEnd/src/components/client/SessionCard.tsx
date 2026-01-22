@@ -1,12 +1,22 @@
 import { type JSX } from "react";
+// 1. Import the Client type
+import type { Client } from "../../Services/clientViewService"; 
 
-export default function SessionsCard(): JSX.Element {
+// 2. Define the interface for the props
+interface SessionsCardProps {
+  client: Client;
+}
+
+// 3. Update the function to accept the props
+export default function SessionsCard({ client }: SessionsCardProps): JSX.Element {
+     console.log(client)
   return (
     <div className="card sessions-card">
       <div className="card-header">
         <h3>
           <i className="fas fa-calendar-check"></i> Upcoming Sessions
         </h3>
+        {/* You can now use client data here if needed, e.g. client.name */}
         <button className="btn-ghost">View All</button>
       </div>
 
