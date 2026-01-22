@@ -1,11 +1,12 @@
 {
   "name": "lifecoach-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/server.ts",
-    "start:dev": "nodemon src/server.ts"
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "nodemon src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -27,7 +28,9 @@
     "nodemailer": "^7.0.3",
     "openai": "^5.12.2",
     "pg": "^8.13.3",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "typescript": "^5.8.2",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
@@ -40,9 +43,7 @@
     "@types/pg": "^8.11.11",
     "@types/twilio": "^3.19.3",
     "bcryptjs": "^3.0.2",
-    "nodemon": "^3.1.9",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
+    "nodemon": "^3.1.9"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
