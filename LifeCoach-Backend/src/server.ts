@@ -41,12 +41,15 @@ const app = express();
 
 // 3. CREATE HTTP SERVER (Wraps Express)
 const server = http.createServer(app);
-
+app.use(express.urlencoded({ extended: true }));
 // 4. INITIALIZE SOCKET.IO
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173", // Your frontend URL
-        methods: ["GET", "POST"],
+        origin: [
+        "http://localhost:5173",             // Local Frontend
+        "https://life-style-coach.vercel.app" // Production Frontend
+    ], // Your frontend URL
+        methods:"GET,PUT,DELETE,POST,PATCH",
         credentials: true
     }
 });
