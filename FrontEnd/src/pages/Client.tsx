@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/Client.css";
 
 // Components
@@ -29,7 +30,7 @@ export default function ClientDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [mealLogOpen, setMealLogOpen] = useState(false);
   const [userName, setUserName] = useState("User");
-  
+  const navigate = useNavigate();
   // Initialize state from LocalStorage so it remembers where you were on refresh
   const [currentPage, setCurrentPage] = useState<PageType>(() => {
     const savedPage = localStorage.getItem("clientCurrentPage");
@@ -65,9 +66,9 @@ export default function ClientDashboard() {
     if (!client) return;
     try {
       await createMealLog({
-        user_id: client.user_id, 
-        meal_time: meal.meal_time, 
-        description: meal.description, 
+        user_id: client.user_id,
+        meal_time: meal.meal_time,
+        description: meal.description,
         calories: meal.calories,
         log_id: 0
       });
@@ -81,7 +82,7 @@ export default function ClientDashboard() {
   // Helper function to handle navigation changes and reset sub-views
   const handleNavigation = (page: PageType) => {
     setCurrentPage(page);
-    setNutritionView("overview"); 
+    setNutritionView("overview");
   };
 
   // Main content renderer based on current page state
@@ -99,23 +100,26 @@ export default function ClientDashboard() {
                 <button className="action-btn primary" onClick={() => handleNavigation("workouts")}>
                   <i className="fas fa-play"></i> Start Workout
                 </button>
-                
+
                 <button className="action-btn secondary" onClick={() => setModalOpen(true)}>
                   <i className="fas fa-calendar-plus"></i> Book Session
                 </button>
-                <BookSessionModal 
-                  open={modalOpen} 
-                  onClose={() => setModalOpen(false)} 
-                  onNavigate={(page) => handleNavigation(page as PageType)} 
+                <BookSessionModal
+                  open={modalOpen}
+                  onClose={() => setModalOpen(false)}
+                  onNavigate={(page) => handleNavigation(page as PageType)}
                 />
 
-                <button className="action-btn tertiary" onClick={() => setMealLogOpen(true)}>
-                  <i className="fas fa-camera"></i> Log Meal
+                <button
+                  className="action-btn tertiary"
+                  onClick={() => navigate("/messages")} // Navigates to the main chat inbox
+                >
+                  <i className="fas fa-comments"></i> My Chats
                 </button>
-                <LogMealModal 
-                  open={mealLogOpen} 
-                  onClose={() => setMealLogOpen(false)} 
-                  onSubmit={handleLogMeal} 
+                <LogMealModal
+                  open={mealLogOpen}
+                  onClose={() => setMealLogOpen(false)}
+                  onSubmit={handleLogMeal}
                 />
               </div>
             </section>
@@ -140,7 +144,7 @@ export default function ClientDashboard() {
       case "workouts":
         return (
           <section className="main-section">
-             <ClientWorkouts />
+            <ClientWorkouts />
           </section>
         );
 
@@ -149,26 +153,26 @@ export default function ClientDashboard() {
           <section className="main-section">
             {nutritionView === "overview" ? (
               <>
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems:'center', marginBottom: '20px'}}>
-                    <h1>Nutrition Overview</h1>
-                    <button 
-                      className="action-btn primary" 
-                      onClick={() => setNutritionView("plans")}
-                      style={{ fontSize: '0.9rem', padding: '10px 20px' }}
-                    >
-                      <i className="fas fa-utensils" style={{marginRight:'8px'}}></i>
-                      My Meal Plans
-                    </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h1>Nutrition Overview</h1>
+                  <button
+                    className="action-btn primary"
+                    onClick={() => setNutritionView("plans")}
+                    style={{ fontSize: '0.9rem', padding: '10px 20px' }}
+                  >
+                    <i className="fas fa-utensils" style={{ marginRight: '8px' }}></i>
+                    My Meal Plans
+                  </button>
                 </div>
                 <NutritionCard client={client} />
               </>
             ) : (
               <>
-                <button 
+                <button
                   onClick={() => setNutritionView("overview")}
-                  style={{ 
-                      background: 'none', border: 'none', cursor: 'pointer', 
-                      color: '#666', marginBottom: '10px', display:'flex', alignItems:'center', gap:'5px'
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: '#666', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px'
                   }}
                 >
                   <i className="fas fa-arrow-left"></i> Back to Overview
