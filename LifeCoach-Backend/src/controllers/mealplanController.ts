@@ -234,8 +234,78 @@ export const deleteMealPlan = asyncHandler(async (req: UserRequest, res: Respons
 export const assignMealPlan = asyncHandler(async (req: UserRequest, res: Response) => {
   try {
     const userId = req.user?.user_id;
-    if (!userId) return res.status(401).json({ message: "Not authenticated" });
+    if (!userId) {
+      console.log("[ASSIGN] Error: Not authenticated");
+      return res.status(401).json({ message: "Not authenticated" });
+    }
 
+    console.log("[ASSIGN] User ID:", userId);
+
+    // ✅ REMOVED: Don't fetch dietician_id - just use user_id directly
+    // const dieticianQuery = await pool.query(
+    //   "SELECT dietician_id FROM dieticians WHERE user_id = $1",
+    //   [userId]
+    // );
+
+    const { client_id, meal_plan_id, start_date, notes } = req.body;
+    
+    console.log("[ASSIGN] Request body:", {
+      client_id,
+      meal_plan_id,
+      start_date,
+      notes,
+      types: {
+        client_id: typeof client_id,
+        meal_plan_id: typeof meal_plan_id,
+        start_date: typeof start_date
+      }
+    });
+
+    if (!client_id) {
+      console.log("[ASSIGN] Error: Missing client_id");
+      return res.status(400).json({ message: "Client ID is required" });
+    }
+    
+    if (!meal_plan_id) {
+      console.log("[ASSIGN] Error: Missing meal_plan_id");
+      return res.status(400).json({ message: "Meal Plan ID is required" });
+    }
+    
+    if (!start_date) {
+      console.log("[ASSIGN] Error: Missing start_date");
+      return res.status(400).json({ message: "Start Date is required" });
+    }
+
+    // ✅ FIX: Check using user_id (not dietician_id)
+    const clientCheck = await pool.query(
+      `SELECT dc.client_id 
+       FROM dietician_clients dc 
+       WHERE dc.dietician_id = $1 AND dc.client_id = $2`,
+      [userId, client_id]  // ✅ Use userId directly
+    );
+
+    if (clientCheck.rows.length === 0) {
+      console.log("[ASSIGN] Error: Client not in dietician's roster", {
+        dietician_user_id: userId,
+        client_id
+      });
+      
+      // ✅ Debug: Show what clients ARE in the roster
+      const rosterDebug = await pool.query(
+        `SELECT client_id, u.name 
+         FROM dietician_clients dc
+         JOIN users u ON dc.client_id = u.user_id
+         WHERE dc.dietician_id = $1`,
+        [userId]
+      );
+      console.log("[ASSIGN] Clients in roster:", rosterDebug.rows);
+      
+      return res.status(403).json({ 
+        message: "This client is not in your roster. Please hire them first." 
+      });
+    }
+
+    // ✅ FIX: Get dietician_id for meal_plans check
     const dieticianQuery = await pool.query(
       "SELECT dietician_id FROM dieticians WHERE user_id = $1",
       [userId]
@@ -246,29 +316,71 @@ export const assignMealPlan = asyncHandler(async (req: UserRequest, res: Respons
     }
 
     const dietician_id = dieticianQuery.rows[0].dietician_id;
-    const { client_id, meal_plan_id, start_date, notes } = req.body;
 
-    if (!client_id || !meal_plan_id || !start_date) {
-      return res.status(400).json({ message: "Client, Meal Plan, and Start Date are required" });
+    // ✅ Verify the meal plan exists and belongs to this dietician
+    const mealPlanCheck = await pool.query(
+      `SELECT meal_plan_id 
+       FROM meal_plans 
+       WHERE meal_plan_id = $1 AND dietician_id = $2`,
+      [meal_plan_id, dietician_id]
+    );
+
+    if (mealPlanCheck.rows.length === 0) {
+      console.log("[ASSIGN] Error: Meal plan not found or doesn't belong to dietician", {
+        meal_plan_id,
+        dietician_id
+      });
+      return res.status(404).json({ 
+        message: "Meal plan not found or you don't have permission to assign it" 
+      });
     }
 
-    // Use correct table name: client_diet_assignments (or client_meal_plans if you named it that)
+    // ✅ Check if already assigned
+    const duplicateCheck = await pool.query(
+      `SELECT assignment_id 
+       FROM client_diet_assignments 
+       WHERE client_id = $1 AND meal_plan_id = $2 AND status = 'active'`,
+      [client_id, meal_plan_id]
+    );
+
+    if (duplicateCheck.rows.length > 0) {
+      console.log("[ASSIGN] Warning: Plan already assigned to this client");
+      return res.status(400).json({ 
+        message: "This meal plan is already assigned to this client" 
+      });
+    }
+
+    console.log("[ASSIGN] All validations passed, inserting assignment...");
+
+    // ✅ Insert the assignment
     const result = await pool.query(
       `INSERT INTO client_diet_assignments 
         (client_id, meal_plan_id, dietician_id, assigned_date, custom_notes, status)
        VALUES ($1, $2, $3, $4, $5, 'active')
        RETURNING *`,
-      [client_id, meal_plan_id, dietician_id, start_date, notes]
+      [client_id, meal_plan_id, dietician_id, start_date, notes || null]
     );
+
+    console.log("[ASSIGN] Success! Assignment created:", result.rows[0]);
 
     res.status(201).json({
       message: "Meal plan assigned successfully",
       assignment: result.rows[0],
     });
 
-  } catch (error) {
-    console.error("Error assigning meal plan:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+  } catch (error: any) {
+    console.error("[ASSIGN] Database Error:", error);
+    console.error("[ASSIGN] Error details:", {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint
+    });
+    
+    res.status(500).json({ 
+      message: "Internal Server Error",
+      error: error.message
+    });
   }
 });
 
