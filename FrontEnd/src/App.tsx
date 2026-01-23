@@ -21,6 +21,7 @@ import Chatbot from "./components/chatbot";
 import DieticianClients from "./components/dietician/clients/dieticianClients";
 import ChatPage from "./pages/chatui";
 import ClientProgress from "./components/instructor/clientsProgress";
+import MatchedDieticians from "./components/client/clientDieticians"
 
 
 const App: React.FC = () => {
@@ -49,6 +50,7 @@ const App: React.FC = () => {
           <Route path="clientsView" element={<ClientsPage />} />
           <Route path="dietician/clients" element={<DieticianClients />} />
 
+<Route path="matched-dieticians" element={<MatchedDieticians />} />
           <Route
             path="/complete-profile"
             element={<ProfileLoader />}

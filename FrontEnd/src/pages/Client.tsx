@@ -16,6 +16,7 @@ import BookSessionModal from "../components/client/bookSessionModal";
 import LogMealModal from "../components/client/logMealModal";
 import ClientWorkouts from "../components/client/myWorkouts";
 import ClientMealPlans from "../components/client/clientMealPlans";
+import MatchedDieticians from "../components/client/clientDieticians"
 
 // Services & Types
 import type { Client } from "../Services/clientViewService";
@@ -188,13 +189,13 @@ export default function ClientDashboard() {
           </section>
         );
 
-      case "schedule":
-        return (
-          <section className="main-section">
-            <h1>Schedule</h1>
-            <p>Your upcoming sessions will appear here.</p>
-          </section>
-        );
+     case "schedule":
+  return (
+    <section className="main-section">
+      {/* 2. Render the component here */}
+      <MatchedDieticians />
+    </section>
+  );
 
       case "progress":
         return (
