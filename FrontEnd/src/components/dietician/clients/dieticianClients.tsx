@@ -95,7 +95,19 @@ const DieticianClients: React.FC = () => {
 
   return (
     <div className="clients-page" style={{padding: '20px', maxWidth: '1200px', margin: '0 auto'}}>
-      
+      <button 
+        onClick={() => navigate("/dietician")}
+        style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            background: 'none', border: 'none', color: '#64748b',
+            cursor: 'pointer', marginBottom: '20px', fontSize: '0.95rem',
+            fontWeight: '600', padding: '0', transition: 'color 0.2s'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.color = '#1f2937'}
+        onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
+      >
+        ← Back to Dashboard
+      </button>
       {/* Header & Tabs */}
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'30px'}}>
         <h1 style={{margin:0, color:'#2c3e50'}}>Manage Clients</h1>
