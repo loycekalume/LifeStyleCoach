@@ -33,6 +33,7 @@ import recommendedMeal from "./routes/recommendedMeal";
 import matchInstructorRoutes from "./routes/matchInstructorRoutes";
 import chatui from "./routes/chatui";
 import instructorClients from "./routes/instructorClients"
+import matchedDietician from "./routes/matchedDietician";
 // Configure dotenv
 dotenv.config();
 
@@ -86,6 +87,7 @@ app.use("/messages", chatui);
 
 app.use("/client", clientRoutes);
 
+app.use("/matchedDietician", matchedDietician);
 app.use("/clientWorkouts", clientWorkoutRoutes);
 app.use("/sessions", sessionRoutes);
 app.use("/meal-plans", mealplanRoutes);

@@ -5,6 +5,7 @@ const router = express.Router()
 router.post("/",upsertClient)
 router.get("/",  getClients);
 router.get("/matches", protect, getMatchedClientsForInstructor);
+
 router.get("/:id", getClientById);
 
 
