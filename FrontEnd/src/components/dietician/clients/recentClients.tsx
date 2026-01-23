@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { FaUsers, FaChevronRight, FaArrowRight } from "react-icons/fa";
-// If you use React Router, import useNavigate. 
-// If you use state-based navigation (like ClientDashboard), you might need to pass a prop instead.
 import { useNavigate } from "react-router-dom"; 
+// ✅ Import axiosInstance
+import axiosInstance from "../../../utils/axiosInstance";
 
 interface ClientData {
   user_id: number;
@@ -18,21 +18,16 @@ const RecentClients: React.FC = () => {
 
   useEffect(() => {
     async function fetchClients() {
-      const token = localStorage.getItem("token");
       try {
-        const res = await fetch("http://localhost:3000/meal-plans/clients", {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
-        });
-        const data = await res.json();
-        if (res.ok) {
-          const list = Array.isArray(data) ? data : (data.clients || []);
-          setClients(list);
-        }
+        
+        const res = await axiosInstance.get("/dieticianClients/roster");
+        
+        // Handle different data structures safely
+        const list = res.data.data || res.data.clients || res.data;
+        setClients(Array.isArray(list) ? list : []);
+        
       } catch (err) {
-        console.error(err);
+        console.error("Failed to load recent clients", err);
       } finally {
         setLoading(false);
       }
@@ -59,7 +54,7 @@ const RecentClients: React.FC = () => {
         </h3>
         {/* Navigation Button */}
         <button 
-          onClick={() => navigate("/dietician/clients")} // Update this path to match your router path for the Clients page
+          onClick={() => navigate("/dietician/clients")} // Ensure this route exists in your App.tsx
           style={{
             background: "none",
             border: "none",
