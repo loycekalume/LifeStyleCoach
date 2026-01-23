@@ -10,7 +10,6 @@ export const createConsultation = asyncHandler(async (req: UserRequest, res: Res
     const userId = req.user?.user_id;
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
-    // Get dietician_id from the authenticated user
     const dieticianQuery = await pool.query(
       "SELECT dietician_id FROM dieticians WHERE user_id = $1",
       [userId]
@@ -22,30 +21,26 @@ export const createConsultation = asyncHandler(async (req: UserRequest, res: Res
 
     const dietician_id = dieticianQuery.rows[0].dietician_id;
 
-    const { client_id, scheduled_date, scheduled_time, category, notes, status } = req.body;
+    // ✅ NEW: Extract meeting_type and meeting_link
+    const { client_id, scheduled_date, scheduled_time, category, notes, status, meeting_type, meeting_link } = req.body;
 
-    // Basic validation
-    if (!client_id || !scheduled_date || !scheduled_time || !category) {
+    if (!client_id || !scheduled_date || !scheduled_time || !category || !meeting_type) {
       return res.status(400).json({ 
-        message: "Client ID, scheduled date, scheduled time, and category are required" 
+        message: "Client, Date, Time, Category, and Meeting Type are required" 
       });
     }
 
-    // Verify client exists
-    const clientCheck = await pool.query(
-      "SELECT user_id FROM users WHERE user_id = $1",
-      [client_id]
-    );
-
-    if (clientCheck.rows.length === 0) {
-      return res.status(404).json({ message: "Client not found" });
+    // Optional: Validate link if online
+    if (meeting_type === 'online' && !meeting_link) {
+        return res.status(400).json({ message: "A meeting link is required for online consultations." });
     }
 
     const newConsultation = await pool.query(
-      `INSERT INTO consultations (dietician_id, client_id, scheduled_date, scheduled_time, category, notes, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO consultations 
+        (dietician_id, client_id, scheduled_date, scheduled_time, category, notes, status, meeting_type, meeting_link)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [dietician_id, client_id, scheduled_date, scheduled_time, category, notes, status || 'scheduled']
+      [dietician_id, client_id, scheduled_date, scheduled_time, category, notes, status || 'scheduled', meeting_type, meeting_link]
     );
 
     res.status(201).json({
