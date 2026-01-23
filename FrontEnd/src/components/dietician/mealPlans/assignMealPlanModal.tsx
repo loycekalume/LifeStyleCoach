@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { FaTimes, FaUser, FaCalendarAlt, FaStickyNote } from "react-icons/fa";
+import axiosInstance from "../../../utils/axiosInstance"; 
 
 interface Props {
     isOpen: boolean;
@@ -21,75 +22,73 @@ export default function AssignMealModal({ isOpen, onClose, mealPlanTitle, mealPl
     const [notes, setNotes] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // Fetch Clients when modal opens
     useEffect(() => {
         if (isOpen) {
-            const token = localStorage.getItem("token");
-            
-            fetch("http://localhost:3000/client", {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` 
-                }
-            })
-            .then(res => {
-                if (!res.ok) throw new Error("Failed to fetch clients");
-                return res.json();
-            })
-            .then(data => {
-                // ✅ Accessing the .clients array from your new controller structure
-                if (data.clients) {
-                    setClients(data.clients);
-                } else if (Array.isArray(data)) {
-                    setClients(data); // Fallback if API returns direct array
-                }
-            })
-            .catch(err => console.error("Failed to load clients", err));
+            fetchClients();
         }
     }, [isOpen]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-
-        const token = localStorage.getItem("token");
-
+    const fetchClients = async () => {
         try {
-            const response = await fetch("http://localhost:3000/meal-plans/assign", {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` // ✅ Auth Header Added
-                },
-                body: JSON.stringify({
-                    client_id: selectedClient,
-                    meal_plan_id: mealPlanId,
-                    start_date: startDate,
-                    notes: notes
-                    // ❌ assigned_by is NOT needed (backend gets it from token)
-                })
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                alert("Plan assigned successfully!");
-                // Reset form
-                setSelectedClient("");
-                setNotes("");
-                setStartDate("");
-                onClose();
-            } else {
-                alert(result.message || "Failed to assign plan");
-            }
-        } catch (error) {
-            console.error("Assignment error:", error);
-            alert("An error occurred while assigning the plan.");
-        } finally {
-            setLoading(false);
+            const response = await axiosInstance.get("/dieticianClients/roster");
+            const data = response.data.data || response.data.clients || response.data;
+            setClients(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error("Failed to load clients", err);
         }
     };
 
+   const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    // ✅ Validate before sending
+    if (!selectedClient) {
+        alert("Please select a client");
+        setLoading(false);
+        return;
+    }
+
+    if (!startDate) {
+        alert("Please select a start date");
+        setLoading(false);
+        return;
+    }
+
+    console.log("[ASSIGN] Submitting:", {
+        client_id: Number(selectedClient),
+        meal_plan_id: Number(mealPlanId),
+        start_date: startDate,
+        notes: notes
+    });
+
+    try {
+        const response = await axiosInstance.post("/meal-plans/assign", {
+            client_id: Number(selectedClient),
+            meal_plan_id: Number(mealPlanId),
+            start_date: startDate,
+            notes: notes || ""
+        });
+
+        console.log("[ASSIGN] Success:", response.data);
+        alert("Plan assigned successfully!");
+        
+        setSelectedClient("");
+        setNotes("");
+        setStartDate("");
+        onClose();
+
+    } catch (error: any) {
+        console.error("[ASSIGN] Error:", error);
+        console.error("[ASSIGN] Response:", error.response?.data);
+        
+        // ✅ Show specific error message from backend
+        const msg = error.response?.data?.message || error.message || "Failed to assign plan";
+        alert(`Error: ${msg}`);
+    } finally {
+        setLoading(false);
+    }
+};
     if (!isOpen) return null;
 
     return (
@@ -124,7 +123,7 @@ export default function AssignMealModal({ isOpen, onClose, mealPlanTitle, mealPl
                             <option value="">-- Choose a Client --</option>
                             {clients.map(client => (
                                 <option key={client.user_id} value={client.user_id}>
-                                    {client.name} ({client.email})
+                                    {client.name}
                                 </option>
                             ))}
                         </select>

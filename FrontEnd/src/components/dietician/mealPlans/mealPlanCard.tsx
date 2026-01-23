@@ -4,7 +4,7 @@ import { useModal } from '../../../contexts/modalContext';
 import AssignMealModal from './assignMealPlanModal'; 
 
 export interface MealPlan {
-    id: number;
+    meal_plan_id: number;
     title: string;
     category: string;
     description: string;
@@ -22,12 +22,19 @@ interface MealPlanCardProps {
 
 export default function MealPlanCard({ plan, onUpdate, onDelete }: MealPlanCardProps) {
     const { openEditModal } = useModal();
-    
-    // 👇 State to control the Assign Modal
     const [isAssignModalOpen, setAssignModalOpen] = useState(false);
 
     const handleFavoriteToggle = () => {
-        onUpdate(plan.id, { is_favorite: !plan.favorite });
+        onUpdate(plan.meal_plan_id, { is_favorite: !plan.favorite });  // ✅ Changed
+    };
+
+    // ✅ Add this debug log
+    const handleAssignClick = () => {
+        console.log("[CARD] Opening assign modal for plan:", {
+            meal_plan_id: plan.meal_plan_id,
+            title: plan.title
+        });
+        setAssignModalOpen(true);
     };
 
     return (
@@ -75,16 +82,15 @@ export default function MealPlanCard({ plan, onUpdate, onDelete }: MealPlanCardP
                             <button 
                                 className="btn1 btn-outline1 btn-sm" 
                                 style={{ flex: 0, padding: '8px 12px', color: '#e74c3c' }}
-                                onClick={() => onDelete(plan.id)}
+                                onClick={() => onDelete(plan.meal_plan_id)}  // ✅ Changed
                             >
                                 <i className="fas fa-trash"></i>
                             </button>
                             
-                            {/* 👇 Updated Assign Button */}
                             <button 
                                 className="btn btn-primary1 btn-sm" 
                                 style={{ flex: 1 }}
-                                onClick={() => setAssignModalOpen(true)}
+                                onClick={handleAssignClick}  // ✅ Changed to use the handler
                             >
                                 Assign
                             </button>
@@ -93,12 +99,12 @@ export default function MealPlanCard({ plan, onUpdate, onDelete }: MealPlanCardP
                 </div>
             </div>
 
-            {/* 👇 Render the Modal outside the card content div */}
+            {/* ✅ Pass meal_plan_id instead of id */}
             <AssignMealModal 
                 isOpen={isAssignModalOpen}
                 onClose={() => setAssignModalOpen(false)}
                 mealPlanTitle={plan.title}
-                mealPlanId={plan.id}
+                mealPlanId={plan.meal_plan_id}  // ✅ Changed from plan.id
             />
         </>
     );
