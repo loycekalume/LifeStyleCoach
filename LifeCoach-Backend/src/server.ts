@@ -34,6 +34,7 @@ import matchInstructorRoutes from "./routes/matchInstructorRoutes";
 import chatui from "./routes/chatui";
 import instructorClients from "./routes/instructorClients"
 import matchedDietician from "./routes/matchedDietician";
+import dieticianClients from "./routes/dieticianClients";
 // Configure dotenv
 dotenv.config();
 
@@ -82,6 +83,7 @@ app.use("/posts", communityPostRoutes);
 app.use("/admin", adminRoutes);
 app.use("/notification", notificationRoutes);
 app.use("/dietician", dieticianRoutes);
+app.use("/dieticianClients", dieticianClients);
 app.use("/chat", chatRoutes);
 app.use("/messages", chatui);
 

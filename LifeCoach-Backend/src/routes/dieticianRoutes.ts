@@ -1,5 +1,5 @@
 import express, { Router } from "express"
-import { addDietician, deleteDietician, getAiMatchedClientsForDietician, getDietician, getDieticianById, getDieticianCertification, getDieticianPricing, getDieticianProfile, getDieticianSpecialization, updateDieticianCertification, updateDieticianPricing, updateDieticianProfile, updateDieticianSpecialization } from "../controllers/dieticianController"
+import { addDietician, deleteDietician, getDietician, getDieticianById, getDieticianCertification, getDieticianPricing, getDieticianProfile, getDieticianSpecialization, updateDieticianCertification, updateDieticianPricing, updateDieticianProfile, updateDieticianSpecialization } from "../controllers/dieticianController"
 import { protect } from "../middlewares/auth/protect" // 👈 Import
 
 const router = express.Router()
@@ -23,7 +23,7 @@ router.put("/pricing", protect, updateDieticianPricing);
 router.get("/certification", protect, getDieticianCertification);
 router.put("/certification", protect, updateDieticianCertification);
 
-router.get("/match-ai", protect, getAiMatchedClientsForDietician);
+
 router.get("/:id", getDieticianById)
 router.delete("/:id", deleteDietician)
 
