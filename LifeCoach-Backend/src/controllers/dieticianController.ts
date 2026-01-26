@@ -295,4 +295,43 @@ export const updateDieticianCertification = asyncHandler(async (req: UserRequest
 });
 
 
+export const getDashboardStats = asyncHandler(async (req: Request, res: Response) => {
+    // 1. Get the User ID (Used for 'dietician_clients' table)
+    const userId = (req as any).user.user_id;
 
+    // 2. Get the Dietician Profile ID (Used for 'meal_plans' & 'consultations' tables)
+    const dieticianQuery = await pool.query("SELECT dietician_id FROM dieticians WHERE user_id = $1", [userId]);
+    
+    if (dieticianQuery.rows.length === 0) {
+        return res.status(404).json({ message: "Profile not found" });
+    }
+    
+    const dieticianId = dieticianQuery.rows[0].dietician_id;
+
+    console.log(`[STATS] User ID: ${userId}, Dietician ID: ${dieticianId}`);
+
+    // 3. Run Counts using the CORRECT ID for each table
+    const statsQuery = `
+        SELECT
+            -- 1. Active Clients (Linked via User ID in 'dietician_clients')
+            (SELECT COUNT(*) FROM dietician_clients WHERE dietician_id = $2) as active_clients,
+            
+            -- 2. Meal Plans (Linked via Dietician ID in 'meal_plans')
+            (SELECT COUNT(*) FROM meal_plans WHERE dietician_id = $1) as total_meal_plans,
+            
+            -- 3. Today's Sessions (Linked via Dietician ID in 'consultations')
+            (SELECT COUNT(*) FROM consultations WHERE dietician_id = $1 AND scheduled_date = CURRENT_DATE) as today_sessions
+    `;
+
+    
+    const result = await pool.query(statsQuery, [dieticianId, userId]);
+    const stats = result.rows[0];
+
+    res.json({
+        data: {
+            active_clients: Number(stats.active_clients),
+            total_meal_plans: Number(stats.total_meal_plans),
+            today_sessions: Number(stats.today_sessions)
+        }
+    });
+});
