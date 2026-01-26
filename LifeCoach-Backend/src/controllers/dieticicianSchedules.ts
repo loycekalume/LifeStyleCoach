@@ -71,6 +71,13 @@ export const getMyConsultations = asyncHandler(async (req: UserRequest, res: Res
     }
 
     const dietician_id = dieticianQuery.rows[0].dietician_id;
+    
+    // DEBUG: Check total consultations for this dietician
+    const totalConsultations = await pool.query(
+      "SELECT COUNT(*) FROM consultations WHERE dietician_id = $1",
+      [dietician_id]
+    );
+    console.log(`Total consultations for dietician ${dietician_id}:`, totalConsultations.rows[0].count);
 
     // Optional query parameters for filtering
     const { status, date, client_id } = req.query;
@@ -116,11 +123,29 @@ export const getMyConsultations = asyncHandler(async (req: UserRequest, res: Res
 
     query += ` ORDER BY c.scheduled_date DESC, c.scheduled_time DESC`;
 
+    // DEBUG: Log the query
+    console.log('=== CONSULTATION QUERY DEBUG ===');
+    console.log('Query:', query);
+    console.log('Params:', queryParams);
+    console.log('Filters - status:', status, 'date:', date, 'client_id:', client_id);
+
     const result = await pool.query(query, queryParams);
+
+    console.log(`Found ${result.rows.length} consultations`);
+    if (result.rows.length > 0) {
+      console.log('Sample result:', result.rows[0]);
+    }
+    console.log('================================');
 
     res.status(200).json({
       message: "Consultations retrieved successfully",
       consultations: result.rows,
+      debug: {
+        dietician_id,
+        total_in_db: totalConsultations.rows[0].count,
+        filtered_count: result.rows.length,
+        filters: { status, date, client_id }
+      }
     });
   } catch (error) {
     console.error("Error retrieving consultations:", error);
