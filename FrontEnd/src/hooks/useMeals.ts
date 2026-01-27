@@ -72,12 +72,35 @@ export const useMeals = () => {
     }
   }, []);
 
+  // ✅ UPDATED: generatePlan with Geolocation Logic
   const generatePlan = async () => {
     setGenerating(true);
     setError(null);
+    
+    let detectedCoordinates = "";
+
+    // 1. Try to get Geolocation
+    if ("geolocation" in navigator) {
+       try {
+         // Ask for permission and get position
+         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+           navigator.geolocation.getCurrentPosition(resolve, reject);
+         });
+         
+         // Format as a simple string the AI will understand
+         detectedCoordinates = `Lat: ${position.coords.latitude}, Long: ${position.coords.longitude}`;
+         
+       } catch (geoError) {
+         console.warn("Location access denied or failed, using profile default.");
+         // Note: We don't block execution here; we simply proceed without the override
+       }
+    }
+
     try {
+      // 2. Send request WITH the locationOverride
       const response = await api.post<ApiResponse<RecommendedMeal[]> & { location?: string }>(
-        '/recommendedmeals/generate'
+        '/recommendedmeals/generate',
+        { locationOverride: detectedCoordinates } // payload
       );
       
       setMeals(response.data.data);
@@ -96,6 +119,7 @@ export const useMeals = () => {
 
   const logMeal = async (recommendation_id: number) => {
     try {
+      // Optimistic Update
       setMeals(prev => prev.map(m => 
         m.recommendation_id === recommendation_id 
           ? { ...m, status: 'logged' } 
@@ -108,6 +132,7 @@ export const useMeals = () => {
       });
     } catch (err) {
       console.error("Log error:", err);
+      // Revert if failed
       fetchDailyMeals(); 
     }
   };

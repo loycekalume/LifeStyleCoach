@@ -1,140 +1,143 @@
-import  { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axiosInstance from "../../utils/axiosInstance";
-import { FaLeaf, FaFireAlt, FaCheck, FaUtensils, FaMugHot, FaCloudMoon, FaCookieBite, FaArrowRight } from "react-icons/fa";
-import "../../styles/assignedMealPlans.css"; 
+import React from "react";
+// Removed useNavigate since we are going back to AI generation
+import { useMeals } from "../../hooks/useMeals";
+import "../../styles/mealCard.css"; 
+
+// 1. Keep Client Type to prevent Dashboard errors
 import type { Client } from "../../Services/clientViewService";
 
-interface AssignedMealCardProps {
+// 2. Keep Interface
+interface MealRecommendationCardProps {
   client: Client;
 }
 
-interface AssignedMeal {
-  id: number;
-  type: string;
-  name: string;
-  calories?: string;
-  status: 'pending' | 'logged';
-}
-
-export default function AssignedMealCard({ client }: AssignedMealCardProps) {
-  const [meals, setMeals] = useState<AssignedMeal[]>([]);
-  const [planTitle, setPlanTitle] = useState<string>("");
-  const [totalCalories, setTotalCalories] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  console.log(client)
-  useEffect(() => {
-    const fetchActivePlan = async () => {
-      try {
-        const res = await axiosInstance.get("/client/my-plans");
-        const activePlans = res.data.plans;
-
-        if (activePlans && activePlans.length > 0) {
-          const currentPlan = activePlans[0];
-          setPlanTitle(currentPlan.title);
-          setTotalCalories(currentPlan.calories);
-          setMeals(parseDescriptionToMeals(currentPlan.description));
-        }
-      } catch (err) {
-        console.error("Failed to load active plan", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchActivePlan();
-  }, []);
-
-  const parseDescriptionToMeals = (description: string): AssignedMeal[] => {
-    if (!description) return [];
-    return description.split('\n').filter(line => line.trim().length > 0).map((line, index) => {
-      let type = "Snack";
-      let name = line;
-
-      if (line.match(/Breakfast/i)) { type = "Breakfast"; name = line.replace(/Breakfast:?/i, "").trim(); }
-      else if (line.match(/Lunch/i)) { type = "Lunch"; name = line.replace(/Lunch:?/i, "").trim(); }
-      else if (line.match(/Dinner/i)) { type = "Dinner"; name = line.replace(/Dinner:?/i, "").trim(); }
-      
-      return { id: index, type, name: name || line, status: 'pending' };
-    });
-  };
-
-  const getIcon = (type: string) => {
+// 3. Component
+export default function MealRecommendationCard({ client }: MealRecommendationCardProps): React.JSX.Element {
+  // usage of generatePlan from the hook
+  const { meals, loading, generating, error, generatePlan, logMeal, location } = useMeals();
+console.log(client)
+  const getIcon = (type: string): string => {
     switch(type) {
-      case 'Breakfast': return <FaMugHot />;
-      case 'Lunch': return <FaUtensils />;
-      case 'Dinner': return <FaCloudMoon />;
-      default: return <FaCookieBite />;
+      case 'Breakfast': return 'fa-mug-hot';
+      case 'Lunch': return 'fa-utensils';
+      case 'Dinner': return 'fa-moon';
+      case 'Snack': return 'fa-cookie-bite';
+      default: return 'fa-apple-alt';
     }
   };
 
-  const handleLogMeal = (id: number) => {
-    setMeals(prev => prev.map(m => m.id === id ? { ...m, status: 'logged' } : m));
-  };
-
   return (
-    <div className="assigned-meal-card">
-      {/* Header */}
-      <div className="am-header">
-        <div className="am-header-title">
-          <div className="am-icon-box"><FaLeaf /></div>
-          <div>
-            <h3>Today's Menu</h3>
-            {!loading && planTitle && <span className="am-subtitle">{planTitle}</span>}
-          </div>
+    <div className="card meal-card">
+      {/* Header Section */}
+      <div className="meal-card-header">
+        <div className="header-text-group">
+            <h3>
+                <div className="icon-badge main-icon">
+                    <i className="fas fa-leaf"></i>
+                </div>
+                Today's Nutrition
+            </h3>
+            
+            {/* Location Sub-header */}
+            {!loading && location && (
+                <div className="location-subtitle">
+                    <i className="fas fa-map-marker-alt"></i>
+                    <span>{location}  Meal Suggestions</span>
+                </div>
+            )}
         </div>
         
-        {totalCalories && (
-           <div className="am-calories-badge">
-             <FaFireAlt /> {totalCalories}
-           </div>
+        {/* ✅ RESTORED BUTTON: AI Generate Plan */}
+        {meals.length === 0 && !loading && !generating && (
+          <button 
+            onClick={generatePlan} 
+            className="btn-generate"
+          >
+            <i className="fas fa-magic"></i> Generate Plan
+          </button>
         )}
       </div>
 
-      <div className="am-content">
-        {loading ? (
-          <div className="am-loading">
-            <div className="am-spinner"></div>
-            <p>Curating your menu...</p>
+      <div className="meal-card-content">
+        
+        {/* Loading State */}
+        {loading && (
+          <div className="state-message">
+            <div className="spinner"></div>
+            <p>Loading your plan...</p>
           </div>
-        ) : meals.length === 0 ? (
-          <div className="am-empty">
-            <FaUtensils size={30} color="#cbd5e0" />
-            <p>No active plan assigned.</p>
-            <span>Ask your dietician to assign a meal plan.</span>
+        )}
+        
+        {/* Generating AI State */}
+        {generating && (
+          <div className="state-message ai-generating">
+            <i className="fas fa-robot fa-bounce"></i>
+            <p>Curating local meals for you...</p>
           </div>
-        ) : (
-          <div className="am-list">
-            {meals.map((item) => (
-              <div key={item.id} className={`am-item ${item.status}`}>
-                <div className={`am-item-icon ${item.type.toLowerCase()}`}>
-                  {getIcon(item.type)}
-                </div>
-                
-                <div className="am-item-info">
-                  <span className="am-type">{item.type}</span>
-                  <span className="am-name">{item.name}</span>
-                </div>
+        )}
 
-                <div className="am-item-action">
-                  {item.status === 'pending' ? (
-                    <button onClick={() => handleLogMeal(item.id)} className="am-btn-eat">
-                      Eat
-                    </button>
-                  ) : (
-                    <span className="am-logged-text"><FaCheck /> Logged</span>
-                  )}
+        {/* Error State */}
+        {error && (
+          <div className="error-banner">
+            <i className="fas fa-exclamation-circle"></i> {error}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && !generating && meals.length === 0 && !error && (
+          <div className="empty-state">
+            <i className="fas fa-utensils"></i>
+            <p>No meals planned yet.</p>
+            {/* Restored Original Text */}
+            <span>Tap "Generate" to get a location-based plan.</span>
+          </div>
+        )}
+
+        {/* The Meal List */}
+        <div className="meal-list">
+          {meals.map((item) => (
+            <div 
+              className={`meal-item ${item.status === 'logged' ? 'is-logged' : ''}`} 
+              key={item.recommendation_id}
+            >
+              
+              {/* Left: Icon */}
+              <div className="meal-icon-wrapper">
+                <i className={`fas ${item.status === 'logged' ? 'fa-check' : getIcon(item.meal_type)}`}></i>
+              </div>
+              
+              {/* Middle: Info */}
+              <div className="meal-info">
+                <div className="meal-type">{item.meal_type}</div>
+                <div className="meal-name">{item.meal_name}</div>
+                <div className="meal-reason">
+                  <i className="fas fa-info-circle"></i> {item.reason}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      <div className="am-footer">
-        <button onClick={() => navigate('/nutrition')} className="am-view-all">
-          View Full Plan <FaArrowRight style={{marginLeft: '6px', fontSize: '12px'}} />
-        </button>
+              {/* Right: Stats & Action */}
+              <div className="meal-actions">
+                <span className="calories-badge">
+                  <i className="fas fa-fire-alt"></i> {item.calories}
+                </span>
+                
+                {item.status === 'pending' && (
+                  <button 
+                    onClick={() => logMeal(item.recommendation_id)}
+                    className="btn-eat"
+                  >
+                    Eat
+                  </button>
+                )}
+                
+                {item.status === 'logged' && (
+                  <span className="status-logged">Logged</span>
+                )}
+              </div>
+              
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
