@@ -376,3 +376,62 @@ export const getDieticianLeads = asyncHandler(async (req: Request, res: Response
         data: result.rows 
     });
 });
+
+export const getClientProgress = asyncHandler(async (req: Request, res: Response) => {
+    const { clientId } = req.params;
+
+    // 1. Fetch Client Profile (For Goal & Current Weight)
+    const clientQuery = await pool.query(
+        "SELECT name, weight, weight_goal FROM clients JOIN users ON clients.user_id = users.user_id WHERE clients.user_id = $1",
+        [clientId]
+    );
+
+    if (clientQuery.rows.length === 0) {
+        return res.status(404).json({ message: "Client not found" });
+    }
+    const client = clientQuery.rows[0];
+
+    // 2. Fetch Meal Logs for the last 30 days
+    const logsQuery = await pool.query(
+        `SELECT log_date, SUM(calories) as daily_calories, 
+                SUM(protein) as daily_protein, 
+                SUM(carbs) as daily_carbs, 
+                SUM(fats) as daily_fats
+         FROM meal_logs 
+         WHERE user_id = $1 AND log_date > CURRENT_DATE - INTERVAL '30 days'
+         GROUP BY log_date 
+         ORDER BY log_date ASC`,
+        [clientId]
+    );
+
+    const dailyLogs = logsQuery.rows;
+
+    // 3. Calculate Averages & Consistency
+    const totalDaysLogged = dailyLogs.length;
+    const consistency = Math.round((totalDaysLogged / 30) * 100);
+
+    let totalCals = 0, totalP = 0, totalC = 0, totalF = 0;
+
+    dailyLogs.forEach(log => {
+        totalCals += Number(log.daily_calories);
+        totalP += Number(log.daily_protein);
+        totalC += Number(log.daily_carbs);
+        totalF += Number(log.daily_fats);
+    });
+
+    const averages = totalDaysLogged > 0 ? {
+        calories: Math.round(totalCals / totalDaysLogged),
+        protein: Math.round(totalP / totalDaysLogged),
+        carbs: Math.round(totalC / totalDaysLogged),
+        fats: Math.round(totalF / totalDaysLogged),
+    } : { calories: 0, protein: 0, carbs: 0, fats: 0 };
+
+    res.json({
+        client_name: client.name,
+        current_weight: client.weight,
+        weight_goal: client.weight_goal,
+        consistency: consistency,
+        averages: averages,
+        logs: dailyLogs 
+    });
+});

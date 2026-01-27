@@ -4,7 +4,8 @@ import {
     hireClient, 
     getDieticianRoster, 
     getDieticianLeads, 
-    getAiMatchedClientsForDietician
+    getAiMatchedClientsForDietician,
+    getClientProgress
 } from "../controllers/dieticianClients";
 
 
@@ -20,5 +21,5 @@ router.get("/roster", protect, getDieticianRoster);
 
 // 4. Action (Hire)
 router.post("/hire", protect, hireClient);
-
+router.get("/progress/:clientId", protect, getClientProgress);
 export default router;
