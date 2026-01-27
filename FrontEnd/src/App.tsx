@@ -14,6 +14,7 @@ import InstructorList from "./components/admin/instructorList";
 import ClientList from "./components/admin/clientsList";
 import { ToastContainer } from "react-toastify";
 import ClientsPage from "./components/ClientsView";
+import DieticianClientProgress from "./components/dietician/clients/clientProgress"
 import DieticiansDashboard from "./pages/dieticianDashboards";
 import { ModalProvider } from "./contexts/modalContext";
 import MealPlans from "./components/dietician/mealPlans/mealPlans";
@@ -56,6 +57,13 @@ const App: React.FC = () => {
             path="/complete-profile"
             element={<ProfileLoader />}
           />
+
+          <Route 
+          path="/dieticianClients/client-progress/:clientId" 
+          element={<DieticianClientProgress />} 
+        />
+
+      
           <Route path="/workouts" element={<Workouts />} />
           <Route path="/sessions" element={<SessionsPage />} />
 

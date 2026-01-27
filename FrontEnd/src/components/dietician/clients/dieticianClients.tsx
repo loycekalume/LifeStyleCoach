@@ -7,7 +7,7 @@ import "../../../styles/clientView.css";
 
 import type { Client } from "../../../Services/clientViewService";
 
-// Extend Client Type
+// Extend Client Type to include matching/hiring info
 interface DieticianClientView extends Client {
   match_score?: number;
   match_reason?: string;
@@ -25,7 +25,7 @@ const DieticianClients: React.FC = () => {
   
   const navigate = useNavigate();
 
-  // ✅ FIX 1: Get viewMode from URL params, default to 'recommended'
+  // Get viewMode from URL params, default to 'recommended'
   const viewMode = (searchParams.get('view') as ViewMode) || 'recommended';
 
   useEffect(() => {
@@ -52,7 +52,6 @@ const DieticianClients: React.FC = () => {
     }
   };
 
-  // ✅ FIX 1: Update URL when changing view mode
   const handleViewModeChange = (mode: ViewMode) => {
     setSearchParams({ view: mode });
   };
@@ -75,7 +74,7 @@ const DieticianClients: React.FC = () => {
       await axiosInstance.post("/dieticianClients/hire", { client_user_id: client.user_id });
       alert(`${client.name} has been added to your roster!`);
       
-      // ✅ FIX 2: Update the local state immediately
+      // Update local state to reflect hired status immediately
       setClients(prevClients => 
         prevClients.map(c => 
           c.user_id === client.user_id 
@@ -83,9 +82,6 @@ const DieticianClients: React.FC = () => {
             : c
         )
       );
-      
-      // Optional: Also refresh from server to ensure data consistency
-      // fetchClients();
       
     } catch (err) {
       console.error(err);
@@ -95,6 +91,7 @@ const DieticianClients: React.FC = () => {
 
   return (
     <div className="clients-page" style={{padding: '20px', maxWidth: '1200px', margin: '0 auto'}}>
+      {/* Back Button */}
       <button 
         onClick={() => navigate("/dietician")}
         style={{
@@ -108,6 +105,7 @@ const DieticianClients: React.FC = () => {
       >
         ← Back to Dashboard
       </button>
+
       {/* Header & Tabs */}
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'30px'}}>
         <h1 style={{margin:0, color:'#2c3e50'}}>Manage Clients</h1>
@@ -132,7 +130,7 @@ const DieticianClients: React.FC = () => {
         </div>
       </div>
 
-      {/* Loading State */}
+      {/* Content Area */}
       {isLoading ? (
         <div style={{textAlign:'center', padding:'50px', color:'#999'}}>
           <div style={{fontSize:'1.2rem'}}>Loading...</div>
@@ -158,237 +156,88 @@ const DieticianClients: React.FC = () => {
                     onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.02)'}
                     >
                         
-                        {/* Header */}
+                        {/* Card Header */}
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'start'}}>
                             <div>
                                 <h3 style={{margin:0, fontSize:'1.1rem'}}>{client.name}</h3>
                                 <span style={{fontSize:'0.85rem', color:'#666'}}>📍 {client.location || 'Remote'}</span>
                             </div>
                             
-                            {/* AI Score Badge - ONLY for Recommended */}
+                            {/* Badges based on View Mode */}
                             {viewMode === 'recommended' && client.match_score && (
-                                <span style={{
-                                    background:'#ecfdf5', color:'#059669', padding:'4px 8px', 
-                                    borderRadius:'12px', fontSize:'0.75rem', fontWeight:'bold'
-                                }}>
+                                <span style={{ background:'#ecfdf5', color:'#059669', padding:'4px 8px', borderRadius:'12px', fontSize:'0.75rem', fontWeight:'bold' }}>
                                     {client.match_score}% MATCH
                                 </span>
                             )}
                             
-                            {/* Hired Badge for Leads */}
                             {viewMode === 'leads' && client.is_hired && (
-                                <span style={{
-                                    background:'#ecfdf5', color:'#059669', padding:'4px 8px', 
-                                    borderRadius:'12px', fontSize:'0.75rem', fontWeight:'bold'
-                                }}>
+                                <span style={{ background:'#ecfdf5', color:'#059669', padding:'4px 8px', borderRadius:'12px', fontSize:'0.75rem', fontWeight:'bold' }}>
                                     ✓ IN ROSTER
                                 </span>
                             )}
                             
-                            {/* Active Badge for Hired Tab */}
                             {viewMode === 'hired' && (
-                                <span style={{
-                                    background:'#eff6ff', color:'#2563eb', padding:'4px 8px', 
-                                    borderRadius:'12px', fontSize:'0.75rem', fontWeight:'bold'
-                                }}>
+                                <span style={{ background:'#eff6ff', color:'#2563eb', padding:'4px 8px', borderRadius:'12px', fontSize:'0.75rem', fontWeight:'bold' }}>
                                     ACTIVE
                                 </span>
                             )}
                         </div>
 
-                        {/* AI Reason */}
+                        {/* AI Match Reason */}
                         {viewMode === 'recommended' && client.match_reason && (
                             <div style={{background:'#f9fafb', padding:'10px', borderRadius:'8px', fontSize:'0.85rem', color:'#555', lineHeight:'1.4'}}>
                                 💡 {client.match_reason}
                             </div>
                         )}
 
-                        {/* Stats */}
+                        {/* Client Stats */}
                         <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem', color:'#444'}}>
                             <div>Goal: <b>{client.weight_goal || 'Health'}</b></div>
                             <div>Age: <b>{client.age || 'N/A'}</b></div>
                         </div>
 
-                        {/* Button Logic */}
+                        {/* Action Buttons - FIXED */}
                         <div style={{display:'flex', gap:'10px', marginTop:'auto'}}>
                             
-                            {/* 1. RECOMMENDED TAB: Profile + Chat */}
+                            {/* 1. RECOMMENDED VIEW */}
                             {viewMode === 'recommended' && (
                                 <>
-                                    <button 
-                                        onClick={() => setSelectedClient(client)}
-                                        style={{ 
-                                            flex:1, 
-                                            padding:'10px', 
-                                            borderRadius:'6px', 
-                                            border:'1px solid #e5e7eb', 
-                                            background:'#f3f4f6', 
-                                            cursor:'pointer', 
-                                            display:'flex', 
-                                            alignItems:'center', 
-                                            justifyContent:'center', 
-                                            gap:'5px',
-                                            transition: 'all 0.2s',
-                                            fontWeight: '500'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = '#e5e7eb';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = '#f3f4f6';
-                                        }}
-                                    >
+                                    <button onClick={() => setSelectedClient(client)} className="btn-secondary" style={btnSecondaryStyle}>
                                         <FaUser /> Profile
                                     </button>
-                                    <button 
-                                        onClick={() => handleChat(client.user_id)}
-                                        style={{ 
-                                            flex:1, 
-                                            padding:'10px', 
-                                            borderRadius:'6px', 
-                                            border:'1px solid #e5e7eb', 
-                                            background:'white', 
-                                            cursor:'pointer', 
-                                            display:'flex', 
-                                            alignItems:'center', 
-                                            justifyContent:'center', 
-                                            gap:'5px',
-                                            transition: 'all 0.2s',
-                                            fontWeight: '500'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = '#f9fafb';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'white';
-                                        }}
-                                    >
+                                    <button onClick={() => handleChat(client.user_id)} className="btn-secondary1" style={btnSecondaryStyle}>
                                         <FaComments /> Chat
                                     </button>
                                 </>
                             )}
 
-                            {/* 2. LEADS TAB: Chat + Hire/Hired Status */}
+                            {/* 2. LEADS VIEW */}
                             {viewMode === 'leads' && (
                                 <>
-                                    <button 
-                                        onClick={() => handleChat(client.user_id)}
-                                        style={{ 
-                                            flex: 1, 
-                                            padding: '10px', 
-                                            borderRadius: '6px', 
-                                            border: '1px solid #e5e7eb', 
-                                            background: 'white', 
-                                            cursor: 'pointer', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            justifyContent: 'center', 
-                                            gap: '5px',
-                                            transition: 'all 0.2s',
-                                            fontWeight: '500'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = '#f9fafb';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'white';
-                                        }}
-                                    >
+                                    <button onClick={() => handleChat(client.user_id)} className="btn-secondary" style={btnSecondaryStyle}>
                                         <FaComments /> Chat
                                     </button>
                                     
-                                    {/* ✅ Conditional: Show "Hired" badge or "Hire" button */}
                                     {client.is_hired ? (
-                                        <div 
-                                            style={{ 
-                                                flex: 1, 
-                                                padding: '10px', 
-                                                borderRadius: '6px', 
-                                                border: '2px solid #10b981', 
-                                                background: '#ecfdf5', 
-                                                color: '#059669', 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                justifyContent: 'center', 
-                                                gap: '5px',
-                                                fontWeight: 'bold',
-                                                fontSize: '0.9rem'
-                                            }}
-                                        >
-                                            ✓ Hired
-                                        </div>
+                                        <div style={badgeHiredStyle}>✓ Hired</div>
                                     ) : (
-                                        <button 
-                                            onClick={() => handleHire(client)}
-                                            style={{ 
-                                                flex: 1, 
-                                                padding: '10px', 
-                                                borderRadius: '6px', 
-                                                border: 'none', 
-                                                background: '#10b981', 
-                                                color: 'white', 
-                                                cursor: 'pointer', 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                justifyContent: 'center', 
-                                                gap: '5px',
-                                                transition: 'background 0.2s',
-                                                fontWeight: '500'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
-                                            onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}
-                                        >
+                                        <button onClick={() => handleHire(client)} className="btn-primary" style={btnPrimaryStyle}>
                                             <FaUserPlus /> Hire
                                         </button>
                                     )}
                                 </>
                             )}
 
-                            {/* 3. HIRED TAB: Chat + Progress */}
+                            {/* 3. HIRED VIEW */}
                             {viewMode === 'hired' && (
                                 <>
-                                    <button 
-                                        onClick={() => handleChat(client.user_id)}
-                                        style={{ 
-                                            flex:1, 
-                                            padding:'10px', 
-                                            borderRadius:'6px', 
-                                            border:'1px solid #e5e7eb', 
-                                            background:'white', 
-                                            cursor:'pointer', 
-                                            display:'flex', 
-                                            alignItems:'center', 
-                                            justifyContent:'center', 
-                                            gap:'5px',
-                                            transition: 'all 0.2s',
-                                            fontWeight: '500'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = '#f9fafb';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'white';
-                                        }}
-                                    >
+                                    <button onClick={() => handleChat(client.user_id)} className="btn-secondary" style={btnSecondaryStyle}>
                                         <FaComments /> Chat
                                     </button>
                                     <button 
                                         onClick={() => navigate(`/dieticianClients/client-progress/${client.user_id}`)}
-                                        style={{ 
-                                            flex:1, 
-                                            padding:'10px', 
-                                            borderRadius:'6px', 
-                                            border:'none', 
-                                            background:'#3b82f6', 
-                                            color:'white', 
-                                            cursor:'pointer', 
-                                            display:'flex', 
-                                            alignItems:'center', 
-                                            justifyContent:'center', 
-                                            gap:'5px',
-                                            transition: 'background 0.2s',
-                                            fontWeight: '500'
-                                        }}
+                                        className="btn-primary" 
+                                        style={{...btnPrimaryStyle, background: '#3b82f6'}}
                                         onMouseEnter={(e) => e.currentTarget.style.background = '#2563eb'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = '#3b82f6'}
                                     >
@@ -409,6 +258,60 @@ const DieticianClients: React.FC = () => {
       )}
     </div>
   );
+};
+
+// --- Updated Button Styles to Fix Sizing Issues ---
+
+const btnSecondaryStyle: React.CSSProperties = {
+    flex: '1', // Allow growth but respect content
+    minWidth: '80px', // Prevents button from getting too small
+    padding: '10px 12px', 
+    borderRadius: '6px', 
+    border: '1px solid #e5e7eb', 
+    background: 'white', 
+    cursor: 'pointer', 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: '6px', 
+    transition: 'all 0.2s', 
+    fontWeight: '500',
+    whiteSpace: 'nowrap' // Prevents text wrapping
+};
+
+const btnPrimaryStyle: React.CSSProperties = {
+    flex: '1', 
+    minWidth: '80px',
+    padding: '10px 12px', 
+    borderRadius: '6px', 
+    border: 'none', 
+    background: '#10b981', 
+    color: 'white',
+    cursor: 'pointer', 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: '6px',
+    transition: 'background 0.2s', 
+    fontWeight: '500',
+    whiteSpace: 'nowrap'
+};
+
+const badgeHiredStyle: React.CSSProperties = {
+    flex: '1', 
+    minWidth: '80px',
+    padding: '10px 12px', 
+    borderRadius: '6px', 
+    border: '2px solid #10b981', 
+    background: '#ecfdf5',
+    color: '#059669', 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: '6px',
+    fontWeight: 'bold', 
+    fontSize: '0.9rem',
+    whiteSpace: 'nowrap'
 };
 
 export default DieticianClients;
