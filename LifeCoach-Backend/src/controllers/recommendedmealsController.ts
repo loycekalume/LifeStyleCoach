@@ -3,16 +3,17 @@ import pool from "../db.config";
 import Groq from "groq-sdk";
 import dotenv from "dotenv";
 import asyncHandler from "../middlewares/asyncHandler";
-import { UserRequest } from "../utils/types/userTypes"; // Assuming you have this type
+import { UserRequest } from "../utils/types/userTypes";
 
 dotenv.config();
-
-const groq = new Groq({ apiKey: process.env.XAI_API_KEY});
+const groq = new Groq({ apiKey: process.env.XAI_API_KEY });
 
 // 1. Generate Recommendations using Groq
 export const generateMealRecommendations = asyncHandler(async (req: UserRequest, res: Response) => {
-  const userId = req.user?.user_id; // Get ID from verified token
-  // If testing without auth middleware, use: const { user_id } = req.body;
+  const userId = req.user?.user_id;
+  
+  // ✅ NEW: Receive the coordinates string (e.g., "Lat: -1.2, Long: 36.8")
+  const { locationOverride } = req.body; 
 
   if (!userId) {
     return res.status(401).json({ message: "User not authenticated" });
@@ -33,24 +34,35 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
 
     const user = clientResult.rows[0];
 
-    // B. Build the System Prompt
+    // ✅ LOGIC: Use coordinates if sent, otherwise fallback to DB location, then default to Kenya
+    const finalLocationInput = locationOverride || user.location || "Kenya";
+
+    // B. Updated System Prompt to handle Coordinates
     const systemPrompt = `
-      You are an expert Kenyan Nutritionist. 
-      Generate a 1-day meal plan (Breakfast, Lunch, Dinner) strictly based on:
-      - Location: ${user.location} (Use ONLY locally available foods in this region).
+      You are an expert Nutritionist familiar with global and local cuisines.
+      
+      The user is currently at this location: "${finalLocationInput}".
+      
+      INSTRUCTIONS:
+      1. If the location is provided as GPS Coordinates (Lat/Long):
+         - First, identify the likely City, Region, or Country from these coordinates.
+         - Then, generate the meal plan using foods LOCALLY available in that identified region.
+      2. If the location is a city name, use foods available there.
+
+      Generate a 1-day meal plan (Breakfast, Lunch, Dinner) based on:
       - Goal: ${user.weight_goal}
       - Conditions: ${user.health_conditions ? user.health_conditions.join(', ') : 'None'}
       - Allergies: ${user.allergies ? user.allergies.join(', ') : 'None'}
       - Budget: ${user.budget}
 
       OUTPUT FORMAT:
-      Return ONLY valid JSON array with this exact structure:
+      Return ONLY a valid JSON array with this exact structure:
       [
-        { "type": "Breakfast", "meal": "Name of meal", "calories": "approx cal", "reason": "Why this fits" },
+        { "type": "Breakfast", "meal": "Name of meal", "calories": "approx cal", "reason": "Why this fits (mention the identified location context if possible)" },
         { "type": "Lunch", "meal": "Name of meal", "calories": "approx cal", "reason": "Why this fits" },
         { "type": "Dinner", "meal": "Name of meal", "calories": "approx cal", "reason": "Why this fits" }
       ]
-      Do not include markdown blocks like \`\`\`json. Just the raw JSON array.
+      Do not include markdown blocks like \`\`\`json or extra text.
     `;
 
     // C. Call Groq
@@ -59,9 +71,9 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
         { role: "system", content: systemPrompt },
         { role: "user", content: "Generate my meal plan." }
       ],
-      model: "llama-3.1-8b-instant", // High speed model
-      temperature: 0.5, // Lower temperature for more consistent formatting
-      max_tokens: 500,
+      model: "llama-3.1-8b-instant",
+      temperature: 0.5,
+      max_tokens: 600,
     });
 
     let aiContent = completion.choices[0]?.message?.content || "[]";
@@ -82,7 +94,7 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
     try {
       await client.query('BEGIN');
 
-      // Optional: Clear previous pending meals for today to avoid duplicates
+      // Clear previous pending meals for today to avoid duplicates
       await client.query(
         "DELETE FROM recommended_meals WHERE user_id = $1 AND recommended_date = CURRENT_DATE AND status = 'pending'",
         [userId]
@@ -108,9 +120,13 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
 
       await client.query('COMMIT');
 
+      // Determine display location for frontend
+      // If we used coordinates, label it "GPS Location" so the user knows it worked
+      const displayLocation = locationOverride ? "GPS Location" : finalLocationInput;
+
       res.status(200).json({
         message: "Meal plan generated successfully",
-        location: user.location,
+        location: displayLocation,
         data: savedMeals
       });
 
@@ -128,20 +144,18 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
 });
 
 // 2. Get Daily Meals
-// ... inside getDailyMeals ...
 export const getDailyMeals = asyncHandler(async (req: UserRequest, res: Response) => {
     const userId = req.user?.user_id;
 
     if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
-    // 1. Get the user's location from clients table
+    // Get location from profile as default for display
     const locationResult = await pool.query(
         `SELECT location FROM clients WHERE user_id = $1`, 
         [userId]
     );
-    const location = locationResult.rows[0]?.location || "Local"; // Default to 'Local' if missing
+    const location = locationResult.rows[0]?.location || "Local";
 
-    // 2. Get the meals
     const result = await pool.query(
         `SELECT * FROM recommended_meals 
          WHERE user_id = $1 AND recommended_date = CURRENT_DATE
@@ -151,7 +165,7 @@ export const getDailyMeals = asyncHandler(async (req: UserRequest, res: Response
 
     res.status(200).json({
         message: "Meals retrieved",
-        location: location, // <--- SEND LOCATION TO FRONTEND
+        location: location, 
         data: result.rows
     });
 });
