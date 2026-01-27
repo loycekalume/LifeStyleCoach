@@ -252,4 +252,97 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
     }
 });
 
+export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) => {
+    const clientId = (req as any).user.user_id;
 
+    const query = `
+        SELECT 
+            mp.meal_plan_id,
+            mp.title,
+            mp.category,
+            mp.description,
+            
+            -- ✅ CALCULATE CALORIES (Assuming 'meal_items' table exists)
+            -- If you don't have meal_items yet, change this line to: 'N/A' as calories,
+            (
+                SELECT COALESCE(SUM(calories), 0) 
+                FROM meal_items mi 
+                WHERE mi.meal_plan_id = mp.meal_plan_id
+            ) as calories,
+
+            cda.status,
+            
+            -- ✅ FIX: Use 'assigned_date' instead of 'start_date'
+            cda.assigned_date as start_date, 
+            
+            cda.custom_notes as dietician_notes,
+            u.name as dietician_name,
+            d.specialization
+        FROM client_diet_assignments cda
+        JOIN meal_plans mp ON cda.meal_plan_id = mp.meal_plan_id
+        JOIN dieticians d ON cda.dietician_id = d.dietician_id
+        JOIN users u ON d.user_id = u.user_id
+        WHERE cda.client_id = $1 AND cda.status = 'active'
+        ORDER BY cda.assigned_date DESC
+    `;
+
+    const result = await pool.query(query, [clientId]);
+
+    // Format the response
+    const formattedPlans = result.rows.map(plan => ({
+        ...plan,
+        // Ensure calories is a string with "kcal" appended
+        calories: plan.calories ? `${plan.calories} kcal` : 'N/A'
+    }));
+
+    res.json({
+        message: "Plans retrieved",
+        plans: formattedPlans
+    });
+});
+
+// ... existing imports
+
+// GET /client/plans/:planId/details
+export const getMealPlanDetails = asyncHandler(async (req: Request, res: Response) => {
+    const { planId } = req.params;
+
+    // 1. Fetch Plan Metadata
+    const planQuery = `
+        SELECT 
+            mp.meal_plan_id, mp.title, mp.category, mp.description,
+            u.name as dietician_name,
+            cda.custom_notes
+        FROM meal_plans mp
+        JOIN client_diet_assignments cda ON mp.meal_plan_id = cda.meal_plan_id
+        JOIN dieticians d ON cda.dietician_id = d.dietician_id
+        JOIN users u ON d.user_id = u.user_id
+        WHERE mp.meal_plan_id = $1
+    `;
+    const planResult = await pool.query(planQuery, [planId]);
+
+    if (planResult.rows.length === 0) {
+        return res.status(404).json({ message: "Plan not found" });
+    }
+
+    // 2. Fetch Actual Meal Items from 'meal_items' table
+    // Assumes columns: item_id, meal_type (Breakfast, etc.), item_name, calories, portion
+    const itemsQuery = `
+        SELECT * FROM meal_items 
+        WHERE meal_plan_id = $1 
+        ORDER BY 
+            CASE 
+                WHEN meal_type = 'Breakfast' THEN 1
+                WHEN meal_type = 'Lunch' THEN 2
+                WHEN meal_type = 'Snack' THEN 3
+                WHEN meal_type = 'Dinner' THEN 4
+                ELSE 5
+            END
+    `;
+    const itemsResult = await pool.query(itemsQuery, [planId]);
+
+    res.json({
+        plan: planResult.rows[0],
+        items: itemsResult.rows
+    });
+});
