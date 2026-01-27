@@ -9,21 +9,22 @@ import SessionsCard from "../components/client/SessionCard";
 import ProgressChart from "../components/client/progressChart";
 import WorkoutPlan from "../components/client/WorkoutPlan";
 import NutritionCard from "../components/client/NutritionCard";
-import ActivityCard from "../components/client/recommendedMeals";
+// This is the daily menu card for the dashboard right column
+import AssignedMealPlans from "../components/client/asignedMealPlans"; 
 import GoalsCard from "../components/client/GoalsCard";
 import InstructorsList from "../components/client/instructorList";
 import BookSessionModal from "../components/client/bookSessionModal";
 import LogMealModal from "../components/client/logMealModal";
 import ClientWorkouts from "../components/client/myWorkouts";
-import ClientMealPlans from "../components/client/clientMealPlans";
-import MatchedDieticians from "../components/client/clientDieticians"
+import MatchedDieticians from "../components/client/clientDieticians";
 
-// Services & Types
+// These act as the sub-views for the Nutrition tab
+import ClientMealPlans from "../components/client/clientMealPlans"; 
+import MealPlanDetails from "../components/client/mealPlanDetails"; // The Detailed Timeline
+
 import type { Client } from "../Services/clientViewService";
 import { getClientById } from "../Services/clientViewService";
 
-
-// Define valid page types to avoid Type errors
 type PageType = "dashboard" | "workouts" | "nutrition" | "instructors" | "schedule" | "progress";
 
 export default function ClientDashboard() {
@@ -31,23 +32,25 @@ export default function ClientDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [mealLogOpen, setMealLogOpen] = useState(false);
   const [userName, setUserName] = useState("User");
-  const navigate = useNavigate();
-
-  // Initialize state from LocalStorage so it remembers where you were on refresh
+  
+  // State for Navigation
   const [currentPage, setCurrentPage] = useState<PageType>(() => {
     const savedPage = localStorage.getItem("clientCurrentPage");
     return (savedPage as PageType) || "dashboard";
   });
 
-  const [nutritionView, setNutritionView] = useState<"overview" | "plans">("overview");
+  // ✅ NEW: State to track if a specific plan is selected in the Nutrition tab
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
 
+  const navigate = useNavigate();
   const userId = Number(localStorage.getItem("userId") || 13);
 
-  // Save to LocalStorage whenever currentPage changes
+  // Persistence
   useEffect(() => {
     localStorage.setItem("clientCurrentPage", currentPage);
   }, [currentPage]);
 
+  // Data Loading
   useEffect(() => {
     const storedName = localStorage.getItem("userName");
     if (storedName) setUserName(storedName);
@@ -63,162 +66,112 @@ export default function ClientDashboard() {
     loadClient();
   }, [userId]);
 
-  
-
-  // Helper function to handle navigation changes and reset sub-views
   const handleNavigation = (page: PageType) => {
     setCurrentPage(page);
-    setNutritionView("overview");
+    setSelectedPlanId(null); // Reset detail view when changing tabs
   };
 
-  // Main content renderer
-  const renderContent = () => {
-    // ✅ FIX: If client data isn't loaded yet, show a loader instead of crashing
-    if (!client && (currentPage === "dashboard" || currentPage === "progress")) {
-       return <div style={{ padding: "50px", textAlign: "center" }}>Loading your data...</div>;
-    }
+  // --- Content Renderers ---
+  const renderDashboard = () => (
+    <>
+      <section className="welcome-section">
+        <div className="welcome-content">
+          <h1>Welcome back, {userName}! 👋</h1>
+          <p>Your daily health overview is ready.</p>
+        </div>
+        <div className="quick-actions">
+          <button className="action-btn primary" onClick={() => handleNavigation("workouts")}>
+            <i className="fas fa-dumbbell"></i> Workout
+          </button>
+          <button className="action-btn secondary" onClick={() => setModalOpen(true)}>
+            <i className="fas fa-calendar-check"></i> Book
+          </button>
+          <button className="action-btn tertiary" onClick={() => navigate("/messages")}>
+            <i className="fas fa-comment-dots"></i> Chat
+          </button>
+        </div>
+      </section>
 
-    switch (currentPage) {
-      case "dashboard":
-        // TypeScript now knows 'client' is not null here because of the check above
-        return (
-          <>
-            <section className="welcome-section">
-              <div className="welcome-content">
-                <h1>Welcome back, {userName}! 👋</h1>
-                <p>Ready to crush your fitness and health goals today?</p>
-              </div>
-              <div className="quick-actions">
-                <button className="action-btn primary" onClick={() => handleNavigation("workouts")}>
-                  <i className="fas fa-play"></i> Start Workout
-                </button>
+      {client ? (
+        <div className="dashboard-grid">
+          <div className="dashboard-left">
+            <SessionsCard client={client} />
+            <WorkoutPlan client={client} />
+          </div>
+          <div className="dashboard-middle">
+            <ProgressChart client={client} />
+            {/* Summary Stats */}
+            <NutritionCard client={client} /> 
+          </div>
+          <div className="dashboard-right">
+            {/* Daily Menu Card */}
+            <AssignedMealPlans client={client} />
+            <GoalsCard client={client} />
+          </div>
+        </div>
+      ) : (
+        <div className="loading-container">Loading dashboard...</div>
+      )}
 
-                <button className="action-btn secondary" onClick={() => setModalOpen(true)}>
-                  <i className="fas fa-calendar-plus"></i> Book Session
-                </button>
-                <BookSessionModal
-                  open={modalOpen}
-                  onClose={() => setModalOpen(false)}
-                  onNavigate={(page) => handleNavigation(page as PageType)}
-                />
-
-                <button
-                  className="action-btn tertiary"
-                  onClick={() => navigate("/messages")} 
-                >
-                  <i className="fas fa-comments"></i> My Chats
-                </button>
-            <LogMealModal
-  open={mealLogOpen}
-  onClose={() => setMealLogOpen(false)}
-  onSuccess={() => {
-     alert("Meal logged!");
-     // Optional: If you have a function to reload dashboard stats, call it here.
-     // e.g., loadClient(); 
-  }}
-/>
-              </div>
-            </section>
-
-            {/* ✅ client! is safe here, or simple passing 'client' works because we checked it */}
-            <div className="dashboard-grid">
-              <div className="dashboard-left">
-                <SessionsCard client={client!} />
-                <WorkoutPlan client={client!} />
-              </div>
-              <div className="dashboard-middle">
-                <ProgressChart client={client!} />
-                <NutritionCard client={client!} />
-              </div>
-              <div className="dashboard-right">
-                <ActivityCard client={client!} />
-                <GoalsCard client={client!} />
-              </div>
-            </div>
-          </>
-        );
-
-      case "workouts":
-        return (
-          <section className="main-section">
-            <ClientWorkouts />
-          </section>
-        );
-
-      case "nutrition":
-        return (
-          <section className="main-section">
-            {nutritionView === "overview" ? (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h1>Nutrition Overview</h1>
-                  <button
-                    className="action-btn primary"
-                    onClick={() => setNutritionView("plans")}
-                    style={{ fontSize: '0.9rem', padding: '10px 20px' }}
-                  >
-                    <i className="fas fa-utensils" style={{ marginRight: '8px' }}></i>
-                    My Meal Plans
-                  </button>
-                </div>
-                {/* ✅ Check client exists before rendering NutritionCard */}
-                {client ? <NutritionCard client={client} /> : <p>Loading Nutrition Data...</p>}
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => setNutritionView("overview")}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: '#666', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px'
-                  }}
-                >
-                  <i className="fas fa-arrow-left"></i> Back to Overview
-                </button>
-                <ClientMealPlans />
-              </>
-            )}
-          </section>
-        );
-
-      case "instructors":
-        return (
-          <section className="main-section">
-            <h1>Available Instructors</h1>
-            <InstructorsList />
-          </section>
-        );
-
-     case "schedule":
-  return (
-    <section className="main-section">
-      {/* 2. Render the component here */}
-      <MatchedDieticians />
-    </section>
+      {/* Modals */}
+      <BookSessionModal 
+        open={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        onNavigate={(page) => handleNavigation(page as PageType)} 
+      />
+      <LogMealModal 
+        open={mealLogOpen} 
+        onClose={() => setMealLogOpen(false)} 
+        onSuccess={() => alert("Meal logged!")} 
+      />
+    </>
   );
 
-      case "progress":
-        return (
-          <section className="main-section">
-            <h1>Progress</h1>
-            <ProgressChart client={client!} />
-          </section>
-        );
+  const renderNutrition = () => {
+    // 1. DETAIL VIEW: If a plan ID is selected, show the Timeline
+    if (selectedPlanId) {
+      return (
+        <section className="main-section">
+          <MealPlanDetails 
+            planId={selectedPlanId} 
+            onBack={() => setSelectedPlanId(null)} // Back button resets state
+          />
+        </section>
+      );
+    }
 
-      default:
-        return <div>Page not found</div>;
+    // 2. DEFAULT VIEW: Show Nutrition Card + List of All Plans
+    return (
+      <section className="main-section">
+        <h1>Nutrition Overview</h1>
+        
+        {/* The Stats Card */}
+        {client && <NutritionCard client={client} />}
+        
+        {/* The List of Plans - Clicking one sets the selectedPlanId */}
+        <ClientMealPlans onPlanSelect={(id) => setSelectedPlanId(id)} />
+        
+      </section>
+    );
+  };
+
+  // --- Main Switch ---
+  const renderContent = () => {
+    switch (currentPage) {
+      case "dashboard": return renderDashboard();
+      case "workouts": return <section className="main-section"><ClientWorkouts /></section>;
+      case "nutrition": return renderNutrition(); // ✅ Uses the logic above
+      case "instructors": return <section className="main-section"><h1>Instructors</h1><InstructorsList /></section>;
+      case "schedule": return <section className="main-section"><MatchedDieticians /></section>;
+      case "progress": return <section className="main-section"><h1>Your Progress</h1>{client && <ProgressChart client={client} />}</section>;
+      default: return <div>Page not found</div>;
     }
   };
 
   return (
     <>
-      <TopNav
-        currentPage={currentPage}
-        onNavigate={(page) => handleNavigation(page as PageType)}
-      />
-
+      <TopNav currentPage={currentPage} onNavigate={(page) => handleNavigation(page as PageType)} />
       {renderContent()}
-
       <MobileNav />
     </>
   );

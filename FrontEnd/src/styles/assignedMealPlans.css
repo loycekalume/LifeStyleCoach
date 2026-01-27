@@ -1,0 +1,210 @@
+.assigned-meal-card {
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f2f5;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 400px;
+}
+
+/* Header */
+.am-header {
+  padding: 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #f7fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.am-header-title {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.am-icon-box {
+  width: 45px;
+  height: 45px;
+  background: #f0fdf4;
+  color: #16a34a;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.am-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.am-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  display: block;
+  margin-top: 2px;
+}
+
+.am-calories-badge {
+  background: #fef2f2;
+  color: #ef4444;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Content */
+.am-content {
+  flex: 1;
+  padding: 24px;
+  background: #fcfcfc;
+  overflow-y: auto;
+}
+
+/* List Items */
+.am-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.am-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: white;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
+}
+
+.am-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  border-color: #e2e8f0;
+}
+
+.am-item.logged {
+  background: #f8fafc;
+  opacity: 0.8;
+}
+
+/* Item Icon */
+.am-item-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.am-item-icon.breakfast { background: #fff7ed; color: #f97316; }
+.am-item-icon.lunch { background: #ecfdf5; color: #10b981; }
+.am-item-icon.dinner { background: #eff6ff; color: #3b82f6; }
+.am-item-icon.snack { background: #f3f4f6; color: #64748b; }
+
+/* Item Info */
+.am-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.am-type {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.am-name {
+  font-size: 0.95rem;
+  color: #334155;
+  font-weight: 500;
+}
+
+/* Actions */
+.am-btn-eat {
+  background: #1e293b;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.am-btn-eat:hover {
+  background: #0f172a;
+}
+
+.am-logged-text {
+  color: #16a34a;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Footer */
+.am-footer {
+  padding: 16px 24px;
+  background: white;
+  border-top: 1px solid #f1f5f9;
+  text-align: center;
+}
+
+.am-view-all {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.am-view-all:hover {
+  color: #3b82f6;
+}
+
+/* Loading/Empty States */
+.am-loading, .am-empty {
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+}
+
+.am-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

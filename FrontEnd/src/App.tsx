@@ -24,6 +24,7 @@ import ClientProgress from "./components/instructor/clientsProgress";
 import MatchedDieticians from "./components/client/clientDieticians"
 
 
+
 const App: React.FC = () => {
   return (
     <Router>
@@ -49,7 +50,7 @@ const App: React.FC = () => {
           <Route path="/admin/clients" element={<ClientList />} />
           <Route path="clientsView" element={<ClientsPage />} />
           <Route path="dietician/clients" element={<DieticianClients />} />
-
+        
 <Route path="matched-dieticians" element={<MatchedDieticians />} />
           <Route
             path="/complete-profile"
