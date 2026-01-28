@@ -25,11 +25,7 @@ interface DieticianProfileData {
   clinic_address: string;
 }
 
-const formatArray = (input: string | null): string => {
-  if (!input) return "{}";
-  const elements = input.split(',').map(e => `"${e.trim()}"`).filter(e => e.length > 2);
-  return `{${elements.join(',')}}`;
-};
+
 
 const DieticianProfileWizard: React.FC = () => {
   const navigate = useNavigate();
@@ -112,7 +108,7 @@ const DieticianProfileWizard: React.FC = () => {
     setError(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep(step)) return;
 
@@ -125,14 +121,28 @@ const DieticianProfileWizard: React.FC = () => {
     setError(null);
 
     try {
+      // ✅ Process specialization into array
+      const specializationArray = formData.specialization
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      // ✅ Process certification into array
+      const certificationArray = formData.certification
+        .split(',')
+        .map(c => c.trim())
+        .filter(Boolean);
+
       const payload = {
         user_id: formData.user_id,
-        certification: formData.certification,
-        specialization: formatArray(formData.specialization),
+        certification: certificationArray,  // ✅ Send as array
+        specialization: specializationArray,  // ✅ Send as array
         years_of_experience: parseInt(formData.years_of_experience, 10),
         clinic_name: formData.clinic_name,
         clinic_address: formData.clinic_address,
       };
+
+      console.log("[WIZARD] Submitting payload:", payload);
 
       const res = await axios.post("http://localhost:3000/dietician", payload); 
       
@@ -144,6 +154,7 @@ const DieticianProfileWizard: React.FC = () => {
       navigate("/dietician");
     } catch (err: any) {
       console.error("Profile submission error:", err);
+      console.error("Response:", err.response?.data);
       setError(
         err.response?.data?.message ||
           "Failed to save profile. Please ensure your backend is running and data is valid."
