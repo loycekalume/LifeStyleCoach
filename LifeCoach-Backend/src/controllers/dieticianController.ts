@@ -3,7 +3,6 @@ import pool from "../db.config"
 import asyncHandler from "../middlewares/asyncHandler";
 import { UserRequest } from "../utils/types/userTypes";
 
-
 export const addDietician = asyncHandler(async (req: Request, res: Response) => {
   try {
     const {
@@ -12,8 +11,18 @@ export const addDietician = asyncHandler(async (req: Request, res: Response) => 
       years_of_experience,
       clinic_name,
       clinic_address,
-      certification, // ✅ Added field
+      certification,
     } = req.body;
+
+    console.log("[ADD DIETICIAN] Received data:", {
+      user_id,
+      specialization,
+      certification,
+      types: {
+        specialization: typeof specialization,
+        certification: typeof certification
+      }
+    });
 
     // ✅ Verify user exists and is actually a dietician (role_id = 4)
     const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [user_id]);
@@ -22,35 +31,73 @@ export const addDietician = asyncHandler(async (req: Request, res: Response) => 
       return res.status(400).json({ message: "User is not a dietician" });
     }
 
-    // ✅ Handle empty or missing specialization gracefully
-    const specializationArray =
-      Array.isArray(specialization) && specialization.length > 0
-        ? specialization
-        : "{}"; // fallback to empty Postgres array
+    // ✅ Handle specialization array
+    let specializationArray;
+    if (Array.isArray(specialization) && specialization.length > 0) {
+      specializationArray = specialization;
+    } else if (typeof specialization === 'string' && specialization.trim()) {
+      // If it comes as string like "{Diabetes,Weight Loss}", parse it
+      specializationArray = specialization.replace(/[{}]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+      specializationArray = [];
+    }
 
-    //  Clean up clinic_address input
+    // ✅ Handle certification array (same logic)
+    let certificationArray;
+    if (Array.isArray(certification) && certification.length > 0) {
+      certificationArray = certification;
+    } else if (typeof certification === 'string' && certification.trim()) {
+      // Split by comma if multiple certifications like "RDN, LD"
+      certificationArray = certification.split(',').map(c => c.trim()).filter(Boolean);
+    } else {
+      certificationArray = [];
+    }
+
+    console.log("[ADD DIETICIAN] Processed arrays:", {
+      specializationArray,
+      certificationArray
+    });
+
+    // Clean up clinic_address input
     const cleanClinicAddress = clinic_address?.trim() || null;
 
-    //  Insert the dietician profile
+    // ✅ Insert the dietician profile
     const newDietician = await pool.query(
       `INSERT INTO dieticians (
         user_id, specialization, years_of_experience, clinic_name, clinic_address, certification
       )
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *`,
-      [user_id, specializationArray, years_of_experience, clinic_name, cleanClinicAddress, certification]
+      [
+        user_id, 
+        specializationArray,      // ✅ Now an array
+        years_of_experience, 
+        clinic_name, 
+        cleanClinicAddress, 
+        certificationArray        // ✅ Now an array
+      ]
     );
 
-    //  Mark user profile as complete
+    // Mark user profile as complete
     await pool.query("UPDATE users SET profile_complete = TRUE WHERE user_id = $1", [user_id]);
+
+    console.log("[ADD DIETICIAN] Success:", newDietician.rows[0]);
 
     res.status(200).json({
       message: "Dietician profile successfully completed and saved",
       dietician: newDietician.rows[0],
     });
-  } catch (error) {
-    console.error("Error adding dietician:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+  } catch (error: any) {
+    console.error("[ADD DIETICIAN] Error:", error);
+    console.error("[ADD DIETICIAN] Error details:", {
+      message: error.message,
+      code: error.code,
+      detail: error.detail
+    });
+    res.status(500).json({ 
+      message: "Internal Server Error",
+      error: error.message 
+    });
   }
 });
 
