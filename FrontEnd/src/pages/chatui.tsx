@@ -207,6 +207,7 @@ const MessagesPage: React.FC = () => {
       room: activeConversation,
       message: currentMessage,
       senderId: myUserId,
+      recipientId: activeConv?.other_person_id,
       time: timeNowRaw.toISOString(), // Send ISO to socket for accuracy
     };
 
