@@ -159,7 +159,6 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
     const instructor = instRes.rows[0];
 
     // 2. Fetch All Clients
-    // We limit to 50 to avoid sending too much text to AI at once
     const clientQuery = `
         SELECT 
             u.user_id, u.name, 
@@ -177,47 +176,73 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
     }
 
     // 3. Construct AI Prompt
-    const systemPrompt = `
-        You are an assistant to a Fitness Instructor.
-        Your goal is to explain why specific Clients are a good business opportunity for this Instructor.
+    const systemPrompt = `You are a fitness client matching expert. Your job is to find the BEST client matches for an instructor based on strict compatibility criteria.
 
-        === INSTRUCTOR PROFILE ===
-        Specialization: ${instructor.specialization}
-        Locations: ${instructor.available_locations}
-        Mode: ${instructor.coaching_mode}
+**INSTRUCTOR PROFILE:**
+- Specialization: ${instructor.specialization}
+- Available Locations: ${instructor.available_locations}
+- Coaching Mode: ${instructor.coaching_mode}
 
-        === CLIENT LIST ===
-        ${JSON.stringify(clients.map(c => ({
-            id: c.user_id,
-            name: c.name,
-            goal: c.weight_goal,
-            loc: c.location,
-            budget: c.budget
-        })))}
+**CLIENTS TO EVALUATE:**
+${JSON.stringify(clients.map(c => ({
+    id: c.user_id,
+    name: c.name,
+    weight_goal: c.weight_goal,
+    location: c.location,
+    gender: c.gender,
+    age: c.age,
+    health_conditions: c.health_conditions
+})), null, 2)}
 
-        === RULES ===
-        1. **Perspective:** Speak directly to the Instructor. Use "You" for the instructor and "This client" or "They" for the client.
-        2. **Tone:** Professional, encouraging, and business-focused.
-        3. **Constraint:** Only return matches with a score > 50.
+**MATCHING RULES (APPLY STRICTLY):**
 
-        === OUTPUT FORMAT (JSON) ===
-        {
-            "matches": [
-                { 
-                    "user_id": 123, 
-                    "match_score": 90, 
-                    "match_reason": "This client is looking for weight loss, which is your top specialization. They are also located in your area." 
-                }
-            ]
+1. **Specialization Match (40 points max):**
+   - EXACT match between instructor specialization and client weight_goal: 40 points
+   - Partial/related match (e.g., "weight loss" instructor + "fat loss" client): 25 points
+   - No match: 0 points
+
+2. **Location Match (40 points max):**
+   - COACHING MODE LOGIC:
+     * If instructor coaching_mode is "Online" or "Remote": Award 40 points to ALL clients (location irrelevant)
+     * If instructor coaching_mode is "In-Person": Client location MUST match at least one of instructor's available_locations
+       - Exact city match: 40 points
+       - Same region/state: 25 points
+       - Different location: 0 points
+     * If instructor coaching_mode is "Both" or "Hybrid": 
+       - Location match: 40 points
+       - No location match but client could go online: 30 points
+
+
+
+**SCORING:**
+- Calculate total score (max 100 points)
+- ONLY return matches with score ≥ 50
+- Be STRICT - don't force matches that don't meet criteria
+
+**OUTPUT FORMAT (STRICT JSON):**
+{
+    "matches": [
+        { 
+            "user_id": <number>,
+            "match_score": <number 0-100>,
+            "match_reason": "<2-3 sentence explanation from instructor's perspective using 'you' for instructor and 'they/this client' for client. Be specific about WHY they match.>"
         }
-    `;
+    ]
+}
+
+**IMPORTANT:**
+- Speak directly to the instructor (use "you")
+- Be professional and business-focused
+- Only include scores ≥ 50
+- If no matches meet criteria, return empty matches array
+- Be honest - don't inflate scores artificially`;
 
     try {
         const completion = await groq.chat.completions.create({
             messages: [{ role: "system", content: systemPrompt }],
             model: "llama-3.1-8b-instant",
             temperature: 0.1,
-            response_format: { type: "json_object" }, // Force JSON
+            response_format: { type: "json_object" },
         });
 
         // 4. Parse AI Response
@@ -226,29 +251,34 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
         const aiMatches = parsedData.matches || [];
 
         // 5. Merge AI Scores back into Full Client Objects
-        const finalResults = aiMatches.map((match: any) => {
-            const originalClient = clients.find(c => c.user_id === match.user_id);
-            if (!originalClient) return null;
+        const finalResults = aiMatches
+            .filter((match: any) => match.match_score >= 50) // Double-check AI followed rules
+            .map((match: any) => {
+                const originalClient = clients.find(c => c.user_id === match.user_id);
+                if (!originalClient) return null;
 
-            return {
-                ...originalClient,
-                match_score: match.match_score,
-                match_reasons: [match.match_reason] // Standardizing as array
-            };
-        }).filter(Boolean);
+                return {
+                    ...originalClient,
+                    match_score: match.match_score,
+                    match_reasons: [match.match_reason]
+                };
+            })
+            .filter(Boolean);
 
-        // Sort by score
+        // Sort by score (highest first)
         finalResults.sort((a: any, b: any) => b.match_score - a.match_score);
 
         res.json({
-            message: "AI Matches found",
+            message: `Found ${finalResults.length} qualified matches`,
             data: finalResults
         });
 
     } catch (error) {
         console.error("AI Error:", error);
-        // Fallback: Return empty or all clients if AI fails
-        res.status(200).json({ message: "AI unavailable", data: clients });
+        res.status(500).json({ 
+            message: "AI matching service unavailable", 
+            data: [] 
+        });
     }
 });
 
