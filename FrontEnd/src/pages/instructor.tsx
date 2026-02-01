@@ -47,21 +47,36 @@ const InstructorProfile: React.FC = () => {
 
   return (
     <div>
-      <header className="header">
-        <div className="container">
-          <div className="header-content">
-            <h1>Instructor Profile</h1>
-            <div className="header-actions">
-              <button className="btn btn-outline" onClick={() => navigate("/workouts")}>
-                <i className="fas fa-dumbbell"></i> Workouts
-              </button>
-              <Link to="/clientsView" className="btn btn-primary">
-                <i className="fas fa-user-friends"></i> View Clients
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+     <header className="header">
+  <div className="container">
+    <div className="header-content">
+      <h1>Instructor Profile</h1>
+      <div className="header-actions">
+        
+        {/* ✅ NEW: My Chats Button */}
+        <button 
+          className="btn btn-outline" 
+          onClick={() => navigate("/messages")}
+          title="View Conversations"
+        >
+          <i className="fas fa-comments"></i> My Chats
+        </button>
+
+        <button 
+          className="btn btn-outline" 
+          onClick={() => navigate("/workouts")}
+        >
+          <i className="fas fa-dumbbell"></i> Workouts
+        </button>
+
+        <Link to="/clientsView" className="btn btn-primary">
+          <i className="fas fa-user-friends"></i> View Clients
+        </Link>
+        
+      </div>
+    </div>
+  </div>
+</header>
 
       <div className="container">
         <div className="profile-layout">
