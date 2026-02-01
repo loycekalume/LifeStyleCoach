@@ -106,35 +106,52 @@ app.use("/workoutLogs", workoutLogRoutes);
 app.use("/mealPlans", recommendedMealplans);
 
 // 5. SOCKET.IO CONNECTION LOGIC
+// 5. SOCKET.IO CONNECTION LOGIC
 io.on("connection", (socket) => {
     console.log(`User Connected: ${socket.id}`);
 
-    socket.on("join_room", (room) => {
-        socket.join(room);
-        console.log(`User ${socket.id} joined room: ${room}`);
+    // ✅ 1. NEW: Allow a user to join their "Personal Notification Room"
+    // This allows us to send alerts to them specifically (like "New Message!")
+    socket.on("join_user_room", (userId) => {
+        socket.join(`user_${userId}`);
+        console.log(`User ${userId} joined notification room: user_${userId}`);
     });
 
-    // ✅ UPDATED: Save message to DB then Emit
+    // Existing Chat Room Logic
+    socket.on("join_room", (room) => {
+        socket.join(room);
+        console.log(`User ${socket.id} joined chat room: ${room}`);
+    });
+
+    // ✅ 2. UPDATED: Save Message -> Emit to Chat -> Emit Notification
     socket.on("send_message", async (data) => {
-        // data = { room, author, message, senderId, time }
+        // Expected data = { room, message, senderId, recipientId, time }
         
         try {
-            // 1. Save to Database
-            // Assuming table 'messages' has columns: conversation_id, sender_id, content
+            // A. Save to Database
             const saveQuery = `
                 INSERT INTO messages (conversation_id, sender_id, content) 
                 VALUES ($1, $2, $3)
             `;
             await pool.query(saveQuery, [data.room, data.senderId, data.message]);
 
-            // 2. Emit to others in room
+            // B. Emit to the Chat Room (Updates the active chat window)
             socket.to(data.room).emit("receive_message", data);
             
+            // C. ✅ NEW: Emit Notification to the Recipient's Personal Room
+            // This triggers the red badge on the Profile/Dashboard
+            if (data.recipientId) {
+                io.to(`user_${data.recipientId}`).emit("new_message_notification", {
+                    type: 'message',
+                    count: 1 
+                });
+                console.log(`Notification sent to user_${data.recipientId}`);
+            }
+
             console.log("Message saved and sent:", data.message);
 
         } catch (err) {
             console.error("Socket Message Save Error:", err);
-            // Optional: Emit an error back to sender
         }
     });
 
