@@ -1,18 +1,19 @@
 import express from "express";
 import {
   createSession,
-  getSessions,
-  getSessionById,
+  getInstructorSessions,
+
   updateSession,
   deleteSession,
 } from "../controllers/sessionControllers";
+import { protect } from "../middlewares/auth/protect";
 
 const router = express.Router();
 
-router.post("/", createSession);
-router.get("/", getSessions);
-router.get("/:id", getSessionById);
-router.put("/:id", updateSession);
-router.delete("/:id", deleteSession);
+router.post("/", protect,createSession);
+router.get("/",protect, getInstructorSessions);
+
+router.put("/:id", protect,updateSession);
+router.delete("/:id",protect, deleteSession);
 
 export default router;

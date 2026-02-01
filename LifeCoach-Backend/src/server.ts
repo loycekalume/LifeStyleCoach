@@ -36,6 +36,7 @@ import instructorClients from "./routes/instructorClients"
 import matchedDietician from "./routes/matchedDietician";
 import dieticianClients from "./routes/dieticianClients";
 import goalsRoutes from "./routes/goalsRoutes";
+import clientSession from "./routes/clientSession";
 // Configure dotenv
 dotenv.config();
 
@@ -73,6 +74,7 @@ app.use(cors({
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/client/goals", goalsRoutes);
+app.use("/clientSessions", clientSession);
 app.use("/mealLogs", MealLogRoutes);
 app.use("/recipes", recipeRoutes);
 app.use("/instructorClients", instructorClients);
