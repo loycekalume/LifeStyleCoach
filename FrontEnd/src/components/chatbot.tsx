@@ -1,10 +1,9 @@
-// components/Chatbot.tsx
 import React, { useState, useRef, useEffect } from "react";
 import type { ChangeEvent, MouseEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { X, MessageCircle, Send, Loader2 } from "lucide-react";
-import  api  from "../utils/axiosInstance"; // ✅ Import our axios instance
+import api from "../utils/axiosInstance"; 
 import "../styles/Chatbot.css";
 
 interface Message {
@@ -13,6 +12,16 @@ interface Message {
 }
 
 const Chatbot: React.FC = () => {
+  // ✅ 1. ROLE CHECK: Get role from storage
+  const userRole = localStorage.getItem("userRole");
+
+  // ✅ 2. RESTRICTION: If not a Client, don't render anything
+  // Ideally, ensure your login logic saves "Client", "Dietician", or "Instructor" correctly.
+  if (userRole !== "Client") {
+    return null;
+  }
+
+  // ... (Rest of your existing state)
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
@@ -23,27 +32,23 @@ const Chatbot: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // 1. Scroll to bottom on new message
+  // 1. Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isOpen]);
 
-  // 2. Fetch History when opened (only once per session)
+  // 2. Fetch History
   useEffect(() => {
     if (isOpen && !hasFetchedHistory) {
       const fetchHistory = async () => {
         try {
-          // No user_id needed - backend reads from cookie
           const res = await api.get('/chathistory/history');
-          
-          // Transform DB format to UI format
           const historyMessages: Message[] = [];
           res.data.forEach((row: any) => {
             historyMessages.push({ sender: "user", text: row.question });
             historyMessages.push({ sender: "bot", text: row.answer });
           });
 
-          // If no history, add default greeting
           if (historyMessages.length === 0) {
             historyMessages.push({ 
               sender: "bot", 
@@ -56,23 +61,14 @@ const Chatbot: React.FC = () => {
           setError(null);
         } catch (err: any) {
           console.error("History fetch error:", err);
-          
           if (err.response?.status === 401) {
             setError("Session expired. Please log in again.");
-            setMessages([{ 
-              sender: "bot", 
-              text: "⚠️ Please log in to continue chatting." 
-            }]);
+            setMessages([{ sender: "bot", text: "⚠️ Please log in to continue chatting." }]);
           } else {
-            // Fallback greeting if error
-            setMessages([{ 
-              sender: "bot", 
-              text: "Hello! (Could not load history)" 
-            }]);
+            setMessages([{ sender: "bot", text: "Hello! (Could not load history)" }]);
           }
         }
       };
-
       fetchHistory();
     }
   }, [isOpen, hasFetchedHistory]);
@@ -87,36 +83,20 @@ const Chatbot: React.FC = () => {
     const userQuestion = input;
     setInput(""); 
 
-    // Add User Message Optimistically
     setMessages((prev) => [...prev, { sender: "user", text: userQuestion }]);
     setIsLoading(true);
     setError(null);
 
     try {
-      // ✅ No user_id needed - backend reads from cookie
-      const response = await api.post('/chat', {
-        question: userQuestion,
-      });
-
-      setMessages((prev) => [...prev, { 
-        sender: "bot", 
-        text: response.data.reply 
-      }]);
-
+      const response = await api.post('/chat', { question: userQuestion });
+      setMessages((prev) => [...prev, { sender: "bot", text: response.data.reply }]);
     } catch (error: any) {
       console.error("Chat Error:", error);
-      
       if (error.response?.status === 401) {
         setError("Session expired");
-        setMessages((prev) => [...prev, { 
-          sender: "bot", 
-          text: "⚠️ Your session expired. Please log in again." 
-        }]);
+        setMessages((prev) => [...prev, { sender: "bot", text: "⚠️ Your session expired. Please log in again." }]);
       } else {
-        setMessages((prev) => [...prev, { 
-          sender: "bot", 
-          text: "⚠️ Sorry, I couldn't reach the server." 
-        }]);
+        setMessages((prev) => [...prev, { sender: "bot", text: "⚠️ Sorry, I couldn't reach the server." }]);
       }
     } finally {
       setIsLoading(false);
@@ -161,34 +141,19 @@ const Chatbot: React.FC = () => {
                 </button>
               </div>
 
-              {error && (
-                <div className="chatbot-error">
-                  ⚠️ {error}
-                </div>
-              )}
+              {error && <div className="chatbot-error">⚠️ {error}</div>}
 
               <div className="chatbot-messages">
                 {messages.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`message ${msg.sender === "user" ? "user" : "bot"}`}
-                  >
-                    {msg.sender === "bot" ? (
-                      <ReactMarkdown>{msg.text}</ReactMarkdown>
-                    ) : (
-                      msg.text
-                    )}
+                  <div key={index} className={`message ${msg.sender === "user" ? "user" : "bot"}`}>
+                    {msg.sender === "bot" ? <ReactMarkdown>{msg.text}</ReactMarkdown> : msg.text}
                   </div>
                 ))}
-                
                 {isLoading && (
                   <div className="message bot loading">
-                    <span className="dot">.</span>
-                    <span className="dot">.</span>
-                    <span className="dot">.</span>
+                    <span className="dot">.</span><span className="dot">.</span><span className="dot">.</span>
                   </div>
                 )}
-                
                 <div ref={messagesEndRef} />
               </div>
 
@@ -200,16 +165,8 @@ const Chatbot: React.FC = () => {
                   placeholder="Ask about food..."
                   disabled={isLoading}
                 />
-                <button
-                  onClick={handleSend}
-                  className="send-btn"
-                  disabled={isLoading || !input.trim()}
-                >
-                  {isLoading ? (
-                    <Loader2 className="animate-spin" size={16} />
-                  ) : (
-                    <Send size={16} />
-                  )}
+                <button onClick={handleSend} className="send-btn" disabled={isLoading || !input.trim()}>
+                  {isLoading ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
                 </button>
               </div>
             </motion.div>
