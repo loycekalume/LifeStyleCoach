@@ -35,6 +35,7 @@ import chatui from "./routes/chatui";
 import instructorClients from "./routes/instructorClients"
 import matchedDietician from "./routes/matchedDietician";
 import dieticianClients from "./routes/dieticianClients";
+import goalsRoutes from "./routes/goalsRoutes";
 // Configure dotenv
 dotenv.config();
 
@@ -71,6 +72,7 @@ app.use(cors({
 // Routes
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
+app.use("/client/goals", goalsRoutes);
 app.use("/mealLogs", MealLogRoutes);
 app.use("/recipes", recipeRoutes);
 app.use("/instructorClients", instructorClients);
