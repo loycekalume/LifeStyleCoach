@@ -295,7 +295,7 @@ const ClientProfileWizard: React.FC = () => {
         <input
           type="text"
           name="location"
-          placeholder="City / Time Zone *"
+          placeholder="City "
           value={formData.location}
           onChange={handleChange}
           required
