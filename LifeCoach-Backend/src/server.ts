@@ -37,6 +37,7 @@ import matchedDietician from "./routes/matchedDietician";
 import dieticianClients from "./routes/dieticianClients";
 import goalsRoutes from "./routes/goalsRoutes";
 import clientSession from "./routes/clientSession";
+import instructorStats from "./routes/instructorStats"
 // Configure dotenv
 dotenv.config();
 
@@ -79,6 +80,7 @@ app.use("/mealLogs", MealLogRoutes);
 app.use("/recipes", recipeRoutes);
 app.use("/instructorClients", instructorClients);
 app.use("/instructors", instructorRoutes);
+app.use("/instructorStats", instructorStats);
 app.use("/matchinstructor", matchInstructorRoutes);
 app.use("/workout", workoutRoutes);
 app.use("/progress", progressLogRoutes);
