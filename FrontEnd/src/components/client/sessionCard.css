@@ -1,0 +1,138 @@
+/* General Layout */
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.session-item:last-child {
+  border-bottom: none;
+}
+
+/* Time Column */
+.session-time {
+  text-align: center;
+  min-width: 60px;
+  padding-right: 15px;
+  border-right: 2px solid #f1f5f9;
+}
+
+.session-time .time {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
+.session-time .date {
+  font-size: 0.8rem;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Info Column */
+.session-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.session-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-title {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Type Icons */
+.type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.type-icon.dietician {
+  background: #dcfce7; /* Light Green */
+  color: #16a34a;
+}
+
+.type-icon.instructor {
+  background: #e0f2fe; /* Light Blue */
+  color: #0284c7;
+}
+
+/* Instructor / Host */
+.session-instructor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.avatar-placeholder {
+  width: 20px;
+  height: 20px;
+  background: #cbd5e1;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+/* Location / Online Status */
+.session-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.icon-video { color: #8b5cf6; }
+.icon-map { color: #ef4444; }
+
+.online-tag {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+/* Actions */
+.session-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
