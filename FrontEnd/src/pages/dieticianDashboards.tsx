@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import axiosInstance from "../utils/axiosInstance"; 
+
+// Components
 import MealPlanLibrary from "../components/dietician/mealPlans/mealPlanLibrary";
 import ScheduleCard from "../components/dietician/schedules/scheduleCard";
 import RecentActivity from "../components/dietician/recentActivity";
 import ConsultationModal from "../components/dietician/schedules/scheduleModal";
 import type { ActivityItem } from "../components/dietician/recentActivity";
-import "../styles/dieticianDashboard.css";
 import Header from "../components/dietician/header/header";
+import RecentClients from "../components/dietician/clients/recentClients"; 
 import { ModalProvider } from './../contexts/modalContext';
 
-// 👇 1. Import the new component
-import RecentClients from "../components/dietician/clients/recentClients"; 
+// Styles
+import "../styles/dieticianDashboard.css";
 
 const activities: ActivityItem[] = [
-    // ... (your existing activity data)
     {
         avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face",
         client: "Emma Johnson",
@@ -22,33 +24,54 @@ const activities: ActivityItem[] = [
         statusLabel: "calories",
         statusType: "good",
     },
-    // ... other activities
+    // ... add more if needed
 ];
+
+// ✅ Interface for the Stats
+interface DashboardStats {
+    total_clients: number;
+    meal_plans_created: number;
+    today_consultations: number;
+}
 
 const DieticianDashboard: React.FC = () => {
     const [dieticianName, setDieticianName] = useState<string>("Dietician");
+    
+    // ✅ NEW: State for real stats
+    const [stats, setStats] = useState<DashboardStats>({
+        total_clients: 0,
+        meal_plans_created: 0,
+        today_consultations: 0
+    });
+
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // ... (your existing fetch profile logic)
-        const fetchDieticianProfile = async () => {
+        const fetchData = async () => {
             try {
                 const userId = localStorage.getItem("userId");
-                if (!userId) {
-                    setLoading(false);
-                    return;
+
+                // 1. Fetch Profile Name (Existing logic)
+                if (userId) {
+                    const profileRes = await axios.get(`http://localhost:3000/users/${userId}`);
+                    if (profileRes.data && profileRes.data.name) {
+                        setDieticianName(profileRes.data.name);
+                    }
                 }
-                const response = await axios.get(`http://localhost:3000/users/${userId}`);
-                if (response.data && response.data.name) {
-                    setDieticianName(response.data.name);
-                }
+
+                // 2. ✅ Fetch Real Stats (New logic)
+                // We use axiosInstance to ensure the token/cookies are sent
+                const statsRes = await axiosInstance.get('/dietician/stats');
+                setStats(statsRes.data);
+
             } catch (error) {
-                console.error("Error fetching dietician profile:", error);
+                console.error("Error fetching dashboard data:", error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchDieticianProfile();
+
+        fetchData();
     }, []);
 
     const getGreeting = () => {
@@ -59,7 +82,8 @@ const DieticianDashboard: React.FC = () => {
     };
 
     const handleConsultationAdded = () => {
-        console.log('New consultation added - refresh data if needed');
+        console.log('New consultation added - you might want to re-fetch stats here');
+        // Optional: refetch stats here to update the count immediately
     };
 
     return (
@@ -73,32 +97,47 @@ const DieticianDashboard: React.FC = () => {
                         <h2>
                             {loading ? "Loading..." : `${getGreeting()}, Dr. ${dieticianName}! 🥗`}
                         </h2>
-                        <p>You have 8 consultations scheduled today and 3 meal plans pending review.</p>
+                        {/* ✅ Dynamic Text based on real data */}
+                        <p>
+                            You have <strong>{stats.today_consultations} consultations</strong> scheduled today.
+                        </p>
                     </div>
-                    {/* ... (Your existing Quick Stats code) ... */}
+                    
                     <div className="quick-stats">
-                        {/* ... stat cards ... */}
-                         <div className="stat-card">
+                        {/* ✅ Active Clients Card */}
+                        <div className="stat-card">
                             <div className="stat-icon clients"><i className="fas fa-users"></i></div>
-                            <div className="stat-info"><div className="stat-number">127</div><div className="stat-label">Active Clients</div></div>
+                            <div className="stat-info">
+                                <div className="stat-number">{stats.total_clients}</div>
+                                <div className="stat-label">Active Clients</div>
+                            </div>
                         </div>
-                         <div className="stat-card">
+                        
+                        {/* ✅ Meal Plans Card */}
+                        <div className="stat-card">
                             <div className="stat-icon plans"><i className="fas fa-clipboard-list"></i></div>
-                            <div className="stat-info"><div className="stat-number">89</div><div className="stat-label">Meal Plans</div></div>
+                            <div className="stat-info">
+                                <div className="stat-number">{stats.meal_plans_created}</div>
+                                <div className="stat-label">Meal Plans</div>
+                            </div>
                         </div>
-                         <div className="stat-card">
+                        
+                        {/* ✅ Today's Sessions Card */}
+                        <div className="stat-card">
                             <div className="stat-icon consultations"><i className="fas fa-calendar-check"></i></div>
-                            <div className="stat-info"><div className="stat-number">8</div><div className="stat-label">Today's Sessions</div></div>
+                            <div className="stat-info">
+                                <div className="stat-number">{stats.today_consultations}</div>
+                                <div className="stat-label">Today's Sessions</div>
+                            </div>
                         </div>
                     </div>
                 </section>
 
                 <div className="dashboard-grid">
-                    {/*  2. Add RecentClients here */}
                     <div className="dashboard-left-column" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {/* ✅ Added RecentClients Component */}
                         <RecentClients />
                         <ScheduleCard />
-                        
                     </div>
 
                     <div className="dashboard-right-column" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
