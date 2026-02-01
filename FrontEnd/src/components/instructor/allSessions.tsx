@@ -6,7 +6,7 @@ interface Session {
     session_type: string;
     duration: number;
     scheduled_at: string;
-    status: string;
+    status: 'pending' | 'completed' | 'cancelled'; // Strict typing
     notes?: string;
     client_id: number;
     client_name: string;
@@ -30,7 +30,6 @@ const SessionsPage: React.FC = () => {
 
     const fetchData = async () => {
         try {
-            
             const sessionsRes = await axiosInstance.get('/sessions/');
             setSessions(sessionsRes.data.sessions || []);
 
@@ -49,9 +48,8 @@ const SessionsPage: React.FC = () => {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        // Logic to keep numbers as numbers in state
         if (name === "client_id" || name === "duration") {
-             setFormData({ ...formData, [name]: value }); // Keep as string for input, convert on submit
+             setFormData({ ...formData, [name]: value }); 
         } else {
             setFormData({ ...formData, [name]: value });
         }
@@ -59,18 +57,16 @@ const SessionsPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        // ✅ FIX 2: Explicit Payload Construction (Sanitization)
-        // This prevents "400 Bad Request" by ensuring numbers are actual numbers
+        
+        // Default to 'pending' if creating new
         const payload = {
             ...formData,
             client_id: Number(formData.client_id), 
             duration: Number(formData.duration),
-            status: formData.status || 'pending',
+            status: formData.status || 'pending', 
             scheduled_at: formData.scheduled_at
         };
 
-        // Simple validation check
         if (!payload.client_id || !payload.duration || !payload.scheduled_at) {
             alert("Please fill in Client, Duration, and Date.");
             return;
@@ -82,11 +78,9 @@ const SessionsPage: React.FC = () => {
             } else {
                 await axiosInstance.post("/sessions", payload);
             }
-            
             setShowModal(false);
             setFormData({});
             fetchData();
-            
         } catch (error: any) {
             console.error("Error saving session:", error);
             alert(error.response?.data?.message || "Failed to save session");
@@ -101,6 +95,22 @@ const SessionsPage: React.FC = () => {
         } catch (error) {
             console.error("Error deleting:", error);
         }
+    };
+
+    // ✅ Updated Status Colors
+    const getStatusStyle = (status: string) => {
+        switch (status) {
+            case 'pending':   return { bg: '#e0f2fe', color: '#0284c7' }; // Blue (Upcoming)
+            case 'completed': return { bg: '#dcfce7', color: '#166534' }; // Green (Done)
+            case 'cancelled': return { bg: '#fee2e2', color: '#991b1b' }; // Red
+            default:          return { bg: '#f3f4f6', color: '#374151' }; // Grey
+        }
+    };
+
+    // ✅ Helper to format label (e.g., "pending" -> "Upcoming")
+    const getStatusLabel = (status: string) => {
+        if (status === 'pending') return 'Upcoming'; 
+        return status.charAt(0).toUpperCase() + status.slice(1);
     };
 
     return (
@@ -133,18 +143,32 @@ const SessionsPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {sessions.map((session) => (
-                            <tr key={session.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                <td style={{ padding: '10px' }}>{session.client_name}</td>
-                                <td style={{ padding: '10px' }}>{session.session_type}</td>
-                                <td style={{ padding: '10px' }}>{new Date(session.scheduled_at).toLocaleString()}</td>
-                                <td style={{ padding: '10px' }}>{session.status}</td>
-                                <td style={{ padding: '10px', display:'flex', gap:'5px' }}>
-                                    <button className="btn btn-warning btn-sm" onClick={() => { setFormData(session); setShowModal(true); }}>Edit</button>
-                                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(session.id)}>Delete</button>
-                                </td>
-                            </tr>
-                        ))}
+                        {sessions.map((session) => {
+                            const badgeStyle = getStatusStyle(session.status);
+                            return (
+                                <tr key={session.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                    <td style={{ padding: '10px' }}>{session.client_name}</td>
+                                    <td style={{ padding: '10px' }}>{session.session_type}</td>
+                                    <td style={{ padding: '10px' }}>{new Date(session.scheduled_at).toLocaleString()}</td>
+                                    <td style={{ padding: '10px' }}>
+                                        <span style={{ 
+                                            padding: '4px 8px', 
+                                            borderRadius: '12px', 
+                                            fontSize: '0.8rem', 
+                                            fontWeight: '600',
+                                            background: badgeStyle.bg,
+                                            color: badgeStyle.color
+                                        }}>
+                                            {getStatusLabel(session.status)}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '10px', display:'flex', gap:'5px' }}>
+                                        <button className="btn btn-warning btn-sm" onClick={() => { setFormData(session); setShowModal(true); }}>Edit</button>
+                                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(session.id)}>Delete</button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             )}
@@ -155,7 +179,6 @@ const SessionsPage: React.FC = () => {
                         <h3>{formData.id ? "Edit Session" : "Schedule Session"}</h3>
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             
-                            {/* Client Select */}
                             {formData.id ? (
                                 <input type="text" value={formData.client_name || ""} disabled />
                             ) : (
@@ -167,16 +190,19 @@ const SessionsPage: React.FC = () => {
                                 </select>
                             )}
 
-                            <input type="text" name="session_type" placeholder="Type" value={formData.session_type || ""} onChange={handleChange} required style={{ padding: '10px' }} />
+                            <input type="text" name="session_type" placeholder="Type (e.g. HIIT)" value={formData.session_type || ""} onChange={handleChange} required style={{ padding: '10px' }} />
                             <input type="number" name="duration" placeholder="Duration (min)" value={formData.duration || ""} onChange={handleChange} required style={{ padding: '10px' }} />
                             <input type="datetime-local" name="scheduled_at" value={formData.scheduled_at ? formData.scheduled_at.slice(0, 16) : ""} onChange={handleChange} required style={{ padding: '10px' }} />
+                            
+                            {/* ✅ Updated Dropdown Options */}
                             <select name="status" value={formData.status || "pending"} onChange={handleChange} style={{ padding: '10px' }}>
-                                <option value="pending">Pending</option>
-                                <option value="confirmed">Confirmed</option>
+                                <option value="pending">Upcoming (Pending)</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
                             </select>
                             
                             <div style={{ display: 'flex', gap: '10px' }}>
-                                <button type="submit" className="btn btn-primary">{formData.id ? "Update" : "Create"}</button>
+                                <button type="submit" className="btn btn-primary">{formData.id ? "Update" : "Schedule"}</button>
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
                             </div>
                         </form>
