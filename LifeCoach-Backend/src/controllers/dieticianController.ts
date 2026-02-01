@@ -342,43 +342,52 @@ export const updateDieticianCertification = asyncHandler(async (req: UserRequest
 });
 
 
-export const getDashboardStats = asyncHandler(async (req: Request, res: Response) => {
-    // 1. Get the User ID (Used for 'dietician_clients' table)
+export const getDieticianStats = asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.user_id;
 
-    // 2. Get the Dietician Profile ID (Used for 'meal_plans' & 'consultations' tables)
-    const dieticianQuery = await pool.query("SELECT dietician_id FROM dieticians WHERE user_id = $1", [userId]);
-    
-    if (dieticianQuery.rows.length === 0) {
-        return res.status(404).json({ message: "Profile not found" });
+    // 1. Get the dietician_id from dieticians table
+    const dieticianQuery = `SELECT dietician_id FROM dieticians WHERE user_id = $1`;
+    const dieticianResult = await pool.query(dieticianQuery, [userId]);
+
+    if (dieticianResult.rows.length === 0) {
+        return res.status(404).json({ message: "Dietician profile not found for this user." });
     }
-    
-    const dieticianId = dieticianQuery.rows[0].dietician_id;
 
-    console.log(`[STATS] User ID: ${userId}, Dietician ID: ${dieticianId}`);
+    const dieticianId = dieticianResult.rows[0].dietician_id;
 
-    // 3. Run Counts using the CORRECT ID for each table
-    const statsQuery = `
-        SELECT
-            -- 1. Active Clients (Linked via User ID in 'dietician_clients')
-            (SELECT COUNT(*) FROM dietician_clients WHERE dietician_id = $2) as active_clients,
-            
-            -- 2. Meal Plans (Linked via Dietician ID in 'meal_plans')
-            (SELECT COUNT(*) FROM meal_plans WHERE dietician_id = $1) as total_meal_plans,
-            
-            -- 3. Today's Sessions (Linked via Dietician ID in 'consultations')
-            (SELECT COUNT(*) FROM consultations WHERE dietician_id = $1 AND scheduled_date = CURRENT_DATE) as today_sessions
-    `;
-
-    
-    const result = await pool.query(statsQuery, [dieticianId, userId]);
-    const stats = result.rows[0];
+    // 2. Run all stats queries in parallel
+    const [clientsRes, mealPlansRes, todayConsultationsRes] = await Promise.all([
+        // ✅ Total active clients (dietician_clients uses users.user_id)
+        pool.query(
+            `SELECT COUNT(*)::int as count 
+             FROM dietician_clients 
+             WHERE dietician_id = $1 AND status = 'Active'`, 
+            [userId] // ← Use userId because dietician_clients references users.user_id
+        ),
+        
+        // ✅ Total meal plans created (meal_plans uses dieticians.dietician_id)
+        pool.query(
+            `SELECT COUNT(*)::int as count 
+             FROM meal_plans 
+             WHERE dietician_id = $1`, 
+            [dieticianId] // ← Use dieticianId
+        ),
+        
+        // ✅ Today's consultations (consultations uses dieticians.dietician_id)
+        pool.query(
+            `SELECT COUNT(*)::int as count 
+             FROM consultations 
+             WHERE dietician_id = $1 
+             AND scheduled_date = CURRENT_DATE 
+             AND status = 'scheduled'`, 
+            [dieticianId] // ← Use dieticianId
+        )
+    ]);
 
     res.json({
-        data: {
-            active_clients: Number(stats.active_clients),
-            total_meal_plans: Number(stats.total_meal_plans),
-            today_sessions: Number(stats.today_sessions)
-        }
+        total_clients: clientsRes.rows[0].count,
+        meal_plans_created: mealPlansRes.rows[0].count,
+        today_consultations: todayConsultationsRes.rows[0].count
     });
 });
+
