@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+// ❌ REMOVED: import axios from "axios";
+import axiosInstance from "../utils/axiosInstance"; // ✅ Use configured instance
 import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -60,7 +61,7 @@ interface StepProps {
 }
 
 // ----------------------------------------------------------------------
-// --- Step Components (Moved outside for DOM stability) ---
+// --- Step Components ---
 // ----------------------------------------------------------------------
 
 const Step1: React.FC<StepProps> = ({ formData, handleChange, nextStep }) => (
@@ -123,7 +124,6 @@ const Step2: React.FC<StepProps> = ({ formData, handleChange, nextStep, prevStep
           required
         >
           <option value="">Select Coaching Mode</option>
-          {/* ✅ FIX: Changed option values to match PostgreSQL check constraint */}
           <option value="remote">Online Only</option>
           <option value="onsite">In-person Only</option>
           <option value="both">Hybrid (Online & In-person)</option>
@@ -204,7 +204,6 @@ const Step4: React.FC<StepProps> = ({
   handlePricingChange, 
   addPricingOption, 
   deletePricingOption, 
- 
   isLoading,
   userId,
   prevStep,
@@ -315,7 +314,6 @@ const InstructorProfileWizard: React.FC = () => {
     certifications: "",
     years_of_experience: "",
     profile_title: "",
-    // Default initial value must also be a valid DB value
     coaching_mode: "", 
     bio: "",
     available_locations: "",
@@ -332,7 +330,7 @@ const InstructorProfileWizard: React.FC = () => {
   useEffect(() => {
     if (!userId || role !== "Instructor") {
       console.error("Missing user details or incorrect role. Redirecting to login.");
-      navigate("/login"); 
+      // navigate("/login"); // Uncomment for production safety
     }
     setFormData(prev => ({ ...prev, user_id: userId }));
   }, [userId, role, navigate]);
@@ -345,8 +343,6 @@ const InstructorProfileWizard: React.FC = () => {
   ) => {
     const { name, value } = e.target;
     setError(null);
-    
-    // Store raw string value for all fields to maintain focus and stability
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -357,8 +353,6 @@ const InstructorProfileWizard: React.FC = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    
-    // Store raw string value for all fields to maintain focus and stability
     setNewPricing((prev) => ({
       ...prev,
       [name]: value,
@@ -428,7 +422,6 @@ const InstructorProfileWizard: React.FC = () => {
         return;
     }
 
-    // Final numeric validation before submission
     if (isNaN(Number(formData.years_of_experience))) {
         setError("Years of Experience must be a valid number.");
         return;
@@ -436,17 +429,14 @@ const InstructorProfileWizard: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
-    const instructorEndpoint = "http://localhost:3000/instructors"; 
-    const pricingEndpoint = "http://localhost:3000/instructors/pricing"; 
+
+    // ✅ Define endpoints relative to base URL handled by axiosInstance
+    const instructorEndpoint = "/instructors"; 
+    const pricingEndpoint = "/instructors/pricing"; 
 
     try {
-      // --- Data Formatting for PostgreSQL Array Fix ---
       const formatArray = (input: string): string => {
         if (!input) return "{}";
-        // 1. Split by comma (e.g., "Weight Loss, Yoga" -> ["Weight Loss", " Yoga"])
-        // 2. Map each element: trim whitespace and wrap in double quotes (e.g., " \"Weight Loss\" ")
-        // 3. Filter out empty strings from the map (length > 2 because it must contain at least "")
-        // 4. Join with commas and wrap the whole thing in curly braces.
         const elements = input.split(',').map(e => `"${e.trim()}"`).filter(e => e.length > 2);
         return `{${elements.join(',')}}`;
       };
@@ -459,35 +449,35 @@ const InstructorProfileWizard: React.FC = () => {
         coaching_mode: formData.coaching_mode,
         bio: formData.bio,
         
-        // APPLY ARRAY FORMATTING
         specialization: formatArray(formData.specialization), 
         certifications: formatArray(formData.certifications),
         available_locations: formatArray(formData.available_locations), 
       };
 
-      // 1. Submit Instructor Profile Data
-      const instructorRes = await axios.post(instructorEndpoint, instructorPayload);
+      // ✅ Use axiosInstance for POST request
+      const instructorRes = await axiosInstance.post(instructorEndpoint, instructorPayload);
       const instructor_id = instructorRes.data.instructor.instructor_id; 
 
-      // 2. Submit Pricing Options
       if (instructor_id) {
         const pricingPromises = pricingOptions.map((p) => 
-          axios.post(`${pricingEndpoint}`, {
+          axiosInstance.post(`${pricingEndpoint}`, {
             instructor_id,
             session_type: p.session_type,
-            price: parseFloat(p.price), // Convert price string to number for backend
+            price: parseFloat(p.price),
             unit: p.unit,
           })
         );
         await Promise.all(pricingPromises);
       }
-       localStorage.setItem("instructorId", String(instructor_id));
+      
+      localStorage.setItem("instructorId", String(instructor_id));
       localStorage.setItem("profileComplete", "true");
+      
       alert("Instructor profile and pricing saved successfully!");
       navigate("/instructor"); 
 
     } catch (err: any) {
-      console.error("Error adding instructor:", err); // Log the full error here
+      console.error("Error adding instructor:", err);
       setError(
         err.response?.data?.message ||
           "Failed to save profile. Please try again."
@@ -529,8 +519,7 @@ const InstructorProfileWizard: React.FC = () => {
 
   return (
     <div className="wizard-container">
-      {/* The main form element now handles all submissions */}
-      <form onSubmit={step === 4 ? handleSubmit : nextStep} className="wizard-form">
+      <form onSubmit={(e) => step === 4 ? handleSubmit(e) : nextStep(e)} className="wizard-form">
         <h2 className="wizard-title">Instructor Profile Setup</h2>
         <div className="step-indicator">
           <span className={`step ${step === 1 ? "active" : ""}`}>1</span>
