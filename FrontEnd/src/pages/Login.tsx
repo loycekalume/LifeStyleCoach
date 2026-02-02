@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axiosInstance from "../utils/axiosInstance"; // ✅ Import axiosInstance
+import axios from "axios"; // ✅ Use raw axios to avoid interceptor redirects on login failure
 import "../styles/Login.css";
 
 // Define a map to convert backend role_id (number) to frontend role (string)
@@ -11,17 +11,19 @@ const ROLE_MAP: { [key: number]: "Client" | "Instructor" | "Dietician" | "Admin"
   1: "Admin",
 };
 
-// Define the interface to match the backend response (including instructor_id)
+// Define the interface to match the backend response
 interface LoginResponse {
   token?: string;
   message?: string;
   user?: {
-    id: number;
+    id: number; // usually user_id
+    user_id?: number; // fallback if backend names it differently
     email: string;
     name: string;
     role_id: number; 
     profile_complete: boolean;
     instructor_id?: number; 
+    dietician_id?: number; // Added for completeness
   };
 }
 
@@ -36,6 +38,10 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // ✅ Added loading state
+
+  // Get API URL from env, similar to your axiosInstance
+  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   const togglePassword = () => {
     setShowPassword((prev) => !prev);
@@ -43,10 +49,14 @@ const Login: React.FC = () => {
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
+    setIsLoading(true);
+
+    // 1. Clear any old session data immediately
+    localStorage.clear();
 
     try {
-      // ✅ Use axiosInstance instead of fetch
-      const response = await axiosInstance.post<LoginResponse>("/auth/login", {
+      // ✅ Use raw axios to prevent global interceptors from refreshing the page on 401 (Wrong Password)
+      const response = await axios.post<LoginResponse>(`${API_BASE}/auth/login`, {
         email,
         password_hash: password,
       });
@@ -54,62 +64,57 @@ const Login: React.FC = () => {
       const data = response.data;
       console.log("Login success:", data);
 
-      if (data.token) {
+      // 2. Validate Response
+      if (data.token && data.user) {
+        // 3. Store Data
         localStorage.setItem("token", data.token);
-      }
-
-      if (data.user) {
-        const userId = data.user.id;
-        const userRoleString = data.user.role_id ? getRoleString(data.user.role_id) : null;
-        localStorage.setItem("userName", data.user.name);
         
-        //  FIX: Store BOTH the generic userId and the specific instructorId
+        const userId = data.user.id || data.user.user_id; // Handle both naming conventions
+        const userRoleString = data.user.role_id ? getRoleString(data.user.role_id) : null;
+        
+        localStorage.setItem("userName", data.user.name);
         localStorage.setItem("userId", String(userId));
         
-        if (data.user.instructor_id) {
-          // Save the unique instructor ID for components to use
-          localStorage.setItem("instructorId", String(data.user.instructor_id));
-        } else {
-          // Clear or ensure it's removed if the user is not an instructor
-          localStorage.removeItem("instructorId");
+        if (userRoleString) {
+            localStorage.setItem("userRole", userRoleString);
         }
-        
-        localStorage.setItem("userRole", userRoleString || "");
+
+        // Handle Role-Specific IDs
+        if (data.user.instructor_id) {
+          localStorage.setItem("instructorId", String(data.user.instructor_id));
+        }
+        if (data.user.dietician_id) {
+            localStorage.setItem("dieticianId", String(data.user.dietician_id));
+        }
 
         const isProfileComplete = data.user.profile_complete ?? false; 
 
         if (!userRoleString) {
-          alert("Unknown user role received from the server. Redirecting to login.");
-          navigate("/login");
+          alert("Unknown user role received from the server. Please contact support.");
+          setIsLoading(false);
           return;
         }
 
-        // --- Core Redirection Logic ---
+        // 4. Navigation Logic
         
-        // 1. Handle Admin Role (Always goes to dashboard)
+        // A. Admin always goes to dashboard
         if (userRoleString === "Admin") {
           navigate("/admin");
           return;
         }
 
-        // 2. Handle Profile Completion Check for non-Admin roles
-        if (userRoleString === "Client" || userRoleString === "Instructor" || userRoleString === "Dietician") {
-          
-          if (!isProfileComplete) {
-            // Profile is INCOMPLETE: Send them to the wizard
-            navigate("/complete-profile", {
-              state: {
-                role: userRoleString, 
-                userId: userId, 
-              },
-            });
-            return;
-          }
-          
-          // Profile is COMPLETE: Fall through to their respective dashboard
+        // B. Check Profile Completion
+        if (!isProfileComplete) {
+          navigate("/complete-profile", {
+            state: {
+              role: userRoleString, 
+              userId: userId, 
+            },
+          });
+          return;
         }
 
-        // 3. Redirect to respective Dashboard (for complete profiles)
+        // C. Standard Redirects
         switch (userRoleString) {
           case "Client":
             navigate("/client");
@@ -121,28 +126,27 @@ const Login: React.FC = () => {
             navigate("/dietician");
             break;
           default:
-            navigate("/login"); 
+            navigate("/"); 
             break;
         }
       } else {
-        alert("Login successful but user details incomplete. Please contact support.");
-        navigate("/login");
+        alert("Login successful but user details were missing.");
       }
 
     } catch (error: any) {
-      // ✅ Handle axios errors
       console.error("Login error:", error);
       
       if (error.response) {
-        // Server responded with error
-        alert("Login failed: " + (error.response.data?.message || "Invalid credentials"));
+        // Server responded with error (e.g., 401 Invalid Credentials)
+        alert(error.response.data?.message || "Invalid email or password.");
       } else if (error.request) {
         // Request made but no response
-        alert("Network error. Please check your connection.");
+        alert("Network error. Please check your internet connection.");
       } else {
-        // Something else happened
-        alert("An unexpected error occurred");
+        alert("An unexpected error occurred. Please try again.");
       }
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -227,6 +231,7 @@ const Login: React.FC = () => {
                   type="button"
                   className="password-toggle"
                   onClick={togglePassword}
+                  tabIndex={-1} // Prevent tabbing to this button
                 >
                  <i className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"}`} />
                 </button>
@@ -249,9 +254,9 @@ const Login: React.FC = () => {
               </a>
             </div>
 
-            <button type="submit" className="btn-primary">
-              <span>Sign In</span>
-              <i className="fas fa-arrow-right"></i>
+            <button type="submit" className="btn-primary" disabled={isLoading}>
+              <span>{isLoading ? "Signing In..." : "Sign In"}</span>
+              {!isLoading && <i className="fas fa-arrow-right"></i>}
             </button>
 
             <div className="divider">
@@ -276,7 +281,7 @@ const Login: React.FC = () => {
             <div className="form-footer">
               <p>
                 Don&apos;t have an account?{" "}
-               <Link to="/signUp">SignUp Here</Link>
+                <Link to="/signUp">SignUp Here</Link>
               </p>
             </div>
           </form>

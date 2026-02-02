@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../utils/axiosInstance"; // ✅ Correctly imports your configured instance
+import axiosInstance from "../utils/axiosInstance"; 
 import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -139,7 +139,7 @@ const DieticianProfileWizard: React.FC = () => {
 
       console.log("[WIZARD] Submitting payload:", payload);
 
-      // ✅ Uses axiosInstance which automatically picks up VITE_API_URL
+      // ✅ Uses axiosInstance which automatically picks up VITE_API_URL and attaches the Token
       const res = await axiosInstance.post("/dietician", payload);
       
       if (res.data.dietician && res.data.dietician.dietician_id) {

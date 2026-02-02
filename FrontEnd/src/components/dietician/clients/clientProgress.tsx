@@ -55,7 +55,7 @@ export default function ClientProgress() {
       },
       {
         label: 'Target (Est.)',
-        data: data.logs.map(() => 2000), // Hardcoded target for visualization
+        data: data.logs.map(() => 2000), 
         borderColor: '#10b981',
         borderDash: [5, 5],
         pointRadius: 0
