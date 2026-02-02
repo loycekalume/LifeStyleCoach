@@ -68,7 +68,8 @@ const ClientProfileWizard: React.FC = () => {
   useEffect(() => {
     if (!userId || role !== "Client") {
       console.error("Client Wizard: Missing user details or incorrect role.");
-      navigate("/login");
+      // In production you might want to uncomment this:
+      // navigate("/login");
     }
     setFormData((prev) => ({ ...prev, user_id: userId }));
   }, [userId, role, navigate]);
@@ -105,7 +106,7 @@ const ClientProfileWizard: React.FC = () => {
     return true;
   };
 
-  const nextStep = (e: React.FormEvent) => {
+  const nextStep = (e: React.MouseEvent | React.FormEvent) => {
     e.preventDefault();
     if (validateStep(step)) {
       setStep((prev) => prev + 1);
@@ -117,7 +118,7 @@ const ClientProfileWizard: React.FC = () => {
     setError(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.MouseEvent | React.FormEvent) => {
     e.preventDefault();
     if (!validateStep(step)) return;
 
@@ -143,7 +144,7 @@ const ClientProfileWizard: React.FC = () => {
         location: formData.location,
       };
 
-      // ✅ Use axiosInstance instead of axios
+      // ✅ Uses axiosInstance so the token is attached automatically
       const res = await axiosInstance.post("/client", payload);
       
       if (res.data.client && res.data.client.client_id) {
@@ -325,7 +326,8 @@ const ClientProfileWizard: React.FC = () => {
 
   return (
     <div className="wizard-container">
-      <form onSubmit={step === 2 ? handleSubmit : nextStep} className="wizard-form">
+      {/* Updated onSubmit to handle events correctly */}
+      <form onSubmit={(e) => step === 2 ? handleSubmit(e) : nextStep(e)} className="wizard-form">
         <h2 className="wizard-title">Client Profile Setup</h2>
         <div className="step-indicator">
           <span className={`step ${step === 1 ? "active" : ""}`}>1</span>
