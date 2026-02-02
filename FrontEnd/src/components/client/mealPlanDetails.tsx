@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axiosInstance from "../../utils/axiosInstance";
 import { FaFireAlt, FaClock, FaUserMd, FaUtensils, FaCarrot, FaAppleAlt, FaArrowLeft } from "react-icons/fa";
-import "../../styles/MealPlanDetails.css"; 
+import "../../styles/mealPlanDetails.css"; 
 
 interface MealPlanDetailsProps {
   planId: number;
