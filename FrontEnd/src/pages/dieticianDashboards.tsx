@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import axiosInstance from "../utils/axiosInstance"; 
 
 // Components
@@ -51,16 +50,16 @@ const DieticianDashboard: React.FC = () => {
             try {
                 const userId = localStorage.getItem("userId");
 
-                // 1. Fetch Profile Name (Existing logic)
+                // 1. Fetch Profile Name
                 if (userId) {
-                    const profileRes = await axios.get(`http://localhost:3000/users/${userId}`);
+                    // ✅ FIXED: Use axiosInstance instead of axios with hardcoded localhost
+                    const profileRes = await axiosInstance.get(`/users/${userId}`);
                     if (profileRes.data && profileRes.data.name) {
                         setDieticianName(profileRes.data.name);
                     }
                 }
 
-                // 2. ✅ Fetch Real Stats (New logic)
-                // We use axiosInstance to ensure the token/cookies are sent
+                // 2. ✅ Fetch Real Stats
                 const statsRes = await axiosInstance.get('/dietician/stats');
                 setStats(statsRes.data);
 
@@ -82,8 +81,8 @@ const DieticianDashboard: React.FC = () => {
     };
 
     const handleConsultationAdded = () => {
-        console.log('New consultation added - you might want to re-fetch stats here');
-        // Optional: refetch stats here to update the count immediately
+        console.log('New consultation added');
+        // Optional: You could call fetchData() here again if you extracted it to re-update stats
     };
 
     return (

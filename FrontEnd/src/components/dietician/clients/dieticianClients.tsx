@@ -7,7 +7,7 @@ import "../../../styles/clientView.css";
 
 import type { Client } from "../../../Services/clientViewService";
 
-// Extend Client Type to include matching/hiring info
+// Extend Client Type to include matching/hiring info specific to this view
 interface DieticianClientView extends Client {
   match_score?: number;
   match_reason?: string;
@@ -40,9 +40,11 @@ const DieticianClients: React.FC = () => {
         case 'recommended': endpoint = "/dieticianClients/matches"; break;
         case 'leads':       endpoint = "/dieticianClients/leads"; break;
         case 'hired':       endpoint = "/dieticianClients/roster"; break;
+        default: endpoint = "/dieticianClients/matches";
       }
 
       const res = await axiosInstance.get(endpoint);
+      // Handle data wrapped in { data: [...] } or direct array
       setClients(res.data.data || res.data || []);
     } catch (error) {
       console.error("Error loading clients:", error);
@@ -63,6 +65,7 @@ const DieticianClients: React.FC = () => {
         navigate(`/messages/${res.data.conversationId}`);
       }
     } catch (err) {
+      console.error(err);
       alert("Could not start chat.");
     }
   };
@@ -85,8 +88,61 @@ const DieticianClients: React.FC = () => {
       
     } catch (err) {
       console.error(err);
-      alert("Failed to hire client.");
+      alert("Failed to hire client. Please try again.");
     }
+  };
+
+  // --- STYLES ---
+  const btnSecondaryStyle: React.CSSProperties = {
+    flex: '1', 
+    minWidth: '80px', 
+    padding: '10px 12px', 
+    borderRadius: '6px', 
+    border: '1px solid #e5e7eb', 
+    background: 'white', 
+    cursor: 'pointer', 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: '6px', 
+    transition: 'all 0.2s', 
+    fontWeight: '500',
+    whiteSpace: 'nowrap'
+  };
+
+  const btnPrimaryStyle: React.CSSProperties = {
+    flex: '1', 
+    minWidth: '80px',
+    padding: '10px 12px', 
+    borderRadius: '6px', 
+    border: 'none', 
+    background: '#10b981', 
+    color: 'white', 
+    cursor: 'pointer', 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: '6px', 
+    transition: 'background 0.2s', 
+    fontWeight: '500',
+    whiteSpace: 'nowrap'
+  };
+
+  const badgeHiredStyle: React.CSSProperties = {
+    flex: '1', 
+    minWidth: '80px',
+    padding: '10px 12px', 
+    borderRadius: '6px', 
+    border: '2px solid #10b981', 
+    background: '#ecfdf5',
+    color: '#059669', 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: '6px',
+    fontWeight: 'bold', 
+    fontSize: '0.9rem',
+    whiteSpace: 'nowrap'
   };
 
   return (
@@ -107,7 +163,7 @@ const DieticianClients: React.FC = () => {
       </button>
 
       {/* Header & Tabs */}
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'30px'}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'30px', flexWrap:'wrap', gap:'15px'}}>
         <h1 style={{margin:0, color:'#2c3e50'}}>Manage Clients</h1>
         
         <div className="view-toggles" style={{display:'flex', background:'#f3f4f6', padding:'5px', borderRadius:'8px'}}>
@@ -116,7 +172,7 @@ const DieticianClients: React.FC = () => {
                     key={mode}
                     onClick={() => handleViewModeChange(mode)}
                     style={{
-                        padding:'10px 20px', border:'none', borderRadius:'6px', cursor:'pointer',
+                        padding:'8px 16px', border:'none', borderRadius:'6px', cursor:'pointer',
                         fontWeight:'600', textTransform:'capitalize',
                         background: viewMode === mode ? 'white' : 'transparent',
                         color: viewMode === mode ? '#10b981' : '#6b7280',
@@ -133,37 +189,40 @@ const DieticianClients: React.FC = () => {
       {/* Content Area */}
       {isLoading ? (
         <div style={{textAlign:'center', padding:'50px', color:'#999'}}>
-          <div style={{fontSize:'1.2rem'}}>Loading...</div>
+          <div className="spinner" style={{margin: '0 auto 10px'}}></div>
+          <div style={{fontSize:'1.1rem'}}>Loading clients...</div>
         </div>
       ) : (
         <div className="clients-grid" style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:'20px'}}>
             
             {clients.length === 0 ? (
-                <div style={{gridColumn:'1/-1', textAlign:'center', color:'#999', padding:'40px'}}>
-                    {viewMode === 'recommended' && "No AI recommendations found yet."}
-                    {viewMode === 'leads' && "Start chatting with recommended clients to see them here."}
-                    {viewMode === 'hired' && "Your roster is empty."}
+                <div style={{gridColumn:'1/-1', textAlign:'center', color:'#999', padding:'60px', background:'#f9fafb', borderRadius:'12px'}}>
+                    <div style={{fontSize:'2rem', marginBottom:'10px'}}>📭</div>
+                    <p style={{fontSize:'1.1rem', fontWeight:'500'}}>
+                        {viewMode === 'recommended' && "No AI matches found at the moment."}
+                        {viewMode === 'leads' && "You haven't interacted with any clients yet."}
+                        {viewMode === 'hired' && "Your client roster is currently empty."}
+                    </p>
                 </div>
             ) : (
                 clients.map(client => (
                     <div key={client.user_id} className="client-card" style={{
                         background:'white', borderRadius:'12px', padding:'20px',
                         border:'1px solid #e5e7eb', display:'flex', flexDirection:'column', gap:'15px',
-                        boxShadow:'0 4px 6px rgba(0,0,0,0.02)',
-                        transition: 'box-shadow 0.2s',
+                        boxShadow:'0 2px 4px rgba(0,0,0,0.02)',
+                        transition: 'all 0.2s',
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 12px rgba(0,0,0,0.08)'}
-                    onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.02)'}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 15px rgba(0,0,0,0.05)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; }}
                     >
-                        
                         {/* Card Header */}
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'start'}}>
                             <div>
-                                <h3 style={{margin:0, fontSize:'1.1rem'}}>{client.name}</h3>
-                                <span style={{fontSize:'0.85rem', color:'#666'}}>📍 {client.location || 'Remote'}</span>
+                                <h3 style={{margin:0, fontSize:'1.1rem', color:'#1f2937'}}>{client.name}</h3>
+                                <span style={{fontSize:'0.85rem', color:'#6b7280'}}>📍 {client.location || 'Remote'}</span>
                             </div>
                             
-                            {/* Badges based on View Mode */}
+                            {/* Badges */}
                             {viewMode === 'recommended' && client.match_score && (
                                 <span style={{ background:'#ecfdf5', color:'#059669', padding:'4px 8px', borderRadius:'12px', fontSize:'0.75rem', fontWeight:'bold' }}>
                                     {client.match_score}% MATCH
@@ -183,60 +242,55 @@ const DieticianClients: React.FC = () => {
                             )}
                         </div>
 
-                        {/* AI Match Reason */}
+                        {/* Match Reason */}
                         {viewMode === 'recommended' && client.match_reason && (
-                            <div style={{background:'#f9fafb', padding:'10px', borderRadius:'8px', fontSize:'0.85rem', color:'#555', lineHeight:'1.4'}}>
+                            <div style={{background:'#f3f4f6', padding:'10px', borderRadius:'8px', fontSize:'0.85rem', color:'#4b5563', lineHeight:'1.4'}}>
                                 💡 {client.match_reason}
                             </div>
                         )}
 
-                        {/* Client Stats */}
-                        <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem', color:'#444'}}>
+                        {/* Stats */}
+                        <div style={{display:'flex', justifyContent:'space-between', fontSize:'0.9rem', color:'#4b5563', borderTop:'1px solid #f3f4f6', paddingTop:'10px'}}>
                             <div>Goal: <b>{client.weight_goal || 'Health'}</b></div>
                             <div>Age: <b>{client.age || 'N/A'}</b></div>
                         </div>
 
-                        {/* Action Buttons - FIXED */}
+                        {/* Actions */}
                         <div style={{display:'flex', gap:'10px', marginTop:'auto'}}>
                             
-                            {/* 1. RECOMMENDED VIEW */}
                             {viewMode === 'recommended' && (
                                 <>
-                                    <button onClick={() => setSelectedClient(client)} className="btn-secondary" style={btnSecondaryStyle}>
+                                    <button onClick={() => setSelectedClient(client)} style={btnSecondaryStyle}>
                                         <FaUser /> Profile
                                     </button>
-                                    <button onClick={() => handleChat(client.user_id)} className="btn-secondary1" style={btnSecondaryStyle}>
+                                    <button onClick={() => handleChat(client.user_id)} style={btnSecondaryStyle}>
                                         <FaComments /> Chat
                                     </button>
                                 </>
                             )}
 
-                            {/* 2. LEADS VIEW */}
                             {viewMode === 'leads' && (
                                 <>
-                                    <button onClick={() => handleChat(client.user_id)} className="btn-secondary" style={btnSecondaryStyle}>
+                                    <button onClick={() => handleChat(client.user_id)} style={btnSecondaryStyle}>
                                         <FaComments /> Chat
                                     </button>
-                                    
                                     {client.is_hired ? (
                                         <div style={badgeHiredStyle}>✓ Hired</div>
                                     ) : (
-                                        <button onClick={() => handleHire(client)} className="btn-primary" style={btnPrimaryStyle}>
+                                        <button onClick={() => handleHire(client)} style={btnPrimaryStyle}>
                                             <FaUserPlus /> Hire
                                         </button>
                                     )}
                                 </>
                             )}
 
-                            {/* 3. HIRED VIEW */}
                             {viewMode === 'hired' && (
                                 <>
-                                    <button onClick={() => handleChat(client.user_id)} className="btn-secondary" style={btnSecondaryStyle}>
+                                    <button onClick={() => handleChat(client.user_id)} style={btnSecondaryStyle}>
                                         <FaComments /> Chat
                                     </button>
                                     <button 
                                         onClick={() => navigate(`/dieticianClients/client-progress/${client.user_id}`)}
-                                        className="btn-primary" 
                                         style={{...btnPrimaryStyle, background: '#3b82f6'}}
                                         onMouseEnter={(e) => e.currentTarget.style.background = '#2563eb'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = '#3b82f6'}
@@ -246,7 +300,6 @@ const DieticianClients: React.FC = () => {
                                 </>
                             )}
                         </div>
-
                     </div>
                 ))
             )}
@@ -258,60 +311,6 @@ const DieticianClients: React.FC = () => {
       )}
     </div>
   );
-};
-
-// --- Updated Button Styles to Fix Sizing Issues ---
-
-const btnSecondaryStyle: React.CSSProperties = {
-    flex: '1', // Allow growth but respect content
-    minWidth: '80px', // Prevents button from getting too small
-    padding: '10px 12px', 
-    borderRadius: '6px', 
-    border: '1px solid #e5e7eb', 
-    background: 'white', 
-    cursor: 'pointer', 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    gap: '6px', 
-    transition: 'all 0.2s', 
-    fontWeight: '500',
-    whiteSpace: 'nowrap' // Prevents text wrapping
-};
-
-const btnPrimaryStyle: React.CSSProperties = {
-    flex: '1', 
-    minWidth: '80px',
-    padding: '10px 12px', 
-    borderRadius: '6px', 
-    border: 'none', 
-    background: '#10b981', 
-    color: 'white',
-    cursor: 'pointer', 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    gap: '6px',
-    transition: 'background 0.2s', 
-    fontWeight: '500',
-    whiteSpace: 'nowrap'
-};
-
-const badgeHiredStyle: React.CSSProperties = {
-    flex: '1', 
-    minWidth: '80px',
-    padding: '10px 12px', 
-    borderRadius: '6px', 
-    border: '2px solid #10b981', 
-    background: '#ecfdf5',
-    color: '#059669', 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    gap: '6px',
-    fontWeight: 'bold', 
-    fontSize: '0.9rem',
-    whiteSpace: 'nowrap'
 };
 
 export default DieticianClients;

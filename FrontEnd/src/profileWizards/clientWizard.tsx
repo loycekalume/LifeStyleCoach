@@ -12,6 +12,7 @@ import {
   faDollarSign,
   faMapMarkerAlt,
   faDumbbell,
+  faFileMedical, // ✅ Added for Health Conditions
 } from "@fortawesome/free-solid-svg-icons";
 import "../styles/clientWizard.css"; 
 
@@ -29,10 +30,12 @@ interface ClientProfileData {
   fitness_level: string;
   gender: string;
   allergies: string;
+  health_conditions: string; // ✅ New Field
   budget: string;
   location: string;
 }
 
+// Helper to format string input "a, b, c" -> Postgres Array "{a,b,c}"
 const formatArray = (input: string | null): string => {
   if (!input) return "{}";
   const elements = input.split(',').map(e => `"${e.trim()}"`).filter(e => e.length > 2);
@@ -58,6 +61,7 @@ const ClientProfileWizard: React.FC = () => {
     fitness_level: "",
     gender: "",
     allergies: "",
+    health_conditions: "", // ✅ Initialize
     budget: "",
     location: "",
   });
@@ -68,7 +72,6 @@ const ClientProfileWizard: React.FC = () => {
   useEffect(() => {
     if (!userId || role !== "Client") {
       console.error("Client Wizard: Missing user details or incorrect role.");
-      // In production you might want to uncomment this:
       // navigate("/login");
     }
     setFormData((prev) => ({ ...prev, user_id: userId }));
@@ -140,11 +143,11 @@ const ClientProfileWizard: React.FC = () => {
         fitness_level: formData.fitness_level,
         gender: formData.gender,
         allergies: formatArray(formData.allergies), 
+        health_conditions: formatArray(formData.health_conditions), // ✅ Include in payload
         budget: formData.budget, 
         location: formData.location,
       };
 
-      // ✅ Uses axiosInstance so the token is attached automatically
       const res = await axiosInstance.post("/client", payload);
       
       if (res.data.client && res.data.client.client_id) {
@@ -260,13 +263,26 @@ const ClientProfileWizard: React.FC = () => {
         </select>
       </div>
 
+      {/* Allergies Input */}
       <div className="form-group">
         <FontAwesomeIcon icon={faAllergies} className="input-icon" />
         <input
           type="text"
           name="allergies"
-          placeholder="Food Allergies (Optional)"
+          placeholder="Food Allergies (e.g., Peanuts, Dairy) - Optional"
           value={formData.allergies}
+          onChange={handleChange}
+        />
+      </div>
+
+      {/* ✅ Health Conditions Input */}
+      <div className="form-group">
+        <FontAwesomeIcon icon={faFileMedical} className="input-icon" />
+        <input
+          type="text"
+          name="health_conditions"
+          placeholder="Health Conditions (e.g., Diabetes, Asthma) - Optional"
+          value={formData.health_conditions}
           onChange={handleChange}
         />
       </div>
@@ -291,7 +307,7 @@ const ClientProfileWizard: React.FC = () => {
         <input
           type="text"
           name="location"
-          placeholder="City "
+          placeholder="City/Region *"
           value={formData.location}
           onChange={handleChange}
           required
@@ -326,7 +342,6 @@ const ClientProfileWizard: React.FC = () => {
 
   return (
     <div className="wizard-container">
-      {/* Updated onSubmit to handle events correctly */}
       <form onSubmit={(e) => step === 2 ? handleSubmit(e) : nextStep(e)} className="wizard-form">
         <h2 className="wizard-title">Client Profile Setup</h2>
         <div className="step-indicator">

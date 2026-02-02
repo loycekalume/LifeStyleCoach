@@ -1,4 +1,4 @@
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Logo from "./logo";
 import ProfileDropdown from "./profileDropdown";
 import { useModal } from "./../../../contexts/modalContext";
@@ -6,8 +6,8 @@ import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../utils/axiosInstance"; 
 import io from "socket.io-client";
 
-// Ensure this matches your backend URL
-const SOCKET_URL = "http://localhost:3000"; 
+// ✅ DYNAMIC SOCKET URL: Uses Render URL in production, localhost in dev
+const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export default function Header() {
   const { openConsultationModal } = useModal();
@@ -23,6 +23,7 @@ export default function Header() {
 
     // 3. Real-time Socket Connection
     if (storedUserId) {
+        // Pass the dynamic URL to io()
         const socket = io(SOCKET_URL);
         
         // Join my personal notification room
@@ -40,7 +41,9 @@ export default function Header() {
 
   const fetchUnreadCount = async () => {
     try {
+      // Uses axiosInstance which already handles the base URL and Token
       const res = await axiosInstance.get("/messages/conversations");
+      
       // Calculate total unread messages
       const totalUnread = res.data.reduce((sum: number, conv: any) => {
           return sum + Number(conv.unread_count || 0);
@@ -63,7 +66,7 @@ export default function Header() {
 
           <div className="header1-actions">
             
-            
+            {/* Chats Button with Dynamic Badge */}
             <button
               className="btn btn-outline1"
               onClick={() => navigate('/messages')} 

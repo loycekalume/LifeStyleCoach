@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import axiosInstance from "../utils/axiosInstance";
 
 export interface Client {
   user_id: number;
@@ -13,7 +13,7 @@ export interface Client {
   allergies?: string;
   budget: string;
   location: string;
-  match_score?: number;   // New field
+  match_score?: number;   
   match_reasons?: string[];
 }
 
@@ -35,80 +35,60 @@ export interface Workout {
   plan: any;
 }
 
+// --- Client API Calls ---
 
 // ✅ Fetch all clients
 export const getClients = async (): Promise<Client[]> => {
-  const res = await fetch(`${API_URL}/client`);
-  if (!res.ok) throw new Error("Failed to fetch clients");
-  const data = await res.json();
-  return data.clients || [];
+  const res = await axiosInstance.get('/client');
+  return res.data.clients || [];
 };
 
 // ✅ Get a single client by ID
 export const getClientById = async (id: number): Promise<Client> => {
-  const res = await fetch(`${API_URL}/client/${id}`);
-  if (!res.ok) throw new Error("Failed to fetch client");
-  return await res.json();
+  const res = await axiosInstance.get(`/client/${id}`);
+  return res.data;
 };
 
 // ✅ Create or update a client (upsert)
 export const saveClient = async (clientData: Partial<Client>): Promise<Client> => {
-  const res = await fetch(`${API_URL}/client`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(clientData),
-  });
-  if (!res.ok) throw new Error("Failed to save client");
-  const data = await res.json();
-  return data.client;
+  const res = await axiosInstance.post('/client', clientData);
+  return res.data.client;
 };
 
+// --- Progress Logs API Calls ---
 
-
-//Progress Logs
 // ✅ Fetch logs for one user using user_id
 export const getProgressLogsByUserId = async (user_id: number): Promise<ProgressLog[]> => {
-  const res = await fetch(`${API_URL}/progress/users/${user_id}`);
-  if (!res.ok) throw new Error("Failed to fetch progress logs");
-  const data = await res.json();
-  return data.logs || []; // expect: { message, logs: [...] }
+  // Check if endpoint is /progress/users/:id or /progress/:id based on your backend
+  const res = await axiosInstance.get(`/progress/${user_id}`);
+  
+  // Handle both possible response structures (array root or object with logs key)
+  if (Array.isArray(res.data)) return res.data;
+  return res.data.logs || []; 
 };
 
 // ✅ Add a log for a user
 export const addProgressLog = async (log: Partial<ProgressLog>): Promise<ProgressLog> => {
-  const res = await fetch(`${API_URL}/progress`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(log),
-  });
-  if (!res.ok) throw new Error("Failed to save progress log");
-  const data = await res.json();
-  return data.log;
+  const res = await axiosInstance.post('/progress', log);
+  return res.data.log;
 };
 
-//Workout plans
-// Fetch ALL workouts
+// --- Workout Plans API Calls ---
+
+// ✅ Fetch ALL workouts
 export async function getAllWorkouts(): Promise<Workout[]> {
-  const res = await fetch(`${API_URL}/workout`);
-  if (!res.ok) throw new Error("Failed to fetch workouts");
-  return res.json();
+  const res = await axiosInstance.get('/workout');
+  return res.data;
 }
 
-// Fetch workout by ID
+// ✅ Fetch workout by ID
 export async function getWorkoutById(id: number | string): Promise<Workout> {
-  const res = await fetch(`${API_URL}/workout/${id}`);
-  if (!res.ok) throw new Error("Workout not found");
-  return res.json();
+  const res = await axiosInstance.get(`/workout/${id}`);
+  return res.data;
 }
 
-// Update workout
+// ✅ Update workout
 export async function updateWorkout(id: number | string, payload: Partial<Workout>): Promise<Workout> {
-  const res = await fetch(`${API_URL}/workout/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  if (!res.ok) throw new Error("Failed to update workout");
-  return res.json();
+  const res = await axiosInstance.put(`/workout/${id}`, payload);
+  return res.data;
 }

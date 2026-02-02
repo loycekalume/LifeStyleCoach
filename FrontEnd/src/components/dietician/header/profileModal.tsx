@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useState } from "react";
+import axiosInstance from "../../../utils/axiosInstance"; 
 import "./../../../styles/header.css";
 
 interface ProfileModalProps {
   onClose: () => void;
-  onUpdate?: (updatedName: string) => void; // 👈 Optional callback
+  onUpdate?: (updatedName: string) => void;
 }
 
 export default function ProfileModal({ onClose, onUpdate }: ProfileModalProps) {
@@ -17,15 +17,12 @@ export default function ProfileModal({ onClose, onUpdate }: ProfileModalProps) {
     contact: "",
   });
 
-  const API_BASE = "http://localhost:3000";
-
   // Fetch logged-in dietician profile
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const res = await axios.get(`${API_BASE}/dietician/profile`, {
-          withCredentials: true, // 🔥 Important
-        });
+        
+        const res = await axiosInstance.get('/dietician/profile');
 
         const data = res.data;
 
@@ -36,7 +33,7 @@ export default function ProfileModal({ onClose, onUpdate }: ProfileModalProps) {
         });
       } catch (error) {
         console.error("Error fetching profile", error);
-        alert("Unauthorized. Please login again.");
+        // The global interceptor in axiosInstance will handle 401 redirects
       } finally {
         setLoading(false);
       }
@@ -57,19 +54,17 @@ export default function ProfileModal({ onClose, onUpdate }: ProfileModalProps) {
     try {
       setSaving(true);
 
-      const res = await axios.put(
-        `${API_BASE}/dietician/profile`,
-        formData,
-        {
-          withCredentials: true, //  Important
-        }
-      );
+      // ✅ Use axiosInstance for PUT request
+      const res = await axiosInstance.put('/dietician/profile', formData);
 
       alert("Profile updated successfully!");
       
-      //  Call the onUpdate callback to update parent component
-      if (onUpdate && res.data.user.name) {
-        onUpdate(res.data.user.name);
+      // Call the onUpdate callback to update parent component
+      // Ensure we safely access the user name from the response
+      const updatedName = res.data.user?.name || res.data.name || formData.name;
+      
+      if (onUpdate && updatedName) {
+        onUpdate(updatedName);
       }
       
       onClose();
@@ -83,7 +78,7 @@ export default function ProfileModal({ onClose, onUpdate }: ProfileModalProps) {
   };
 
 
-  if (loading) return <div className="modal">Loading...</div>;
+  if (loading) return <div className="modal"><div className="modal-content">Loading profile...</div></div>;
 
   return (
     <div className="modal">
@@ -105,6 +100,8 @@ export default function ProfileModal({ onClose, onUpdate }: ProfileModalProps) {
             name="email"
             value={formData.email}
             onChange={handleChange}
+            disabled // Often email shouldn't be changeable without verification
+            style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
           />
 
           <label>Contact</label>
