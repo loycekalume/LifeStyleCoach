@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance"; // ✅ Correctly imports your configured instance
 import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -25,8 +25,6 @@ interface DieticianProfileData {
   clinic_address: string;
 }
 
-
-
 const DieticianProfileWizard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,19 +45,18 @@ const DieticianProfileWizard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Validation and Initialization on Load
   useEffect(() => {
+    // Basic validation to ensure user came from registration/login
     if (!userId || role !== "Dietician") {
       console.error("Dietician Wizard: Missing user details or incorrect role.");
-      navigate("/login");
+      // You might want to uncomment this for production safety:
+      // navigate("/login");
     }
     setFormData((prev) => ({ ...prev, user_id: userId }));
   }, [userId, role, navigate]);
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -87,16 +84,16 @@ const DieticianProfileWizard: React.FC = () => {
       }
     }
     if (currentStep === 3) {
-        if (!formData.clinic_name || !formData.clinic_address) {
-            setError("Please provide your clinic or practice details.");
-            return false;
-        }
+      if (!formData.clinic_name || !formData.clinic_address) {
+        setError("Please provide your clinic or practice details.");
+        return false;
+      }
     }
     setError(null);
     return true;
   };
 
-  const nextStep = (e: React.FormEvent) => {
+  const nextStep = (e: React.MouseEvent | React.FormEvent) => {
     e.preventDefault();
     if (validateStep(step)) {
       setStep((prev) => prev + 1);
@@ -108,7 +105,7 @@ const DieticianProfileWizard: React.FC = () => {
     setError(null);
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.MouseEvent | React.FormEvent) => {
     e.preventDefault();
     if (!validateStep(step)) return;
 
@@ -121,13 +118,11 @@ const DieticianProfileWizard: React.FC = () => {
     setError(null);
 
     try {
-      // ✅ Process specialization into array
       const specializationArray = formData.specialization
         .split(',')
         .map(s => s.trim())
         .filter(Boolean);
 
-      // ✅ Process certification into array
       const certificationArray = formData.certification
         .split(',')
         .map(c => c.trim())
@@ -135,8 +130,8 @@ const DieticianProfileWizard: React.FC = () => {
 
       const payload = {
         user_id: formData.user_id,
-        certification: certificationArray,  // ✅ Send as array
-        specialization: specializationArray,  // ✅ Send as array
+        certification: certificationArray,
+        specialization: specializationArray,
         years_of_experience: parseInt(formData.years_of_experience, 10),
         clinic_name: formData.clinic_name,
         clinic_address: formData.clinic_address,
@@ -144,10 +139,11 @@ const DieticianProfileWizard: React.FC = () => {
 
       console.log("[WIZARD] Submitting payload:", payload);
 
-      const res = await axios.post("http://localhost:3000/dietician", payload); 
+      // ✅ Uses axiosInstance which automatically picks up VITE_API_URL
+      const res = await axiosInstance.post("/dietician", payload);
       
       if (res.data.dietician && res.data.dietician.dietician_id) {
-          localStorage.setItem("dieticianId", String(res.data.dietician.dietician_id));
+        localStorage.setItem("dieticianId", String(res.data.dietician.dietician_id));
       }
       
       alert(res.data.message);
@@ -163,9 +159,6 @@ const DieticianProfileWizard: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  // --- RENDERING LOGIC FIXED BELOW ---
-  // We removed "const Step1 = ...". We now render the JSX directly inside the switch.
 
   const renderContent = () => {
     switch (step) {
@@ -183,8 +176,6 @@ const DieticianProfileWizard: React.FC = () => {
                 onChange={handleChange}
                 required
                 maxLength={255}
-                // Key fix: AutoFocus ensures if a re-render happens, we grab focus, 
-                // but strictly speaking, simply removing the sub-component wrapper solves the main issue.
                 autoFocus 
               />
             </div>
@@ -284,7 +275,8 @@ const DieticianProfileWizard: React.FC = () => {
 
   return (
     <div className="wizard-container">
-      <form onSubmit={step === 3 ? handleSubmit : nextStep} className="wizard-form">
+      {/* Updated the onSubmit to handle types correctly */}
+      <form onSubmit={(e) => step === 3 ? handleSubmit(e) : nextStep(e)} className="wizard-form">
         <h2 className="wizard-title">Dietician Profile Setup</h2>
         <div className="step-indicator">
           <span className={`step ${step === 1 ? "active" : ""}`}>1</span>
