@@ -2,7 +2,7 @@ import axios from "axios";
 
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
-console.log("🔥 API_BASE:", API_BASE);
+
 const axiosInstance = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
@@ -10,7 +10,7 @@ const axiosInstance = axios.create({
 
 // Response interceptor to handle token refresh
 axiosInstance.interceptors.response.use(
-  (response) => response, // If successful, just return response
+  (response) => response, 
   async (error) => {
     const originalRequest = error.config;
 

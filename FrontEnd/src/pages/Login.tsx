@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axiosInstance from "../utils/axiosInstance"; // ✅ Import axiosInstance
 import "../styles/Login.css";
 
 // Define a map to convert backend role_id (number) to frontend role (string)
@@ -44,22 +45,13 @@ const Login: React.FC = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:3000/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password_hash: password }),
-        credentials:"include"
+      // ✅ Use axiosInstance instead of fetch
+      const response = await axiosInstance.post<LoginResponse>("/auth/login", {
+        email,
+        password_hash: password,
       });
 
-      const data: LoginResponse = await response.json();
-      console.log("Raw response:", response.status, data);
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
-      }
-
+      const data = response.data;
       console.log("Login success:", data);
 
       if (data.token) {
@@ -70,15 +62,18 @@ const Login: React.FC = () => {
         const userId = data.user.id;
         const userRoleString = data.user.role_id ? getRoleString(data.user.role_id) : null;
         localStorage.setItem("userName", data.user.name);
+        
         //  FIX: Store BOTH the generic userId and the specific instructorId
         localStorage.setItem("userId", String(userId));
+        
         if (data.user.instructor_id) {
-            // Save the unique instructor ID for components to use
-            localStorage.setItem("instructorId", String(data.user.instructor_id));
+          // Save the unique instructor ID for components to use
+          localStorage.setItem("instructorId", String(data.user.instructor_id));
         } else {
-            // Clear or ensure it's removed if the user is not an instructor
-            localStorage.removeItem("instructorId");
+          // Clear or ensure it's removed if the user is not an instructor
+          localStorage.removeItem("instructorId");
         }
+        
         localStorage.setItem("userRole", userRoleString || "");
 
         const isProfileComplete = data.user.profile_complete ?? false; 
@@ -134,12 +129,18 @@ const Login: React.FC = () => {
         navigate("/login");
       }
 
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error("Error:", error.message);
-        alert("Login failed: " + error.message);
+    } catch (error: any) {
+      // ✅ Handle axios errors
+      console.error("Login error:", error);
+      
+      if (error.response) {
+        // Server responded with error
+        alert("Login failed: " + (error.response.data?.message || "Invalid credentials"));
+      } else if (error.request) {
+        // Request made but no response
+        alert("Network error. Please check your connection.");
       } else {
-        console.error("Unexpected error:", error);
+        // Something else happened
         alert("An unexpected error occurred");
       }
     }
@@ -228,7 +229,6 @@ const Login: React.FC = () => {
                   onClick={togglePassword}
                 >
                  <i className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"}`} />
-
                 </button>
               </div>
             </div>
