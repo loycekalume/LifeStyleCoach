@@ -90,12 +90,12 @@ const Signup: React.FC = () => {
             : null,
       };
 
-      // ✅ Use axiosInstance instead of hardcoded URL
+     
       const res = await axiosInstance.post("/auth/register", payload);
       
       alert(res.data.message);
       
-      // ✅ Redirect to login after successful signup
+     
       navigate("/login");
       
     } catch (err: any) {
