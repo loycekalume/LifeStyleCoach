@@ -8,6 +8,7 @@ import {
   faClinicMedical,
   faMapMarkerAlt,
   faCertificate,
+  faGlobe, // Added for Location
 } from "@fortawesome/free-solid-svg-icons";
 import "../styles/instructorProfile.css"; 
 
@@ -23,6 +24,7 @@ interface DieticianProfileData {
   years_of_experience: string;
   clinic_name: string;
   clinic_address: string;
+  location: string; // ✅ Added Location field
 }
 
 const DieticianProfileWizard: React.FC = () => {
@@ -41,15 +43,14 @@ const DieticianProfileWizard: React.FC = () => {
     years_of_experience: "",
     clinic_name: "",
     clinic_address: "",
+    location: "", // ✅ Initialize Location
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Basic validation to ensure user came from registration/login
     if (!userId || role !== "Dietician") {
       console.error("Dietician Wizard: Missing user details or incorrect role.");
-      // You might want to uncomment this for production safety:
       // navigate("/login");
     }
     setFormData((prev) => ({ ...prev, user_id: userId }));
@@ -84,8 +85,9 @@ const DieticianProfileWizard: React.FC = () => {
       }
     }
     if (currentStep === 3) {
-      if (!formData.clinic_name || !formData.clinic_address) {
-        setError("Please provide your clinic or practice details.");
+      // ✅ Added validation for location
+      if (!formData.clinic_name || !formData.clinic_address || !formData.location) {
+        setError("Please provide your clinic details, address, and general location.");
         return false;
       }
     }
@@ -135,11 +137,11 @@ const DieticianProfileWizard: React.FC = () => {
         years_of_experience: parseInt(formData.years_of_experience, 10),
         clinic_name: formData.clinic_name,
         clinic_address: formData.clinic_address,
+        location: formData.location, // ✅ Include location in payload
       };
 
       console.log("[WIZARD] Submitting payload:", payload);
 
-      // ✅ Uses axiosInstance which automatically picks up VITE_API_URL and attaches the Token
       const res = await axiosInstance.post("/dietician", payload);
       
       if (res.data.dietician && res.data.dietician.dietician_id) {
@@ -229,6 +231,7 @@ const DieticianProfileWizard: React.FC = () => {
         return (
           <>
             <h3 className="step-title">3. Clinic / Practice Details</h3>
+            
             <div className="form-group">
               <FontAwesomeIcon icon={faClinicMedical} className="input-icon" />
               <input
@@ -242,17 +245,33 @@ const DieticianProfileWizard: React.FC = () => {
                 autoFocus
               />
             </div>
+
+            {/* ✅ Added Location Input */}
+            <div className="form-group">
+              <FontAwesomeIcon icon={faGlobe} className="input-icon" />
+              <input
+                type="text"
+                name="location"
+                placeholder="General Location (e.g., Nairobi, Mombasa, Remote) *"
+                value={formData.location}
+                onChange={handleChange}
+                required
+                maxLength={100}
+              />
+            </div>
+
             <div className="form-group">
               <FontAwesomeIcon icon={faMapMarkerAlt} className="input-icon" />
               <input
                 type="text"
                 name="clinic_address"
-                placeholder="Clinic Address (City, State, or Remote Practice Name) *"
+                placeholder="Full Clinic Address (Street, Building) *"
                 value={formData.clinic_address}
                 onChange={handleChange}
                 required
               />
             </div>
+
             <div className="form-actions">
               <button type="button" className="btn-secondary" onClick={prevStep}>
                 Back
@@ -275,7 +294,6 @@ const DieticianProfileWizard: React.FC = () => {
 
   return (
     <div className="wizard-container">
-      {/* Updated the onSubmit to handle types correctly */}
       <form onSubmit={(e) => step === 3 ? handleSubmit(e) : nextStep(e)} className="wizard-form">
         <h2 className="wizard-title">Dietician Profile Setup</h2>
         <div className="step-indicator">
