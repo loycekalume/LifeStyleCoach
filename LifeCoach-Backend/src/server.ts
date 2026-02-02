@@ -1,6 +1,6 @@
 import express from "express";
-import http from "http"; // 1. IMPORT HTTP
-import { Server } from "socket.io"; // 2. IMPORT SOCKET.IO
+import http from "http";
+import { Server } from "socket.io";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -38,23 +38,25 @@ import dieticianClients from "./routes/dieticianClients";
 import goalsRoutes from "./routes/goalsRoutes";
 import clientSession from "./routes/clientSession";
 import instructorStats from "./routes/instructorStats"
+
 // Configure dotenv
 dotenv.config();
 
 // Instance of express
 const app = express();
 
-// 3. CREATE HTTP SERVER (Wraps Express)
+// CREATE HTTP SERVER (Wraps Express)
 const server = http.createServer(app);
 app.use(express.urlencoded({ extended: true }));
-// 4. INITIALIZE SOCKET.IO
+
+//  UPDATED: INITIALIZE SOCKET.IO with both local and production URLs
 const io = new Server(server, {
     cors: {
         origin: [
-        "http://localhost:5173",             // Local Frontend
-        "https://life-style-coach.vercel.app" // Production Frontend
-    ], // Your frontend URL
-        methods:"GET,PUT,DELETE,POST,PATCH",
+            "http://localhost:5173",                    // Local Frontend
+            "https://life-style-coach.vercel.app"       // Production Frontend
+        ],
+        methods: "GET,PUT,DELETE,POST,PATCH",
         credentials: true
     }
 });
@@ -64,9 +66,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// CORS configuration (For REST API)
+// ✅ UPDATED: CORS configuration (For REST API) - Allow both local and production
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: [
+        "http://localhost:5173",                    // Local Frontend
+        "https://life-style-coach.vercel.app"       // Production Frontend
+    ],
     methods: "GET,PUT,DELETE,POST,PATCH",
     credentials: true
 }));
@@ -92,9 +97,7 @@ app.use("/dietician", dieticianRoutes);
 app.use("/dieticianClients", dieticianClients);
 app.use("/chat", chatRoutes);
 app.use("/messages", chatui);
-
 app.use("/client", clientRoutes);
-
 app.use("/matchedDietician", matchedDietician);
 app.use("/clientWorkouts", clientWorkoutRoutes);
 app.use("/sessions", sessionRoutes);
@@ -105,41 +108,30 @@ app.use("/recommendedWorkouts", recommendedWorkoutRoutes);
 app.use("/workoutLogs", workoutLogRoutes);
 app.use("/mealPlans", recommendedMealplans);
 
-// 5. SOCKET.IO CONNECTION LOGIC
-// 5. SOCKET.IO CONNECTION LOGIC
+// SOCKET.IO CONNECTION LOGIC
 io.on("connection", (socket) => {
     console.log(`User Connected: ${socket.id}`);
 
-    // ✅ 1. NEW: Allow a user to join their "Personal Notification Room"
-    // This allows us to send alerts to them specifically (like "New Message!")
     socket.on("join_user_room", (userId) => {
         socket.join(`user_${userId}`);
         console.log(`User ${userId} joined notification room: user_${userId}`);
     });
 
-    // Existing Chat Room Logic
     socket.on("join_room", (room) => {
         socket.join(room);
         console.log(`User ${socket.id} joined chat room: ${room}`);
     });
 
-    // ✅ 2. UPDATED: Save Message -> Emit to Chat -> Emit Notification
     socket.on("send_message", async (data) => {
-        // Expected data = { room, message, senderId, recipientId, time }
-        
         try {
-            // A. Save to Database
             const saveQuery = `
                 INSERT INTO messages (conversation_id, sender_id, content) 
                 VALUES ($1, $2, $3)
             `;
             await pool.query(saveQuery, [data.room, data.senderId, data.message]);
 
-            // B. Emit to the Chat Room (Updates the active chat window)
             socket.to(data.room).emit("receive_message", data);
             
-            // C. ✅ NEW: Emit Notification to the Recipient's Personal Room
-            // This triggers the red badge on the Profile/Dashboard
             if (data.recipientId) {
                 io.to(`user_${data.recipientId}`).emit("new_message_notification", {
                     type: 'message',
@@ -159,9 +151,9 @@ io.on("connection", (socket) => {
         console.log("User Disconnected", socket.id);
     });
 });
+
 const port = process.env.PORT || 5000;
 
-// 6. LISTEN WITH 'server' INSTEAD OF 'app'
 server.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
