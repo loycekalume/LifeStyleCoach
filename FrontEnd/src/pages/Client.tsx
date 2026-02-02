@@ -11,7 +11,7 @@ import SessionsCard from "../components/client/SessionCard";
 import ProgressChart from "../components/client/progressChart";
 import WorkoutPlan from "../components/client/WorkoutPlan";
 import NutritionCard from "../components/client/NutritionCard";
-import AssignedMealPlans from "../components/client/asignedMealPlans"; 
+import AssignedMealPlans from "../components/client/recommendedMealPlans"; 
 import GoalsCard from "../components/client/GoalsCard";
 import InstructorsList from "../components/client/instructorList";
 import BookSessionModal from "../components/client/bookSessionModal";

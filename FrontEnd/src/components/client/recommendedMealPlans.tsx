@@ -1,21 +1,17 @@
 import React from "react";
-// Removed useNavigate since we are going back to AI generation
-import { useMeals } from "../../hooks/useMeals";
+import { useMeals } from "../../hooks/useMeals"; // Ensure this path is correct
 import "../../styles/mealCard.css"; 
 
-// 1. Keep Client Type to prevent Dashboard errors
 import type { Client } from "../../Services/clientViewService";
 
-// 2. Keep Interface
 interface MealRecommendationCardProps {
   client: Client;
 }
 
-// 3. Component
 export default function MealRecommendationCard({ client }: MealRecommendationCardProps): React.JSX.Element {
-  // usage of generatePlan from the hook
-  const { meals, loading, generating, error, generatePlan, logMeal, location } = useMeals();
-console.log(client)
+  // ✅ CRITICAL FIX: Pass the specific client's ID to the hook
+  const { meals, loading, generating, error, generatePlan, logMeal, location } = useMeals(client.user_id);
+
   const getIcon = (type: string): string => {
     switch(type) {
       case 'Breakfast': return 'fa-mug-hot';
@@ -39,15 +35,15 @@ console.log(client)
             </h3>
             
             {/* Location Sub-header */}
-            {!loading && location && (
+            {!loading && (location || client.location) && (
                 <div className="location-subtitle">
                     <i className="fas fa-map-marker-alt"></i>
-                    <span>{location}  Meal Suggestions</span>
+                    <span>{location || client.location} Meal Suggestions</span>
                 </div>
             )}
         </div>
         
-        {/* ✅ RESTORED BUTTON: AI Generate Plan */}
+        {/* Generate Button - Only show if no meals exist */}
         {meals.length === 0 && !loading && !generating && (
           <button 
             onClick={generatePlan} 
@@ -64,7 +60,7 @@ console.log(client)
         {loading && (
           <div className="state-message">
             <div className="spinner"></div>
-            <p>Loading your plan...</p>
+            <p>Loading plan...</p>
           </div>
         )}
         
@@ -72,7 +68,7 @@ console.log(client)
         {generating && (
           <div className="state-message ai-generating">
             <i className="fas fa-robot fa-bounce"></i>
-            <p>Curating local meals for you...</p>
+            <p>Curating local meals for {client.name.split(' ')[0]}...</p>
           </div>
         )}
 
@@ -88,7 +84,6 @@ console.log(client)
           <div className="empty-state">
             <i className="fas fa-utensils"></i>
             <p>No meals planned yet.</p>
-            {/* Restored Original Text */}
             <span>Tap "Generate" to get a location-based plan.</span>
           </div>
         )}
@@ -125,6 +120,7 @@ console.log(client)
                   <button 
                     onClick={() => logMeal(item.recommendation_id)}
                     className="btn-eat"
+                    title="Mark as eaten"
                   >
                     Eat
                   </button>
