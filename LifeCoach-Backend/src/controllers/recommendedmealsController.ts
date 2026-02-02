@@ -11,8 +11,6 @@ const groq = new Groq({ apiKey: process.env.XAI_API_KEY });
 // 1. Generate Recommendations using Groq
 export const generateMealRecommendations = asyncHandler(async (req: UserRequest, res: Response) => {
   const userId = req.user?.user_id;
-  
-  // ✅ NEW: Receive the coordinates string (e.g., "Lat: -1.2, Long: 36.8")
   const { locationOverride } = req.body; 
 
   if (!userId) {
@@ -33,47 +31,82 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
     }
 
     const user = clientResult.rows[0];
-
-    // ✅ LOGIC: Use coordinates if sent, otherwise fallback to DB location, then default to Kenya
     const finalLocationInput = locationOverride || user.location || "Kenya";
 
-    // B. Updated System Prompt to handle Coordinates
-    const systemPrompt = `
-      You are an expert Nutritionist familiar with global and local cuisines.
-      
-      The user is currently at this location: "${finalLocationInput}".
-      
-      INSTRUCTIONS:
-      1. If the location is provided as GPS Coordinates (Lat/Long):
-         - First, identify the likely City, Region, or Country from these coordinates.
-         - Then, generate the meal plan using foods LOCALLY available in that identified region.
-      2. If the location is a city name, use foods available there.
-
-      Generate a 1-day meal plan (Breakfast, Lunch, Dinner) based on:
-      - Goal: ${user.weight_goal}
-      - Conditions: ${user.health_conditions ? user.health_conditions.join(', ') : 'None'}
-      - Allergies: ${user.allergies ? user.allergies.join(', ') : 'None'}
-      - Budget: ${user.budget}
-
-      OUTPUT FORMAT:
-      Return ONLY a valid JSON array with this exact structure:
-      [
-        { "type": "Breakfast", "meal": "Name of meal", "calories": "approx cal", "reason": "Why this fits (mention the identified location context if possible)" },
-        { "type": "Lunch", "meal": "Name of meal", "calories": "approx cal", "reason": "Why this fits" },
-        { "type": "Dinner", "meal": "Name of meal", "calories": "approx cal", "reason": "Why this fits" }
-      ]
-      Do not include markdown blocks like \`\`\`json or extra text.
+    // ✅ NEW: Get recently recommended meals to avoid repetition
+    const recentMealsQuery = `
+      SELECT DISTINCT meal_name 
+      FROM recommended_meals 
+      WHERE user_id = $1 
+      AND recommended_date >= CURRENT_DATE - INTERVAL '7 days'
     `;
+    const recentMeals = await pool.query(recentMealsQuery, [userId]);
+    const recentMealNames = recentMeals.rows.map(row => row.meal_name);
+
+    // ✅ IMPROVED: Better structured system prompt
+    const systemPrompt = `
+You are a professional Kenyan nutritionist creating balanced, nutritious meal plans.
+
+USER PROFILE:
+- Location: ${finalLocationInput}
+- Weight Goal: ${user.weight_goal}
+- Health Conditions: ${user.health_conditions?.join(', ') || 'None'}
+- Allergies: ${user.allergies?.join(', ') || 'None'}
+- Budget: ${user.budget}
+
+${recentMealNames.length > 0 ? `AVOID these recently recommended meals: ${recentMealNames.join(', ')}` : ''}
+
+REQUIREMENTS:
+1. Focus on meals commonly available in Kenya and East Africa
+2. Include a mix of traditional Kenyan foods and healthy modern options
+3. Ensure meals are balanced with proteins, carbs, healthy fats, and vegetables
+4. Consider the user's budget (Low = affordable local foods, Medium = mix of local and imported, High = premium options)
+5. Respect dietary restrictions from health conditions and allergies
+6. Provide realistic calorie estimates
+7. Match meals to the weight goal:
+   - "lose": Lower calorie, high protein, high fiber
+   - "gain": Higher calorie, protein-rich, nutrient-dense
+   - "maintain": Balanced macros
+
+MEAL EXAMPLES FOR KENYA:
+Breakfast: Uji (porridge), Mandazi with tea, Githeri, Eggs with whole grain bread, Fruit salad with yogurt
+Lunch: Ugali with sukuma wiki and beans, Brown rice with chicken stew, Chapati with beef and vegetables, Fish with sweet potato
+Dinner: Pilau with kachumbari, Vegetable stir-fry with brown rice, Grilled tilapia with greens, Lentil curry with chapati
+
+OUTPUT FORMAT (STRICT JSON):
+[
+  {
+    "type": "Breakfast",
+    "meal": "Specific meal name",
+    "calories": "200-400 cal",
+    "reason": "Brief explanation of nutritional benefits and how it fits the goal"
+  },
+  {
+    "type": "Lunch",
+    "meal": "Specific meal name",
+    "calories": "400-600 cal",
+    "reason": "Brief explanation"
+  },
+  {
+    "type": "Dinner",
+    "meal": "Specific meal name",
+    "calories": "350-550 cal",
+    "reason": "Brief explanation"
+  }
+]
+
+IMPORTANT: Return ONLY the JSON array. No markdown, no explanations, no code blocks.
+    `.trim();
 
     // C. Call Groq
     const completion = await groq.chat.completions.create({
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: "Generate my meal plan." }
+        { role: "user", content: "Generate today's personalized meal plan." }
       ],
       model: "llama-3.1-8b-instant",
-      temperature: 0.5,
-      max_tokens: 600,
+      temperature: 0.7, // ✅ Increased for more variety
+      max_tokens: 800,  // ✅ Increased for detailed reasons
     });
 
     let aiContent = completion.choices[0]?.message?.content || "[]";
@@ -89,12 +122,18 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
         return res.status(500).json({ error: "AI response was not valid JSON" });
     }
 
+    // ✅ Validate the meal plan structure
+    if (!Array.isArray(mealPlan) || mealPlan.length !== 3) {
+      console.error("Invalid meal plan structure:", mealPlan);
+      return res.status(500).json({ error: "Invalid meal plan generated" });
+    }
+
     // D. Save to Database (Transaction)
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // Clear previous pending meals for today to avoid duplicates
+      // ✅ Clear previous pending meals for TODAY only (not all time)
       await client.query(
         "DELETE FROM recommended_meals WHERE user_id = $1 AND recommended_date = CURRENT_DATE AND status = 'pending'",
         [userId]
@@ -102,8 +141,8 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
 
       const savedMeals = [];
       const insertQuery = `
-        INSERT INTO recommended_meals (user_id, meal_type, meal_name, calories, reason, recommended_date)
-        VALUES ($1, $2, $3, $4, $5, CURRENT_DATE)
+        INSERT INTO recommended_meals (user_id, meal_type, meal_name, calories, reason, recommended_date, status)
+        VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, 'pending')
         RETURNING *
       `;
 
@@ -120,14 +159,17 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
 
       await client.query('COMMIT');
 
-      // Determine display location for frontend
-      // If we used coordinates, label it "GPS Location" so the user knows it worked
       const displayLocation = locationOverride ? "GPS Location" : finalLocationInput;
 
       res.status(200).json({
-        message: "Meal plan generated successfully",
+        message: "Fresh meal plan generated successfully",
         location: displayLocation,
-        data: savedMeals
+        data: savedMeals,
+        tips: [
+          "Drink at least 8 glasses of water throughout the day",
+          "Portion sizes matter - listen to your body's hunger cues",
+          "Fresh, local ingredients are often the most nutritious and affordable"
+        ]
       });
 
     } catch (dbError) {
