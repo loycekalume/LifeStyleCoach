@@ -3,18 +3,20 @@ import pool from "../db.config";
 import asyncHandler from "../middlewares/asyncHandler";
 import Groq from "groq-sdk"; 
 
-
+// Initialize Groq
+const groq = new Groq({ apiKey: process.env.LAI_API_KEY });
 
 export const upsertClient = asyncHandler(async (req: Request, res: Response) => {
-  
-  const { user_id, age, weight, height, goal, gender, allergies, budget, location } = req.body;
+  // ✅ Extract health_conditions from the body
+  const { user_id, age, weight, height, goal, gender, allergies, health_conditions, budget, location } = req.body;
 
   // 1. Insert or Update the Client details
+  // Added health_conditions to the INSERT and UPDATE logic
   const result = await pool.query(
     `INSERT INTO clients (
-        user_id, age, weight, height, weight_goal, gender, allergies, budget, location
+        user_id, age, weight, height, weight_goal, gender, allergies, health_conditions, budget, location
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      ON CONFLICT (user_id) DO UPDATE SET 
         age = EXCLUDED.age,
         weight = EXCLUDED.weight,
@@ -22,14 +24,14 @@ export const upsertClient = asyncHandler(async (req: Request, res: Response) => 
         weight_goal = EXCLUDED.weight_goal,
         gender = EXCLUDED.gender,
         allergies = EXCLUDED.allergies,
+        health_conditions = EXCLUDED.health_conditions,
         budget = EXCLUDED.budget,
         location = EXCLUDED.location
      RETURNING *`,
-    [user_id, age, weight, height, goal, gender, allergies, budget, location]
+    [user_id, age, weight, height, goal, gender, allergies, health_conditions, budget, location]
   );
 
-  // 2. ✅ FIX: Mark the user profile as complete in the USERS table
-  // This prevents the infinite redirect loop on the frontend
+  // 2. Mark the user profile as complete in the USERS table
   await pool.query("UPDATE users SET profile_complete = TRUE WHERE user_id = $1", [user_id]);
 
   res.status(200).json({
@@ -39,8 +41,7 @@ export const upsertClient = asyncHandler(async (req: Request, res: Response) => 
 });
 
 
-//  Get all clients aaaaaand
-///merge
+// Get all clients
 export const getClients = asyncHandler(async (req: Request, res: Response) => {
   const result = await pool.query(
     `SELECT 
@@ -57,10 +58,10 @@ export const getClients = asyncHandler(async (req: Request, res: Response) => {
         c.allergies, 
         c.budget, 
         c.location
-     FROM users u
-     JOIN user_roles r ON u.role_id = r.role_id
-     LEFT JOIN clients c ON u.user_id = c.user_id
-     WHERE u.role_id = 5`
+      FROM users u
+      JOIN user_roles r ON u.role_id = r.role_id
+      LEFT JOIN clients c ON u.user_id = c.user_id
+      WHERE u.role_id = 5`
   );
 
   res.status(200).json({
@@ -70,18 +71,16 @@ export const getClients = asyncHandler(async (req: Request, res: Response) => {
 });
 
 
-
-
 // Get client by ID
 export const getClientById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const result = await pool.query(
     `SELECT clients.*, users.name, users.email, user_roles.role_name
-     FROM clients
-     JOIN users ON clients.user_id = users.user_id
-     JOIN user_roles ON users.role_id = user_roles.role_id
-     WHERE clients.user_id = $1`,
+      FROM clients
+      JOIN users ON clients.user_id = users.user_id
+      JOIN user_roles ON users.role_id = user_roles.role_id
+      WHERE clients.user_id = $1`,
     [id]
   );
 
@@ -93,7 +92,7 @@ export const getClientById = asyncHandler(async (req: Request, res: Response) =>
   res.status(200).json(result.rows[0]);
 });
 
-//  Delete client by ID
+// Delete client by ID
 export const deleteClient = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
@@ -113,18 +112,19 @@ export const deleteClient = asyncHandler(async (req: Request, res: Response) => 
   });
 });
 
-//  Update client (explicit update endpoint if you want it separate from upsert)
+// Update client (explicit update endpoint)
 export const updateClient = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { age, weight, height, goal, gender, allergies, budget, location } = req.body;
+  // ✅ Added health_conditions here
+  const { age, weight, height, goal, gender, allergies, health_conditions, budget, location } = req.body;
 
   const result = await pool.query(
     `UPDATE clients 
-     SET age = $1, weight = $2, height = $3, weight_goal = $4, gender = $5, 
-         allergies = $6, budget = $7, location = $8
-     WHERE user_id = $9
-     RETURNING *`,
-    [age, weight, height, goal, gender, allergies, budget, location, id]
+      SET age = $1, weight = $2, height = $3, weight_goal = $4, gender = $5, 
+          allergies = $6, health_conditions = $7, budget = $8, location = $9
+      WHERE user_id = $10
+      RETURNING *`,
+    [age, weight, height, goal, gender, allergies, health_conditions, budget, location, id]
   );
 
   if (result.rows.length === 0) {
@@ -139,8 +139,9 @@ export const updateClient = asyncHandler(async (req: Request, res: Response) => 
 });
 
 
-
-const groq = new Groq({ apiKey: process.env.LAI_API_KEY });
+// ------------------------------------------------------------------
+// AI MATCHING CONTROLLER
+// ------------------------------------------------------------------
 
 export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, res: Response) => {
     // 1. Get Logged-in Instructor
@@ -158,11 +159,11 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
     }
     const instructor = instRes.rows[0];
 
-    // 2. Fetch All Clients
+    // 2. Fetch All Clients (including health conditions)
     const clientQuery = `
         SELECT 
             u.user_id, u.name, 
-            c.weight_goal, c.location, c.gender, c.age, c.health_conditions
+            c.weight_goal, c.location, c.gender, c.age, c.health_conditions, c.allergies
         FROM users u
         JOIN clients c ON u.user_id = c.user_id
         WHERE u.role_id = 5
@@ -176,12 +177,13 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
     }
 
     // 3. Construct AI Prompt
-    const systemPrompt = `You are a fitness client matching expert. Your job is to find the BEST client matches for an instructor based on strict compatibility criteria.
+    const systemPrompt = `You are a fitness client matching expert. Your job is to find the BEST client matches for an instructor.
 
 **INSTRUCTOR PROFILE:**
 - Specialization: ${instructor.specialization}
 - Available Locations: ${instructor.available_locations}
 - Coaching Mode: ${instructor.coaching_mode}
+- Bio: ${instructor.bio}
 
 **CLIENTS TO EVALUATE:**
 ${JSON.stringify(clients.map(c => ({
@@ -191,51 +193,39 @@ ${JSON.stringify(clients.map(c => ({
     location: c.location,
     gender: c.gender,
     age: c.age,
-    health_conditions: c.health_conditions
+    health_conditions: c.health_conditions, // AI now sees this
+    allergies: c.allergies
 })), null, 2)}
 
 **MATCHING RULES (APPLY STRICTLY):**
 
 1. **Specialization Match (40 points max):**
    - EXACT match between instructor specialization and client weight_goal: 40 points
-   - Partial/related match (e.g., "weight loss" instructor + "fat loss" client): 25 points
+   - Partial/related match: 25 points
    - No match: 0 points
 
 2. **Location Match (40 points max):**
-   - COACHING MODE LOGIC:
-     * If instructor coaching_mode is "Online" or "Remote": Award 40 points to ALL clients (location irrelevant)
-     * If instructor coaching_mode is "In-Person": Client location MUST match at least one of instructor's available_locations
-       - Exact city match: 40 points
-       - Same region/state: 25 points
-       - Different location: 0 points
-     * If instructor coaching_mode is "Both" or "Hybrid": 
-       - Location match: 40 points
-       - No location match but client could go online: 30 points
+   - If instructor is "Online/Remote": 40 points (matches everyone)
+   - If instructor is "In-Person": Must match client location (City/Region).
+     - Exact match: 40 points
+     - Same Region: 25 points
+     - No match: 0 points
+   - If "Hybrid": Location match = 40 points, otherwise 30 points.
 
+3. **Health Condition Check (Safety First):**
+   - If the client has serious health conditions (e.g., "Heart Condition") and the instructor does NOT specialize in "Rehab" or "Medical Fitness", reduce score by 50 points. Safety is priority.
 
-
-**SCORING:**
-- Calculate total score (max 100 points)
-- ONLY return matches with score ≥ 50
-- Be STRICT - don't force matches that don't meet criteria
-
-**OUTPUT FORMAT (STRICT JSON):**
+**OUTPUT FORMAT (JSON):**
 {
     "matches": [
         { 
             "user_id": <number>,
             "match_score": <number 0-100>,
-            "match_reason": "<2-3 sentence explanation from instructor's perspective using 'you' for instructor and 'they/this client' for client. Be specific about WHY they match.>"
+            "match_reason": "<Short explanation>"
         }
     ]
 }
-
-**IMPORTANT:**
-- Speak directly to the instructor (use "you")
-- Be professional and business-focused
-- Only include scores ≥ 50
-- If no matches meet criteria, return empty matches array
-- Be honest - don't inflate scores artificially`;
+`;
 
     try {
         const completion = await groq.chat.completions.create({
@@ -252,7 +242,7 @@ ${JSON.stringify(clients.map(c => ({
 
         // 5. Merge AI Scores back into Full Client Objects
         const finalResults = aiMatches
-            .filter((match: any) => match.match_score >= 50) // Double-check AI followed rules
+            .filter((match: any) => match.match_score >= 50)
             .map((match: any) => {
                 const originalClient = clients.find(c => c.user_id === match.user_id);
                 if (!originalClient) return null;
@@ -265,7 +255,7 @@ ${JSON.stringify(clients.map(c => ({
             })
             .filter(Boolean);
 
-        // Sort by score (highest first)
+        // Sort by score
         finalResults.sort((a: any, b: any) => b.match_score - a.match_score);
 
         res.json({
@@ -282,6 +272,11 @@ ${JSON.stringify(clients.map(c => ({
     }
 });
 
+
+// ------------------------------------------------------------------
+// CLIENT MEAL PLANS (For the Client Dashboard)
+// ------------------------------------------------------------------
+
 export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) => {
     const clientId = (req as any).user.user_id;
 
@@ -292,8 +287,7 @@ export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) =
             mp.category,
             mp.description,
             
-            -- ✅ CALCULATE CALORIES (Assuming 'meal_items' table exists)
-            -- If you don't have meal_items yet, change this line to: 'N/A' as calories,
+            -- Calculate Total Calories from Items
             (
                 SELECT COALESCE(SUM(calories), 0) 
                 FROM meal_items mi 
@@ -301,10 +295,7 @@ export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) =
             ) as calories,
 
             cda.status,
-            
-            -- ✅ FIX: Use 'assigned_date' instead of 'start_date'
             cda.assigned_date as start_date, 
-            
             cda.custom_notes as dietician_notes,
             u.name as dietician_name,
             d.specialization
@@ -318,10 +309,8 @@ export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) =
 
     const result = await pool.query(query, [clientId]);
 
-    // Format the response
     const formattedPlans = result.rows.map(plan => ({
         ...plan,
-        // Ensure calories is a string with "kcal" appended
         calories: plan.calories ? `${plan.calories} kcal` : 'N/A'
     }));
 
@@ -331,7 +320,6 @@ export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) =
     });
 });
 
-// ... existing imports
 
 // GET /client/plans/:planId/details
 export const getMealPlanDetails = asyncHandler(async (req: Request, res: Response) => {
@@ -355,8 +343,7 @@ export const getMealPlanDetails = asyncHandler(async (req: Request, res: Respons
         return res.status(404).json({ message: "Plan not found" });
     }
 
-    // 2. Fetch Actual Meal Items from 'meal_items' table
-    // Assumes columns: item_id, meal_type (Breakfast, etc.), item_name, calories, portion
+    // 2. Fetch Actual Meal Items
     const itemsQuery = `
         SELECT * FROM meal_items 
         WHERE meal_plan_id = $1 
