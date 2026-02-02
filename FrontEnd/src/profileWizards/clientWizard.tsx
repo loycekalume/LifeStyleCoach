@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance"; 
 import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -11,7 +11,7 @@ import {
   faAllergies,
   faDollarSign,
   faMapMarkerAlt,
-  faDumbbell, // 👈 NEW: Icon for fitness level
+  faDumbbell,
 } from "@fortawesome/free-solid-svg-icons";
 import "../styles/clientWizard.css"; 
 
@@ -20,14 +20,13 @@ interface ProfileState {
   userId: number | null;
 }
 
-// 👇 UPDATE 1: Add fitness_level to the Interface
 interface ClientProfileData {
   user_id: number | null;
   age: string;
   weight: string;
   height: string;
   goal: string;
-  fitness_level: string; // 👈 NEW FIELD
+  fitness_level: string;
   gender: string;
   allergies: string;
   budget: string;
@@ -50,14 +49,13 @@ const ClientProfileWizard: React.FC = () => {
 
   const [step, setStep] = useState(1);
   
-  // 👇 UPDATE 2: Initialize the new field in State
   const [formData, setFormData] = useState<ClientProfileData>({
     user_id: userId,
     age: "",
     weight: "",
     height: "",
     goal: "",
-    fitness_level: "", // 👈 Initialize as empty
+    fitness_level: "",
     gender: "",
     allergies: "",
     budget: "",
@@ -98,7 +96,6 @@ const ClientProfileWizard: React.FC = () => {
       }
     }
     if (currentStep === 2) {
-      // 👇 UPDATE 3: Validate that Fitness Level is selected
       if (!formData.goal || !formData.budget || !formData.location || !formData.fitness_level) {
         setError("Please set your goal, fitness level, budget, and location.");
         return false;
@@ -133,24 +130,24 @@ const ClientProfileWizard: React.FC = () => {
     setError(null);
 
     try {
-      // 👇 UPDATE 4: Include fitness_level in the payload sent to Backend
       const payload = {
         user_id: formData.user_id,
         age: parseInt(formData.age, 10),
         weight: parseFloat(formData.weight),
         height: parseFloat(formData.height),
         goal: formData.goal,
-        fitness_level: formData.fitness_level, // 👈 SENDING IT HERE
+        fitness_level: formData.fitness_level,
         gender: formData.gender,
         allergies: formatArray(formData.allergies), 
         budget: formData.budget, 
         location: formData.location,
       };
 
-      const res = await axios.post("http://localhost:3000/client", payload); 
+      // ✅ Use axiosInstance instead of axios
+      const res = await axiosInstance.post("/client", payload);
       
       if (res.data.client && res.data.client.client_id) {
-          localStorage.setItem("clientId", String(res.data.client.client_id));
+        localStorage.setItem("clientId", String(res.data.client.client_id));
       }
       
       alert(res.data.message);
@@ -246,7 +243,6 @@ const ClientProfileWizard: React.FC = () => {
         </select>
       </div>
 
-      {/* 👇 UPDATE 5: New Fitness Level Dropdown */}
       <div className="form-group">
         <FontAwesomeIcon icon={faDumbbell} className="input-icon" />
         <select
@@ -254,7 +250,7 @@ const ClientProfileWizard: React.FC = () => {
           value={formData.fitness_level}
           onChange={handleChange}
           required
-          style={{ borderLeft: "5px solid #007bff" }} // Optional visual highlight
+          style={{ borderLeft: "5px solid #007bff" }}
         >
           <option value="">Select Your Experience Level *</option>
           <option value="beginner">Beginner (New to fitness)</option>
@@ -262,7 +258,6 @@ const ClientProfileWizard: React.FC = () => {
           <option value="advanced">Advanced (High intensity / Athlete)</option>
         </select>
       </div>
-      {/* ------------------------------------- */}
 
       <div className="form-group">
         <FontAwesomeIcon icon={faAllergies} className="input-icon" />
