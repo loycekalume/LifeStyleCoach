@@ -5,8 +5,7 @@ export const startConversation = async (req: Request, res: Response) => {
     const myId = (req as any).user.user_id;
     let { target_user_id, instructor_id, dietician_id } = req.body;
 
-    // 1. If we only have a profile ID (from frontend), resolve it to a User ID first
-    // (This helps us identify roles later)
+    // 1. Resolve profile IDs to user IDs if needed
     if (!target_user_id) {
         try {
             if (instructor_id) {
@@ -16,10 +15,12 @@ export const startConversation = async (req: Request, res: Response) => {
                 const r = await pool.query(`SELECT user_id FROM dieticians WHERE dietician_id = $1`, [dietician_id]);
                 if (r.rows.length) target_user_id = r.rows[0].user_id;
             }
-        } catch (err) { console.error("Lookup error:", err); }
+        } catch (err) { 
+            console.error("Lookup error:", err); 
+        }
     }
 
-    // Default legacy support
+    // Legacy support
     if (!target_user_id && req.body.client_id) target_user_id = req.body.client_id;
     if (!target_user_id) return res.status(400).json({ message: "Target user ID required" });
 
@@ -37,43 +38,44 @@ export const startConversation = async (req: Request, res: Response) => {
 
         if (!userA || !userB) return res.status(404).json({ message: "User not found" });
 
-        // Variables to hold the final IDs for the INSERT statement
-        let finalClientId = null;      // This will be a user_id
-        let finalInstructorId = null;  // This will be an instructor_id
-        let finalDieticianId = null;   // This will be a dietician_id
+        // ✅ FIX: Variables to hold the final IDs
+        let finalClientId = null;      // user_id of the client
+        let finalInstructorId = null;  // user_id of the instructor (NOT instructor_id!)
+        let finalDieticianId = null;   // dietician_id from dieticians table
 
         // Helper to process a user based on their role
         const processUser = async (user: any) => {
             const role = (user.role_name || "").toLowerCase().trim();
             
             if (role === 'client') {
-                // For Clients, the ID in 'conversations' IS the user_id
+                // ✅ Client ID is the user_id
                 finalClientId = user.user_id;
             } 
             else if (role === 'instructor') {
-                // For Instructors, we must fetch the instructor_id
-                const r = await pool.query(`SELECT instructor_id FROM instructors WHERE user_id = $1`, [user.user_id]);
-                if (r.rows.length > 0) finalInstructorId = r.rows[0].instructor_id;
+                // ✅ FIX: Instructor ID in conversations table is the user_id, NOT instructor_id
+                finalInstructorId = user.user_id;
             } 
             else if (role === 'dietician') {
-                // For Dieticians, we must fetch the dietician_id
+                // ✅ Dietician ID must be fetched from dieticians table
                 const r = await pool.query(`SELECT dietician_id FROM dieticians WHERE user_id = $1`, [user.user_id]);
                 if (r.rows.length > 0) finalDieticianId = r.rows[0].dietician_id;
             }
         };
 
-        // Process both users to fill the variables
+        // Process both users
         await processUser(userA);
         await processUser(userB);
 
-        // Fallback: If roles are ambiguous (e.g. Admin chatting), treat initiator as client
+        // Fallback: If roles are ambiguous, treat initiator as client
         if (!finalClientId && !finalInstructorId && !finalDieticianId) {
              finalClientId = myId;
         }
 
         // Safety Check
         if (!finalInstructorId && !finalDieticianId) {
-            return res.status(400).json({ message: "Chat must include at least one Professional (Instructor or Dietician)." });
+            return res.status(400).json({ 
+                message: "Chat must include at least one Professional (Instructor or Dietician)." 
+            });
         }
 
         console.log(`✨ Chat IDs -> Client: ${finalClientId}, Instructor: ${finalInstructorId}, Dietician: ${finalDieticianId}`);
