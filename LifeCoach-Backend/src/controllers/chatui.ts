@@ -229,48 +229,65 @@ export const getUserConversations = async (req: Request, res: Response) => {
                     ELSE 'Client' 
                 END as other_person_role,
 
-                -- 2. Determine NAME (The Fix is here!)
-                COALESCE(
-                    CASE 
-                        WHEN c.client_id = $1 THEN 
-                            -- If I am Client, get name via Profile Tables
-                            COALESCE(i_user.name, d_user.name) 
-                        ELSE 
-                            -- If I am Pro, get Client name directly
-                            c_user.name 
-                    END,
-                    'Unknown User'
-                ) as other_person_name,
+                -- 2. Determine NAME (FIXED!)
+                CASE 
+                    WHEN c.client_id = $1 THEN 
+                        -- I am the client, get the instructor or dietician name
+                        COALESCE(instructor_user.name, dietician_user.name, 'Unknown User')
+                    ELSE 
+                        -- I am the instructor/dietician, get the client name
+                        COALESCE(client_user.name, 'Unknown User')
+                END as other_person_name,
 
                 -- 3. Determine ID
                 CASE 
                     WHEN c.client_id = $1 THEN 
-                        COALESCE(i_user.user_id, d_user.user_id)
-                    ELSE c_user.user_id
+                        COALESCE(c.instructor_id, dietician_data.user_id)
+                    ELSE 
+                        c.client_id
                 END as other_person_id,
 
                 -- 4. Last Message info
-                COALESCE((SELECT content FROM messages m WHERE m.conversation_id = c.conversation_id ORDER BY m.sent_at DESC LIMIT 1), 'No messages yet') as last_message,
-                (SELECT sent_at FROM messages m WHERE m.conversation_id = c.conversation_id ORDER BY m.sent_at DESC LIMIT 1) as last_message_time,
-                COALESCE((SELECT COUNT(*)::int FROM messages m WHERE m.conversation_id = c.conversation_id AND m.sender_id != $1 AND m.is_read = FALSE), 0) as unread_count
+                (
+                    SELECT content 
+                    FROM messages m 
+                    WHERE m.conversation_id = c.conversation_id 
+                    ORDER BY m.sent_at DESC 
+                    LIMIT 1
+                ) as last_message,
+                
+                (
+                    SELECT sent_at 
+                    FROM messages m 
+                    WHERE m.conversation_id = c.conversation_id 
+                    ORDER BY m.sent_at DESC 
+                    LIMIT 1
+                ) as last_message_time,
+                
+                (
+                    SELECT COUNT(*)::int 
+                    FROM messages m 
+                    WHERE m.conversation_id = c.conversation_id 
+                      AND m.sender_id != $1 
+                      AND m.is_read = FALSE
+                ) as unread_count
 
             FROM conversations c
             
-            -- JOIN CLIENT (Direct user_id)
-            LEFT JOIN users c_user ON c.client_id = c_user.user_id
+            -- ✅ FIX: Join client directly (client_id IS user_id)
+            LEFT JOIN users client_user ON c.client_id = client_user.user_id
             
-            -- JOIN INSTRUCTOR (Jump from Profile -> User)
-            LEFT JOIN instructors i ON c.instructor_id = i.instructor_id
-            LEFT JOIN users i_user ON i.user_id = i_user.user_id
+            -- ✅ FIX: Join instructor directly (instructor_id IS user_id, NOT from instructors table)
+            LEFT JOIN users instructor_user ON c.instructor_id = instructor_user.user_id
             
-            -- JOIN DIETICIAN (Jump from Profile -> User)
-            LEFT JOIN dieticians d ON c.dietician_id = d.dietician_id
-            LEFT JOIN users d_user ON d.user_id = d_user.user_id
+            -- ✅ FIX: Join dietician through dieticians table (dietician_id IS from dieticians table)
+            LEFT JOIN dieticians dietician_data ON c.dietician_id = dietician_data.dietician_id
+            LEFT JOIN users dietician_user ON dietician_data.user_id = dietician_user.user_id
 
-            -- Filter: Show where I am involved (Check my ID against Client ID or the Profile's User ID)
+            -- Filter: Show conversations where I'm involved
             WHERE c.client_id = $1 
-               OR i.user_id = $1 
-               OR d.user_id = $1
+               OR c.instructor_id = $1 
+               OR dietician_data.user_id = $1
             
             ORDER BY last_message_time DESC NULLS LAST
         `;
