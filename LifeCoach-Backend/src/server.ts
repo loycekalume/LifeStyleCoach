@@ -83,7 +83,7 @@ app.use("/instructors", instructorRoutes);
 app.use("/instructorStats", instructorStats);
 app.use("/matchinstructor", matchInstructorRoutes);
 app.use("/workout", workoutRoutes);
-app.use("/progress", progressLogRoutes);
+app.use("/myprogress", progressLogRoutes);
 app.use("/chathistory", chatHistoryRoutes);
 app.use("/posts", communityPostRoutes);
 app.use("/admin", adminRoutes);

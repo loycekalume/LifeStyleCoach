@@ -1,104 +1,103 @@
-import {Request,Response} from 'express'
-import pool from "../db.config"
-import asyncHandler from '../middlewares/asyncHandler'
+import { Request, Response } from "express";
+import pool from "../db.config";
 
-export const addProgressLog= asyncHandler(async(req:Request,res:Response)=>{
+export const getClientProgress = async (req: Request, res: Response) => {
+    const { userId } = req.params;
+
     try {
-    const{user_id,
-        date,
-        weight,
-        workout_done,
-        meals_logged,
-        current_streak
-    }=req.body
-    const result=await pool.query(`INSERT INTO ProgressLogs(
-        user_id,
-        date,
-        weight,
-        workout_done,
-        meals_logged,
-        current_streak)VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,
-        [user_id,
-        date,
-        weight,
-        workout_done,
-        meals_logged,
-        current_streak])
-    res.status(200).json({
-        message:"ProgressLog recorded successfully",
-        log:result.rows[0]
-    })
-
-} catch (error) {
-       console.error("Error recording log",error) 
-       res.status(500).json({message:"Internal Server Error"})
-    }
-
-})
-
-export const getLogs= asyncHandler(async(req:Request,res:Response)=>{
-    try {
-        const result=await pool.query("SELECT * FROM ProgressLogs")
-        res.status(200).json({
-            message:"ProgressLogs retrieved",
-            logs:result.rows
+        // 1. Fetch Base Weight from Profile (The starting point)
+        const profileQuery = `SELECT weight FROM clients WHERE user_id = $1`;
         
-        })
-    } catch (error) {
-        console.error("Error retrieving logs",error) 
-       res.status(500).json({message:"Internal Server Error"})
-    }
-    })
-export const getLogByUserId = asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { user_id } = req.params;
-    const result = await pool.query("SELECT * FROM ProgressLogs WHERE user_id=$1", [user_id]);
+        // 2. Fetch Weight Logs (Updates over time)
+        const progressQuery = `
+            SELECT log_date::text as date, weight 
+            FROM client_progress_logs 
+            WHERE user_id = $1 
+            ORDER BY log_date ASC
+        `;
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Logs not found", logs: [] });
-    }
+        // 3. Fetch Workout Dates (Activity)
+        const workoutQuery = `
+            SELECT date_completed::date::text as date 
+            FROM workout_logs 
+            WHERE client_id = $1 
+            ORDER BY date_completed ASC
+        `;
 
-    res.status(200).json({
-      message: "User logs retrieved",
-      logs: result.rows // <-- match frontend expectation
-    });
-  } catch (error) {
-    console.error("Error retrieving logs", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-});
+        const [profileRes, progressRes, workoutRes] = await Promise.all([
+            pool.query(profileQuery, [userId]),
+            pool.query(progressQuery, [userId]),
+            pool.query(workoutQuery, [userId])
+        ]);
 
+        const baseWeight = parseFloat(profileRes.rows[0]?.weight || 0);
+        const weightLogs = progressRes.rows;
+        const workoutLogs = workoutRes.rows;
 
-export const getLogById =asyncHandler(async(req:Request,res:Response)=>{
-    try {
-        const{id}=req.params
-        const result=await pool.query("SELECT * FROM ProgressLogs WHERE id=$1",[id])
-        if(result.rows.length ===0){
-            res.status(400).json({message:"Log not Found"})
+        // 4. ✅ MERGE DATES: Create a master list of all active days
+        const uniqueDates = new Set<string>();
+        weightLogs.forEach((w: any) => uniqueDates.add(w.date));
+        workoutLogs.forEach((w: any) => uniqueDates.add(w.date));
+
+        // 5. HANDLE NO DATA: Return today's date with profile weight
+        if (uniqueDates.size === 0) {
+            return res.json([{
+                date: new Date().toISOString().split('T')[0], // Today
+                weight: baseWeight,
+                workout_done: false,
+                current_streak: 0
+            }]);
         }
-        res.status(400).json({
-            message:"log retrieved",
-            log:result.rows[0]
-        })
-    } catch (error) {
-         console.error("Error retrieving logs",error) 
-       res.status(500).json({message:"Internal Server Error"})
-    }
-})
 
-export const deleteLog= asyncHandler(async(req:Request,res:Response)=>{
-    try {
-        const {id}=req.params
-        const result=await pool.query("DELETE FROM ProgressLogs WHERE id=$1 RETURNING *",[id])
+        // 6. Sort dates chronologically
+        const sortedDates = Array.from(uniqueDates).sort((a, b) => 
+            new Date(a).getTime() - new Date(b).getTime()
+        );
 
-        if(result.rows.length===0){
-            res.json(400).json({message:"Log not found"})
-        }
-        res.status(200).json({
-            message:"Log deleted",
-            log:result.rows[0]
-        })
-    } catch (error) {
+        // 7. Lookups for O(1) access
+        const weightMap = new Map();
+        weightLogs.forEach((w: any) => weightMap.set(w.date, parseFloat(w.weight)));
         
+        const workoutSet = new Set(workoutLogs.map((w: any) => w.date));
+
+        // 8. Build the Response
+        // We track "lastKnownWeight" to fill in gaps where the user worked out but didn't weigh themselves
+        let lastKnownWeight = baseWeight;
+
+        // Try to find the earliest logged weight to start with if available
+        if (weightLogs.length > 0 && new Date(weightLogs[0].date) < new Date(sortedDates[0])) {
+             lastKnownWeight = parseFloat(weightLogs[0].weight);
+        }
+
+        let currentStreak = 0;
+
+        const responseData = sortedDates.map(date => {
+            // Update weight if there is a new log for this specific day
+            if (weightMap.has(date)) {
+                lastKnownWeight = weightMap.get(date);
+            }
+
+            // Streak Logic (Simple: consecutive entries in this list)
+            if (workoutSet.has(date)) {
+                currentStreak++;
+            } else {
+                // Optional: Reset streak on missed days? 
+                // For now, we keep it simple or let it persist.
+                // currentStreak = 0; 
+            }
+
+            return {
+                date: date,
+                weight: lastKnownWeight, // Uses carried-over weight
+                workout_done: workoutSet.has(date),
+                current_streak: currentStreak
+            };
+        });
+
+        res.json(responseData);
+
+    } catch (err) {
+        console.error("Progress API Error:", err);
+        res.status(500).json({ message: "Server Error" });
     }
-})
+};
