@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
-import {  useNavigate } from "react-router-dom";
+import axiosInstance from "../utils/axiosInstance"; 
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
@@ -29,7 +29,8 @@ const Signup: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
-const navigate = useNavigate();
+  const navigate = useNavigate();
+
   // Toggle password visibility
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
@@ -65,7 +66,7 @@ const navigate = useNavigate();
   };
 
   // Handle submit
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
@@ -89,10 +90,8 @@ const handleSubmit = async (e: React.FormEvent) => {
             : null,
       };
 
-      const res = await axios.post(
-        "http://localhost:3000/auth/register",
-        payload
-      );
+      // ✅ Use axiosInstance instead of hardcoded URL
+      const res = await axiosInstance.post("/auth/register", payload);
       
       alert(res.data.message);
       
@@ -103,7 +102,6 @@ const handleSubmit = async (e: React.FormEvent) => {
       alert(err.response?.data?.message || "Something went wrong");
     }
   };
-
 
   return (
     <div className="auth-container">
