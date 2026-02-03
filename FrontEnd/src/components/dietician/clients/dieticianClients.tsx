@@ -12,10 +12,10 @@ interface DieticianClientView extends Client {
   match_score?: number;
   match_reason?: string;
   match_reasons?: string[];
-  is_hired?: boolean;
+  is_accepted?: boolean;
 }
 
-type ViewMode = 'recommended' | 'leads' | 'hired';
+type ViewMode = 'recommended' | 'leads' | 'accepted';
 
 const DieticianClients: React.FC = () => {
   const [clients, setClients] = useState<DieticianClientView[]>([]);
@@ -39,7 +39,7 @@ const DieticianClients: React.FC = () => {
       switch(viewMode) {
         case 'recommended': endpoint = "/dieticianClients/matches"; break;
         case 'leads':       endpoint = "/dieticianClients/leads"; break;
-        case 'hired':       endpoint = "/dieticianClients/roster"; break;
+        case 'accepted':       endpoint = "/dieticianClients/roster"; break;
         default: endpoint = "/dieticianClients/matches";
       }
 
@@ -77,11 +77,11 @@ const DieticianClients: React.FC = () => {
       await axiosInstance.post("/dieticianClients/hire", { client_user_id: client.user_id });
       alert(`${client.name} has been added to your roster!`);
       
-      // Update local state to reflect hired status immediately
+      // Update local state to reflect accepted status immediately
       setClients(prevClients => 
         prevClients.map(c => 
           c.user_id === client.user_id 
-            ? { ...c, is_hired: true } 
+            ? { ...c, is_accepted: true } 
             : c
         )
       );
@@ -128,7 +128,7 @@ const DieticianClients: React.FC = () => {
     whiteSpace: 'nowrap'
   };
 
-  const badgeHiredStyle: React.CSSProperties = {
+  const badgeacceptedStyle: React.CSSProperties = {
     flex: '1', 
     minWidth: '80px',
     padding: '10px 12px', 
@@ -167,7 +167,7 @@ const DieticianClients: React.FC = () => {
         <h1 style={{margin:0, color:'#2c3e50'}}>Manage Clients</h1>
         
         <div className="view-toggles" style={{display:'flex', background:'#f3f4f6', padding:'5px', borderRadius:'8px'}}>
-            {(['recommended', 'leads', 'hired'] as ViewMode[]).map((mode) => (
+            {(['recommended', 'leads', 'accepted'] as ViewMode[]).map((mode) => (
                 <button 
                     key={mode}
                     onClick={() => handleViewModeChange(mode)}
@@ -201,7 +201,7 @@ const DieticianClients: React.FC = () => {
                     <p style={{fontSize:'1.1rem', fontWeight:'500'}}>
                         {viewMode === 'recommended' && "No AI matches found at the moment."}
                         {viewMode === 'leads' && "You haven't interacted with any clients yet."}
-                        {viewMode === 'hired' && "Your client roster is currently empty."}
+                        {viewMode === 'accepted' && "Your client roster is currently empty."}
                     </p>
                 </div>
             ) : (
@@ -229,13 +229,13 @@ const DieticianClients: React.FC = () => {
                                 </span>
                             )}
                             
-                            {viewMode === 'leads' && client.is_hired && (
+                            {viewMode === 'leads' && client.is_accepted && (
                                 <span style={{ background:'#ecfdf5', color:'#059669', padding:'4px 8px', borderRadius:'12px', fontSize:'0.75rem', fontWeight:'bold' }}>
                                     ✓ IN ROSTER
                                 </span>
                             )}
                             
-                            {viewMode === 'hired' && (
+                            {viewMode === 'accepted' && (
                                 <span style={{ background:'#eff6ff', color:'#2563eb', padding:'4px 8px', borderRadius:'12px', fontSize:'0.75rem', fontWeight:'bold' }}>
                                     ACTIVE
                                 </span>
@@ -274,8 +274,8 @@ const DieticianClients: React.FC = () => {
                                     <button onClick={() => handleChat(client.user_id)} style={btnSecondaryStyle}>
                                         <FaComments /> Chat
                                     </button>
-                                    {client.is_hired ? (
-                                        <div style={badgeHiredStyle}>✓ Accepted</div>
+                                    {client.is_accepted ? (
+                                        <div style={badgeacceptedStyle}>✓ Accepted</div>
                                     ) : (
                                         <button onClick={() => handleHire(client)} style={btnPrimaryStyle}>
                                             <FaUserPlus /> Accept
@@ -284,7 +284,7 @@ const DieticianClients: React.FC = () => {
                                 </>
                             )}
 
-                            {viewMode === 'hired' && (
+                            {viewMode === 'accepted' && (
                                 <>
                                     <button onClick={() => handleChat(client.user_id)} style={btnSecondaryStyle}>
                                         <FaComments /> Chat
