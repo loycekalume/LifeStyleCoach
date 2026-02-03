@@ -33,9 +33,9 @@ export default function MealPlanDetails({ planId, onBack }: MealPlanDetailsProps
   useEffect(() => {
     const fetchPlanDetails = async () => {
       try {
-        console.log("Fetching plan details for ID:", planId); // 🔍 Debug
+        console.log("Fetching plan details for ID:", planId); 
         const detailsRes = await axiosInstance.get(`/client/plans/${planId}/details`);
-        console.log("Received data:", detailsRes.data); // 🔍 Debug
+        console.log("Received data:", detailsRes.data); 
         
         setActivePlan(detailsRes.data.plan);
         setMealItems(detailsRes.data.items);
