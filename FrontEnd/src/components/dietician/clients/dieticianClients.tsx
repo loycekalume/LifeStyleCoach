@@ -88,7 +88,7 @@ const DieticianClients: React.FC = () => {
       
     } catch (err) {
       console.error(err);
-      alert("Failed to hire client. Please try again.");
+      alert("Failed to accept client. Please try again.");
     }
   };
 
@@ -275,10 +275,10 @@ const DieticianClients: React.FC = () => {
                                         <FaComments /> Chat
                                     </button>
                                     {client.is_hired ? (
-                                        <div style={badgeHiredStyle}>✓ Hired</div>
+                                        <div style={badgeHiredStyle}>✓ Accepted</div>
                                     ) : (
                                         <button onClick={() => handleHire(client)} style={btnPrimaryStyle}>
-                                            <FaUserPlus /> Hire
+                                            <FaUserPlus /> Accept
                                         </button>
                                     )}
                                 </>

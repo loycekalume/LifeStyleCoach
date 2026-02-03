@@ -104,8 +104,8 @@ const ClientsPage: React.FC = () => {
       alert(`Success! ${clientName} is now a client.`);
       fetchData(); 
     } catch (error) {
-      console.error("Failed to hire client:", error);
-      alert("Could not hire client. They might already be in your roster.");
+      console.error("Failed to accept client:", error);
+      alert("Could not accept client. They might already be in your roster.");
     }
   };
 
@@ -140,7 +140,7 @@ const ClientsPage: React.FC = () => {
                     className={`tab-btn ${viewMode === 'hired' ? 'active' : ''}`}
                     onClick={() => setViewMode('hired')}
                 >
-                    Hired ✅
+                    Accepted ✅
                 </button>
              </div>
           )}
@@ -220,7 +220,7 @@ const ClientsPage: React.FC = () => {
                             style={{ flex: 2, background: '#16a34a', color: 'white', borderColor: '#16a34a' }}
                             onClick={() => handleHireClick(client.name, client.user_id)}
                         >
-                            Hire +
+                            Accept +
                         </button>
                      </div>
                    )}

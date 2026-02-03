@@ -45,7 +45,7 @@ const ClientWorkouts: React.FC = () => {
 
   const fetchAssignments = async () => {
       try {
-        // ✅ Corrected Route: /clientWorkouts/my-assignments
+        
         const res = await axiosInstance.get("/workoutLogs/my-assignments");
         setAssignments(res.data);
       } catch (err) {
