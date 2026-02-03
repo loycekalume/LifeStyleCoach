@@ -35,39 +35,40 @@ export const getClientLogs = asyncHandler(async (req: Request, res: Response) =>
 // 2. CLIENT ACTIONS
 // ==========================================
 
-// Get active assignments for the Client Dashboard
-// Get active assignments for the Client Dashboard
+
 export const getMyAssignments = asyncHandler(async (req: Request, res: Response) => {
-    // Ensure your auth middleware populates req.user
-    const clientId = (req as any).user.user_id; 
+    const userId = (req as any).user.user_id; // For user 9, this is 9
+
+    const query = `
+        SELECT 
+            cw.id as assignment_id,
+            cw.status,
+            cw.date_assigned,
+            cw.last_performed,
+            cw.notes as instructor_notes,
+            w.workout_id,
+            w.title,
+            w.description,
+            w.video_url,
+            w.total_duration,
+            w.plan,
+            u.name as instructor_name
+        FROM client_workouts cw
+        JOIN workouts w ON cw.workout_id = w.workout_id
+        -- Note: Join users directly since your FK points to users(user_id)
+        JOIN users u ON cw.instructor_id = u.user_id 
+        WHERE cw.client_id = $1 
+        AND cw.status = 'scheduled'  -- Match your CHECK constraint
+        ORDER BY cw.date_assigned DESC
+    `;
 
     try {
-        const query = `
-            SELECT 
-                cw.id as assignment_id,
-                cw.status,
-                cw.date_assigned,
-                cw.last_performed,
-                cw.notes as instructor_notes,
-                w.workout_id,
-                w.title,
-                w.description,
-                w.video_url,
-                w.total_duration, -- ✅ ADDED THIS LINE
-                w.plan,
-                u.name as instructor_name
-            FROM client_workouts cw
-            JOIN workouts w ON cw.workout_id = w.workout_id
-            JOIN users u ON cw.instructor_id = u.user_id
-            WHERE cw.client_id = $1 AND cw.status != 'archived'
-            ORDER BY cw.date_assigned DESC
-        `;
-
-        const result = await pool.query(query, [clientId]);
+        const result = await pool.query(query, [userId]);
+        console.log(`Found ${result.rows.length} workouts for User ${userId}`);
         res.status(200).json(result.rows);
     } catch (error) {
-        console.error("Error fetching assignments:", error);
-        res.status(500).json({ message: "Server error fetching your workouts" });
+        console.error("Database Error:", error);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 });
 
