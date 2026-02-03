@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import pool from "../db.config";
 import asyncHandler from "../middlewares/asyncHandler";
-import Groq from "groq-sdk"; 
+import Groq from "groq-sdk";
 
 // Initialize Groq
 const groq = new Groq({ apiKey: process.env.LAI_API_KEY });
@@ -144,23 +144,23 @@ export const updateClient = asyncHandler(async (req: Request, res: Response) => 
 // ------------------------------------------------------------------
 
 export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, res: Response) => {
-    // 1. Get Logged-in Instructor
-    const instructorUserId = (req as any).user.user_id;
+  // 1. Get Logged-in Instructor
+  const instructorUserId = (req as any).user.user_id;
 
-    // Fetch Instructor Profile
-    const instQuery = `
+  // Fetch Instructor Profile
+  const instQuery = `
         SELECT specialization, available_locations, coaching_mode, bio 
         FROM instructors WHERE user_id = $1
     `;
-    const instRes = await pool.query(instQuery, [instructorUserId]);
-    
-    if (instRes.rows.length === 0) {
-        return res.status(404).json({ message: "Instructor profile not found." });
-    }
-    const instructor = instRes.rows[0];
+  const instRes = await pool.query(instQuery, [instructorUserId]);
 
-    // 2. Fetch All Clients (including health conditions)
-    const clientQuery = `
+  if (instRes.rows.length === 0) {
+    return res.status(404).json({ message: "Instructor profile not found." });
+  }
+  const instructor = instRes.rows[0];
+
+  // 2. Fetch All Clients (including health conditions)
+  const clientQuery = `
         SELECT 
             u.user_id, u.name, 
             c.weight_goal, c.location, c.gender, c.age, c.health_conditions, c.allergies
@@ -169,15 +169,15 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
         WHERE u.role_id = 5
         LIMIT 50 
     `;
-    const clientRes = await pool.query(clientQuery);
-    const clients = clientRes.rows;
+  const clientRes = await pool.query(clientQuery);
+  const clients = clientRes.rows;
 
-    if (clients.length === 0) {
-        return res.status(200).json({ data: [] });
-    }
+  if (clients.length === 0) {
+    return res.status(200).json({ data: [] });
+  }
 
-    // 3. Construct AI Prompt
-    const systemPrompt = `You are a fitness client matching expert. Your job is to find the BEST client matches for an instructor.
+  // 3. Construct AI Prompt
+  const systemPrompt = `You are a fitness client matching expert. Your job is to find the BEST client matches for an instructor.
 
 **INSTRUCTOR PROFILE:**
 - Specialization: ${instructor.specialization}
@@ -195,7 +195,7 @@ ${JSON.stringify(clients.map(c => ({
     age: c.age,
     health_conditions: c.health_conditions, // AI now sees this
     allergies: c.allergies
-})), null, 2)}
+  })), null, 2)}
 
 **MATCHING RULES (APPLY STRICTLY):**
 
@@ -227,49 +227,49 @@ ${JSON.stringify(clients.map(c => ({
 }
 `;
 
-    try {
-        const completion = await groq.chat.completions.create({
-            messages: [{ role: "system", content: systemPrompt }],
-            model: "llama-3.1-8b-instant",
-            temperature: 0.1,
-            response_format: { type: "json_object" },
-        });
+  try {
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: "system", content: systemPrompt }],
+      model: "llama-3.1-8b-instant",
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+    });
 
-        // 4. Parse AI Response
-        const aiContent = completion.choices[0]?.message?.content || "{}";
-        const parsedData = JSON.parse(aiContent);
-        const aiMatches = parsedData.matches || [];
+    // 4. Parse AI Response
+    const aiContent = completion.choices[0]?.message?.content || "{}";
+    const parsedData = JSON.parse(aiContent);
+    const aiMatches = parsedData.matches || [];
 
-        // 5. Merge AI Scores back into Full Client Objects
-        const finalResults = aiMatches
-            .filter((match: any) => match.match_score >= 50)
-            .map((match: any) => {
-                const originalClient = clients.find(c => c.user_id === match.user_id);
-                if (!originalClient) return null;
+    // 5. Merge AI Scores back into Full Client Objects
+    const finalResults = aiMatches
+      .filter((match: any) => match.match_score >= 50)
+      .map((match: any) => {
+        const originalClient = clients.find(c => c.user_id === match.user_id);
+        if (!originalClient) return null;
 
-                return {
-                    ...originalClient,
-                    match_score: match.match_score,
-                    match_reasons: [match.match_reason]
-                };
-            })
-            .filter(Boolean);
+        return {
+          ...originalClient,
+          match_score: match.match_score,
+          match_reasons: [match.match_reason]
+        };
+      })
+      .filter(Boolean);
 
-        // Sort by score
-        finalResults.sort((a: any, b: any) => b.match_score - a.match_score);
+    // Sort by score
+    finalResults.sort((a: any, b: any) => b.match_score - a.match_score);
 
-        res.json({
-            message: `Found ${finalResults.length} qualified matches`,
-            data: finalResults
-        });
+    res.json({
+      message: `Found ${finalResults.length} qualified matches`,
+      data: finalResults
+    });
 
-    } catch (error) {
-        console.error("AI Error:", error);
-        res.status(500).json({ 
-            message: "AI matching service unavailable", 
-            data: [] 
-        });
-    }
+  } catch (error) {
+    console.error("AI Error:", error);
+    res.status(500).json({
+      message: "AI matching service unavailable",
+      data: []
+    });
+  }
 });
 
 
@@ -278,55 +278,53 @@ ${JSON.stringify(clients.map(c => ({
 // ------------------------------------------------------------------
 
 export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) => {
-    const clientId = (req as any).user.user_id;
+  const clientId = (req as any).user.user_id;
 
-    const query = `
+  const query = `
         SELECT 
-            mp.meal_plan_id,
-            mp.title,
-            mp.category,
-            mp.description,
-            
-            -- Calculate Total Calories from Items
-            (
-                SELECT COALESCE(SUM(calories), 0) 
-                FROM meal_items mi 
-                WHERE mi.meal_plan_id = mp.meal_plan_id
-            ) as calories,
-
-            cda.status,
-            cda.assigned_date as start_date, 
-            cda.custom_notes as dietician_notes,
-            u.name as dietician_name,
-            d.specialization
-        FROM client_diet_assignments cda
-        JOIN meal_plans mp ON cda.meal_plan_id = mp.meal_plan_id
-        JOIN dieticians d ON cda.dietician_id = d.dietician_id
-        JOIN users u ON d.user_id = u.user_id
-        WHERE cda.client_id = $1 AND cda.status = 'active'
-        ORDER BY cda.assigned_date DESC
+    mp.meal_plan_id,
+    mp.title,
+    mp.category,
+    mp.description,
+    (
+        SELECT COALESCE(SUM(calories), 0) 
+        FROM meal_items mi 
+        WHERE mi.meal_plan_id = mp.meal_plan_id
+    ) as calories,
+    cda.status,
+    cda.assigned_date as start_date, 
+    cda.custom_notes as dietician_notes,
+    u.name as dietician_name
+FROM client_diet_assignments cda
+JOIN meal_plans mp ON cda.meal_plan_id = mp.meal_plan_id
+-- Join clients to match the user_id from your token/request
+JOIN clients c ON cda.client_id = c.client_id 
+JOIN dieticians d ON cda.dietician_id = d.dietician_id
+JOIN users u ON d.user_id = u.user_id
+WHERE c.user_id = $1 AND cda.status = 'active'
+ORDER BY cda.assigned_date DESC
     `;
 
-    const result = await pool.query(query, [clientId]);
+  const result = await pool.query(query, [clientId]);
 
-    const formattedPlans = result.rows.map(plan => ({
-        ...plan,
-        calories: plan.calories ? `${plan.calories} kcal` : 'N/A'
-    }));
+  const formattedPlans = result.rows.map(plan => ({
+    ...plan,
+    calories: plan.calories ? `${plan.calories} kcal` : 'N/A'
+  }));
 
-    res.json({
-        message: "Plans retrieved",
-        plans: formattedPlans
-    });
+  res.json({
+    message: "Plans retrieved",
+    plans: formattedPlans
+  });
 });
 
 
 // GET /client/plans/:planId/details
 export const getMealPlanDetails = asyncHandler(async (req: Request, res: Response) => {
-    const { planId } = req.params;
+  const { planId } = req.params;
 
-    // 1. Fetch Plan Metadata
-    const planQuery = `
+  // 1. Fetch Plan Metadata
+  const planQuery = `
         SELECT 
             mp.meal_plan_id, mp.title, mp.category, mp.description,
             u.name as dietician_name,
@@ -337,14 +335,14 @@ export const getMealPlanDetails = asyncHandler(async (req: Request, res: Respons
         JOIN users u ON d.user_id = u.user_id
         WHERE mp.meal_plan_id = $1
     `;
-    const planResult = await pool.query(planQuery, [planId]);
+  const planResult = await pool.query(planQuery, [planId]);
 
-    if (planResult.rows.length === 0) {
-        return res.status(404).json({ message: "Plan not found" });
-    }
+  if (planResult.rows.length === 0) {
+    return res.status(404).json({ message: "Plan not found" });
+  }
 
-    // 2. Fetch Actual Meal Items
-    const itemsQuery = `
+  // 2. Fetch Actual Meal Items
+  const itemsQuery = `
         SELECT * FROM meal_items 
         WHERE meal_plan_id = $1 
         ORDER BY 
@@ -356,10 +354,10 @@ export const getMealPlanDetails = asyncHandler(async (req: Request, res: Respons
                 ELSE 5
             END
     `;
-    const itemsResult = await pool.query(itemsQuery, [planId]);
+  const itemsResult = await pool.query(itemsQuery, [planId]);
 
-    res.json({
-        plan: planResult.rows[0],
-        items: itemsResult.rows
-    });
+  res.json({
+    plan: planResult.rows[0],
+    items: itemsResult.rows
+  });
 });
