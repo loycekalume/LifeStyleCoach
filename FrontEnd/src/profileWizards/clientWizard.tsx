@@ -289,17 +289,17 @@ const ClientProfileWizard: React.FC = () => {
       
       <div className="form-group half-width">
         <FontAwesomeIcon icon={faDollarSign} className="input-icon" />
-        <select
-          name="budget"
-          value={formData.budget}
-          onChange={handleChange}
-          required
-        >
-          <option value="">Select Monthly Budget *</option>
-          <option value="Low">Low (Under $100)</option>
-          <option value="medium">Medium ($100 - $300)</option>
-          <option value="high">High (Over $300)</option>
-        </select>
+     <select
+  name="budget"
+  value={formData.budget}
+  onChange={handleChange}
+  required
+>
+  <option value="">Select Daily Food Budget *</option>
+  <option value="low">Low (Under KES 300/day)</option>
+  <option value="medium">Medium (KES 300 - 700/day)</option>
+  <option value="high">High (Over KES 700/day)</option>
+</select>
       </div>
 
       <div className="form-group half-width">
