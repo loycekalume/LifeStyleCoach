@@ -8,7 +8,51 @@ import { UserRequest } from "../utils/types/userTypes";
 dotenv.config();
 const groq = new Groq({ apiKey: process.env.XAI_API_KEY });
 
-// 1. Generate Recommendations using Groq
+
+// ✅ Budget mapping with KES context
+const BUDGET_CONTEXT = {
+  low: {
+    daily: "Under KES 300/day",
+    guidelines: `
+      - Stick to the cheapest staples: ugali, rice, beans, lentils, githeri
+      - Vegetables: sukuma wiki, cabbage, tomatoes, onions (buy from roadside vendors)
+      - Protein: eggs, beans, lentils, groundnuts, dried fish (cheapest options)
+      - Fruits: bananas are the most affordable, seasonal mangoes when cheap
+      - Avoid meat entirely or only once or twice a week (cheap cuts like offals)
+      - Cook at home, never eat out
+      - Buy in bulk where possible (beans, rice, flour)
+      - Use simple seasonings: salt, cooking oil, onions, tomatoes
+      - A typical day: Uji for breakfast, Ugali + beans + sukuma for lunch and dinner
+    `
+  },
+  medium: {
+    daily: "KES 300 - 700/day",
+    guidelines: `
+      - Can afford variety: chicken, fish (tilapia), eggs regularly
+      - Fresh vegetables daily: sukuma wiki, cabbage, spinach, tomatoes, carrots
+      - Some fruits: bananas, papaya, oranges
+      - Rice, chapati, or ugali as base
+      - Milk and simple dairy: milk for tea, occasionally yogurt
+      - Can eat out once or twice a week (simple places like mama ngina)
+      - Moderate meat: chicken 2-3 times a week, beef once
+      - Oats or simple cereals for breakfast
+    `
+  },
+  high: {
+    daily: "Over KES 700/day",
+    guidelines: `
+      - Good cuts of meat: chicken breast, beef, fish (tilapia, mackerel)
+      - Fresh fruits and vegetables daily, including avocados
+      - Can afford variety: quinoa, sweet potatoes, nuts
+      - Dairy: milk, yogurt, occasionally cheese
+      - Eating out at decent restaurants is okay
+      - Fresh juices and smoothies
+      - Variety every meal, no need to repeat
+      - Can buy from supermarkets without worrying about price
+    `
+  }
+};
+
 export const generateMealRecommendations = asyncHandler(async (req: UserRequest, res: Response) => {
   const userId = req.user?.user_id;
   const { locationOverride } = req.body; 
@@ -18,7 +62,6 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
   }
 
   try {
-    // A. Get User Profile for Context
     const clientQuery = `
       SELECT weight_goal, health_conditions, allergies, budget, location 
       FROM clients 
@@ -27,13 +70,17 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
     const clientResult = await pool.query(clientQuery, [userId]);
 
     if (clientResult.rows.length === 0) {
-      return res.status(404).json({ message: "Client profile not found. Please complete your profile." });
+      return res.status(404).json({ message: "Client profile not found." });
     }
 
     const user = clientResult.rows[0];
     const finalLocationInput = locationOverride || user.location || "Kenya";
 
-    // ✅ NEW: Get recently recommended meals to avoid repetition
+    // ✅ Resolve budget to KES context (handle null/undefined gracefully)
+    const budgetKey = (user.budget || "medium").toLowerCase();
+    const budget = BUDGET_CONTEXT[budgetKey] || BUDGET_CONTEXT.medium;
+
+    // ✅ Avoid repeating recent meals
     const recentMealsQuery = `
       SELECT DISTINCT meal_name 
       FROM recommended_meals 
@@ -43,75 +90,89 @@ export const generateMealRecommendations = asyncHandler(async (req: UserRequest,
     const recentMeals = await pool.query(recentMealsQuery, [userId]);
     const recentMealNames = recentMeals.rows.map(row => row.meal_name);
 
-    // ✅ IMPROVED: Better structured system prompt
-    const systemPrompt = `
-You are a professional Kenyan nutritionist creating balanced, nutritious meal plans.
+   const systemPrompt = `
+You are a professional Kenyan nutritionist. All prices are in KES based on 
+realistic local market prices. The client shops at local markets, NOT supermarkets.
 
-USER PROFILE:
+=== CLIENT PROFILE ===
 - Location: ${finalLocationInput}
 - Weight Goal: ${user.weight_goal}
-- Health Conditions: ${user.health_conditions?.join(', ') || 'None'}
-- Allergies: ${user.allergies?.join(', ') || 'None'}
-- Budget: ${user.budget}
+- Health Conditions: ${Array.isArray(user.health_conditions) ? user.health_conditions.join(', ') : 'None'}
+- Allergies: ${Array.isArray(user.allergies) ? user.allergies.join(', ') : 'None'}
 
-${recentMealNames.length > 0 ? `AVOID these recently recommended meals: ${recentMealNames.join(', ')}` : ''}
+=== BUDGET ===
+- Daily Food Budget: ${budget.daily}
+- Guidelines:
+${budget.guidelines}
 
-REQUIREMENTS:
-1. Focus on meals commonly available in Kenya and East Africa
-2. Include a mix of traditional Kenyan foods and healthy modern options
-3. Ensure meals are balanced with proteins, carbs, healthy fats, and vegetables
-4. Consider the user's budget (Low = affordable local foods, Medium = mix of local and imported, High = premium options)
-5. Respect dietary restrictions from health conditions and allergies
-6. Provide realistic calorie estimates
-7. Match meals to the weight goal:
-   - "lose": Lower calorie, high protein, high fiber
-   - "gain": Higher calorie, protein-rich, nutrient-dense
-   - "maintain": Balanced macros
+=== PRICE REFERENCES (per serving, local market) ===
+- Egg (1): KES 15-20
+- Chicken thigh (1 piece): KES 60-80
+- Beef (~150g): KES 80-100
+- Dried fish (small pack): KES 30-50
+- Rice (1 cup cooked): KES 25-35
+- Ugali (1 serving): KES 15-20
+- Beans (1 serving): KES 20-30
+- Sukuma wiki (1 bunch): KES 20-40
+- Cabbage (small piece): KES 15-25
+- Tomato (1): KES 15-25
+- Banana (1): KES 10-15
+- Avocado (1): KES 25-50
+- Milk (1 cup): KES 20-25
+- Oats (1 serving): KES 25-35
+- Groundnuts (handful): KES 20-30
 
-MEAL EXAMPLES FOR KENYA:
-Breakfast: Uji (porridge), Mandazi with tea, Githeri, Eggs with whole grain bread, Fruit salad with yogurt
-Lunch: Ugali with sukuma wiki and beans, Brown rice with chicken stew, Chapati with beef and vegetables, Fish with sweet potato
-Dinner: Pilau with kachumbari, Vegetable stir-fry with brown rice, Grilled tilapia with greens, Lentil curry with chapati
+${recentMealNames.length > 0 ? `=== AVOID (recently recommended) ===\n${recentMealNames.join(', ')}` : ''}
 
-OUTPUT FORMAT (STRICT JSON):
+=== RULES ===
+1. Total cost of ALL 3 meals combined must stay within ${budget.daily}
+2. Each meal cost must be realistic based on the prices above
+3. Prioritise local, affordable foods based on the budget tier
+4. Respect health conditions and allergies strictly
+5. Match portions to weight goal:
+   - "lose": smaller portions, high fibre, less oil
+   - "gain": bigger portions, more protein, more calories
+   - "maintain": balanced, moderate portions
+
+=== OUTPUT (STRICT JSON, no markdown) ===
 [
   {
     "type": "Breakfast",
     "meal": "Specific meal name",
-    "calories": "200-400 cal",
-    "reason": "Brief explanation of nutritional benefits and how it fits the goal"
+    "calories": "200-350 cal",
+    "cost_kes": "KES 60",
+    "reason": "Why this meal, how it fits budget and goal"
   },
   {
     "type": "Lunch",
     "meal": "Specific meal name",
-    "calories": "400-600 cal",
-    "reason": "Brief explanation"
+    "calories": "350-500 cal",
+    "cost_kes": "KES 120",
+    "reason": "Why this meal"
   },
   {
     "type": "Dinner",
     "meal": "Specific meal name",
-    "calories": "350-550 cal",
-    "reason": "Brief explanation"
+    "calories": "300-450 cal",
+    "cost_kes": "KES 100",
+    "reason": "Why this meal"
   }
 ]
 
-IMPORTANT: Return ONLY the JSON array. No markdown, no explanations, no code blocks.
-    `.trim();
+IMPORTANT: Return ONLY the JSON array. Total of all cost_kes must not exceed ${budget.daily}.
+`.trim();
 
-    // C. Call Groq
     const completion = await groq.chat.completions.create({
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: "Generate today's personalized meal plan." }
       ],
       model: "llama-3.1-8b-instant",
-      temperature: 0.7, // ✅ Increased for more variety
-      max_tokens: 800,  // ✅ Increased for detailed reasons
+      temperature: 0.7,
+      max_tokens: 800,
     });
 
     let aiContent = completion.choices[0]?.message?.content || "[]";
-    
-    // Cleanup: Remove markdown if AI adds it
     aiContent = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
 
     let mealPlan;
@@ -122,18 +183,16 @@ IMPORTANT: Return ONLY the JSON array. No markdown, no explanations, no code blo
         return res.status(500).json({ error: "AI response was not valid JSON" });
     }
 
-    // ✅ Validate the meal plan structure
     if (!Array.isArray(mealPlan) || mealPlan.length !== 3) {
       console.error("Invalid meal plan structure:", mealPlan);
       return res.status(500).json({ error: "Invalid meal plan generated" });
     }
 
-    // D. Save to Database (Transaction)
+    // D. Save to Database
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // ✅ Clear previous pending meals for TODAY only (not all time)
       await client.query(
         "DELETE FROM recommended_meals WHERE user_id = $1 AND recommended_date = CURRENT_DATE AND status = 'pending'",
         [userId]
@@ -152,23 +211,28 @@ IMPORTANT: Return ONLY the JSON array. No markdown, no explanations, no code blo
           meal.type, 
           meal.meal, 
           meal.calories, 
-          meal.reason
+          meal.reason  // ✅ reason now includes cost context from AI
         ]);
         savedMeals.push(saved.rows[0]);
       }
 
       await client.query('COMMIT');
 
-      const displayLocation = locationOverride ? "GPS Location" : finalLocationInput;
-
       res.status(200).json({
         message: "Fresh meal plan generated successfully",
-        location: displayLocation,
-        data: savedMeals,
+        location: finalLocationInput,
+        budget_tier: budgetKey,
+        budget_daily: budget.daily,
+        data: savedMeals.map(meal => ({
+          ...meal,
+          // ✅ Attach cost from AI response if available
+          cost_kes: mealPlan.find(m => m.meal === meal.meal_name)?.cost_kes || null
+        })),
         tips: [
-          "Drink at least 8 glasses of water throughout the day",
-          "Portion sizes matter - listen to your body's hunger cues",
-          "Fresh, local ingredients are often the most nutritious and affordable"
+          `Your daily food budget is approximately ${budget.daily}`,
+          "Buy seasonal produce from local markets for the best prices",
+          "Cooking in bulk saves both time and money",
+          "Drink at least 8 glasses of water throughout the day"
         ]
       });
 
