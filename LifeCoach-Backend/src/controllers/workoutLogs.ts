@@ -37,7 +37,8 @@ export const getClientLogs = asyncHandler(async (req: Request, res: Response) =>
 
 
 export const getMyAssignments = asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.user_id; // For user 9, this is 9
+    // For user 13, clientId will be 13
+    const clientId = (req as any).user.user_id; 
 
     const query = `
         SELECT 
@@ -55,21 +56,21 @@ export const getMyAssignments = asyncHandler(async (req: Request, res: Response)
             u.name as instructor_name
         FROM client_workouts cw
         JOIN workouts w ON cw.workout_id = w.workout_id
-        -- Note: Join users directly since your FK points to users(user_id)
-        JOIN users u ON cw.instructor_id = u.user_id 
+        -- First, join to instructors to get the user_id for that instructor
+        LEFT JOIN instructors i ON cw.instructor_id = i.instructor_id
+        -- Then, join to users to get the actual name (Frank Omolo)
+        LEFT JOIN users u ON i.user_id = u.user_id
         WHERE cw.client_id = $1 
-        AND cw.status = 'scheduled'  -- Match your CHECK constraint
+        AND cw.status = 'scheduled'
         ORDER BY cw.date_assigned DESC
     `;
 
-    try {
-        const result = await pool.query(query, [userId]);
-        console.log(`Found ${result.rows.length} workouts for User ${userId}`);
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error("Database Error:", error);
-        res.status(500).json({ message: "Internal Server Error" });
-    }
+    const result = await pool.query(query, [clientId]);
+    
+    // Log for your terminal to confirm it's working
+    console.log(`[SUCCESS] Found ${result.rows.length} assignments for User ${clientId}`);
+    
+    res.status(200).json(result.rows);
 });
 
 // Log a Session (The "I Finished" Button)
