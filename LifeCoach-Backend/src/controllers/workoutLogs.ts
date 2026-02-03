@@ -37,14 +37,20 @@ export const getClientLogs = asyncHandler(async (req: Request, res: Response) =>
 
 
 export const getMyAssignments = asyncHandler(async (req: Request, res: Response) => {
-    // For user 13, clientId will be 13
-    const clientId = (req as any).user.user_id; 
+    // 1. Force the ID to be a Number
+    const rawUserId = (req as any).user?.user_id;
+    const clientId = parseInt(rawUserId, 10);
+
+    if (isNaN(clientId)) {
+        console.error(`[ERROR] Invalid User ID received: ${rawUserId}`);
+        return res.status(400).json({ message: "Invalid user identification" });
+    }
 
     const query = `
         SELECT 
             cw.id as assignment_id,
             cw.status,
-            cw.date_assigned,
+            cw.assigned_date,
             cw.last_performed,
             cw.notes as instructor_notes,
             w.workout_id,
@@ -55,22 +61,26 @@ export const getMyAssignments = asyncHandler(async (req: Request, res: Response)
             w.plan,
             u.name as instructor_name
         FROM client_workouts cw
-        JOIN workouts w ON cw.workout_id = w.workout_id
-        -- First, join to instructors to get the user_id for that instructor
+        INNER JOIN workouts w ON cw.workout_id = w.workout_id
         LEFT JOIN instructors i ON cw.instructor_id = i.instructor_id
-        -- Then, join to users to get the actual name (Frank Omolo)
         LEFT JOIN users u ON i.user_id = u.user_id
         WHERE cw.client_id = $1 
         AND cw.status = 'scheduled'
-        ORDER BY cw.date_assigned DESC
+        ORDER BY cw.assigned_date DESC
     `;
 
-    const result = await pool.query(query, [clientId]);
-    
-    // Log for your terminal to confirm it's working
-    console.log(`[SUCCESS] Found ${result.rows.length} assignments for User ${clientId}`);
-    
-    res.status(200).json(result.rows);
+    try {
+        const result = await pool.query(query, [clientId]);
+        
+        // This log is your best friend right now
+        console.log(`[DATABASE-CHECK] Querying for ID: ${clientId} (${typeof clientId})`);
+        console.log(`[DATABASE-CHECK] Rows found: ${result.rows.length}`);
+
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error("[DATABASE-ERROR]", error);
+        res.status(500).json({ message: "Server error fetching workouts" });
+    }
 });
 
 // Log a Session (The "I Finished" Button)
