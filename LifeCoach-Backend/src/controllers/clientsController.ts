@@ -278,34 +278,40 @@ ${JSON.stringify(clients.map(c => ({
 // ------------------------------------------------------------------
 
 export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) => {
-  const clientId = (req as any).user.user_id;
+  
+  const userId = (req as any).user.user_id;
 
   const query = `
-        SELECT 
-    mp.meal_plan_id,
-    mp.title,
-    mp.category,
-    mp.description,
-    (
+    SELECT 
+      mp.meal_plan_id,
+      mp.title,
+      mp.category,
+      mp.description,
+      
+      -- Calculate total calories for the plan
+      (
         SELECT COALESCE(SUM(calories), 0) 
         FROM meal_items mi 
         WHERE mi.meal_plan_id = mp.meal_plan_id
-    ) as calories,
-    cda.status,
-    cda.assigned_date as start_date, 
-    cda.custom_notes as dietician_notes,
-    u.name as dietician_name
-FROM client_diet_assignments cda
-JOIN meal_plans mp ON cda.meal_plan_id = mp.meal_plan_id
--- Join clients to match the user_id from your token/request
-JOIN clients c ON cda.client_id = c.client_id 
-JOIN dieticians d ON cda.dietician_id = d.dietician_id
-JOIN users u ON d.user_id = u.user_id
-WHERE c.user_id = $1 AND cda.status = 'active'
-ORDER BY cda.assigned_date DESC
-    `;
+      ) as calories,
 
-  const result = await pool.query(query, [clientId]);
+      cda.status,
+      cda.assigned_date as start_date, 
+      cda.custom_notes as dietician_notes,
+      u.name as dietician_name
+    FROM client_diet_assignments cda
+    JOIN meal_plans mp ON cda.meal_plan_id = mp.meal_plan_id
+    JOIN dieticians d ON cda.dietician_id = d.dietician_id
+    JOIN users u ON d.user_id = u.user_id
+    
+    -- ✅ FIX: Join clients table using user_id, NOT client_id
+    -- Assuming 'cda.client_id' refers to the user_id of the client (standard practice)
+    WHERE cda.client_id = $1 
+    AND cda.status = 'active'
+    ORDER BY cda.assigned_date DESC
+  `;
+
+  const result = await pool.query(query, [userId]);
 
   const formattedPlans = result.rows.map(plan => ({
     ...plan,
@@ -314,7 +320,7 @@ ORDER BY cda.assigned_date DESC
 
   res.json({
     message: "Plans retrieved",
-    plans: formattedPlans
+    mealPlans: formattedPlans // Ensure frontend key matches (mealPlans vs plans)
   });
 });
 

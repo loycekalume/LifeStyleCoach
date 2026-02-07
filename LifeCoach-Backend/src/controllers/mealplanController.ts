@@ -91,8 +91,7 @@ export const createMealPlan = asyncHandler(async (req: UserRequest, res: Respons
   }
 });
 
-// @desc    Get all meal plans for the authenticated dietician
-// @route   GET /api/meal-plans
+
 export const getMyMealPlans = asyncHandler(async (req: UserRequest, res: Response) => {
   try {
     const userId = req.user?.user_id;
