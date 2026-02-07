@@ -1,4 +1,4 @@
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axiosInstance from "../../utils/axiosInstance";
 import { FaUtensils, FaLeaf } from "react-icons/fa";
 import MealPlanCard from "./assignedMealCard"; 
@@ -15,7 +15,10 @@ export default function ClientMealPlans({ onPlanSelect }: ClientMealPlansProps) 
     const fetchPlans = async () => {
       try {
         const res = await axiosInstance.get("/client/my-plans");
-        setPlans(res.data.plans || []);
+        
+      
+        setPlans(res.data.mealPlans || res.data.plans || []);
+        
       } catch (err) {
         console.error("Error loading plans", err);
       } finally {
