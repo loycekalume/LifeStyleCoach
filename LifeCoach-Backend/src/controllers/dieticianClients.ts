@@ -26,24 +26,27 @@ export const getAiMatchedClientsForDietician = asyncHandler(async (req: Request,
     const dietRes = await pool.query(dietQuery, [userId]);
     
     if (dietRes.rows.length === 0) {
-        console.log("[AI-MATCH] Dietician profile not found");
         return res.status(404).json({ message: "Dietician profile not found." });
     }
     
     const dietician = dietRes.rows[0];
     
-    // ✅ Normalize specializations to always be an array
     const specs = Array.isArray(dietician.specializations) && dietician.specializations.length > 0
         ? dietician.specializations 
         : (dietician.specialization ? [dietician.specialization] : ["General Nutrition"]);
     
     console.log(`[AI-MATCH] Dietician: ${dietician.dietician_name}, Specializations: ${specs.join(", ")}`);
 
-    // 2. Fetch Potential Clients - prioritize those with health conditions
+    // 2. Fetch Potential Clients
     const clientQuery = `
         SELECT 
             u.user_id, u.name, u.email, u.contact,
             c.weight_goal, c.location, c.gender, c.age, 
+            
+          
+            c.weight, 
+            c.height,
+            
             c.health_conditions, c.allergies, c.budget
         FROM users u
         JOIN clients c ON u.user_id = c.user_id
@@ -63,8 +66,6 @@ export const getAiMatchedClientsForDietician = asyncHandler(async (req: Request,
     const clientRes = await pool.query(clientQuery, [userId]);
     const clients = clientRes.rows;
 
-    console.log(`[AI-MATCH] Found ${clients.length} potential clients`);
-
     if (clients.length === 0) {
         return res.status(200).json({ 
             message: "No new clients available for matching",
@@ -72,7 +73,7 @@ export const getAiMatchedClientsForDietician = asyncHandler(async (req: Request,
         });
     }
 
-    // ✅ Prepare clean client data for AI
+    // Prepare clean client data for AI
     const clientsForAI = clients.map(c => ({
         id: c.user_id,
         name: c.name,
@@ -89,7 +90,7 @@ export const getAiMatchedClientsForDietician = asyncHandler(async (req: Request,
         budget: c.budget || "Medium"
     }));
 
-    // ✅ IMPROVED: More precise and structured prompt
+   
     const systemPrompt = `
 You are an expert Clinical Nutrition Matchmaker AI. Match clients to this dietician based on medical expertise alignment and safety.
 
@@ -98,97 +99,50 @@ Name: ${dietician.dietician_name}
 Specializations: ${specs.join(", ")}
 Years of Experience: ${dietician.years_of_experience || 0} years
 Location: ${dietician.location || "Kenya"}
-Clinic: ${dietician.clinic_name || "Independent Practice"}
 
 === AVAILABLE CLIENTS ===
 ${JSON.stringify(clientsForAI, null, 2)}
 
 === MATCHING CRITERIA (WEIGHTED SCORING 0-100) ===
 
-**1. SPECIALIZATION-CONDITION ALIGNMENT (50 points max) - CRITICAL**
+**1. SPECIALIZATION-CONDITION ALIGNMENT (50 points max)**
 ${specs.length > 0 && !specs.includes("General Nutrition") ? `
 This dietician has specific specializations: ${specs.join(", ")}
 
 Scoring Rules:
-- Client condition EXACTLY matches one of your specializations: 50 points
-  Example: Client has "Diabetes" and you specialize in "Diabetes Management"
-- Client condition is CLOSELY RELATED to your specialization: 35-40 points
-  Example: Client has "Insulin Resistance" and you specialize in "Diabetes"
-- Client has MULTIPLE conditions, ALL match your specializations: 50 points
-- Client has MULTIPLE conditions, SOME match: 25-35 points
-- Client condition DOES NOT match your specializations: 0-15 points (NOT RECOMMENDED)
-- Client has NO medical conditions (general wellness): 20 points (acceptable but not priority)
+- EXACT match: 50 points
+- CLOSELY RELATED match: 40 points
+- NO match but client has common condition (Diabetes, BP): 
+  - If experience > 5 years: 40 points (Manageable)
+  - If experience < 3 years: 20 points (Refer out)
 ` : `
-This dietician is a GENERALIST (General Nutrition or no specific specialization)
-
-Scoring Rules:
-- Clients with general wellness goals: 40 points
-- Clients with mild/simple conditions: 35 points
-- Clients with complex medical conditions: 15 points (refer to specialist)
+This dietician is a GENERALIST.
+- General wellness/weight loss: 50 points
+- Common conditions (Type 2 Diabetes, Hypertension, Cholesterol): 50 points (Generalists handle these).
+- Complex conditions (Kidney Failure, Cancer, Eating Disorders): 15 points (Refer to specialist).
 `}
 
-**2. EXPERIENCE-COMPLEXITY MATCH (25 points max)**
-Your Experience: ${dietician.years_of_experience || 0} years
+**2. EXPERIENCE (25 points)**
+- > 5 years: +25 points
+- 2-5 years: +20 points
+- < 2 years: +10 points
 
-- Complex case (multiple conditions) + 7+ years experience: 25 points
-- Moderate case + 4-6 years experience: 20 points
-- Simple case + 2-3 years experience: 18 points
-- Simple case + any experience: 15 points
-- Complex case + low experience: 10 points (risky)
-
-**3. LOCATION PROXIMITY (15 points max)**
-Your Location: ${dietician.location || "Kenya"}
-
-- Same city/town as client: 15 points
-- Same county/region: 12 points
-- Same country: 10 points
-- Remote/International: 5 points
-
-**4. GOAL ALIGNMENT (10 points max)**
-- Client's weight goal matches your common cases: 10 points
-- Moderately aligned: 7 points
-- Not aligned but manageable: 5 points
+**3. LOCATION (15 points)**
+**4. GOAL (10 points)**
 
 === MANDATORY RULES ===
-1. **MINIMUM THRESHOLD: 50 points** - Only return matches scoring 50+
-2. **SAFETY FIRST**: If client has serious conditions (Diabetes, PCOS, Heart Disease, etc.) and dietician does NOT specialize in that area → Score must be < 30
-3. **Maximum 15 matches** - Return only top candidates
-4. **Sort by score** - Highest matches first
-5. If NO clients score ≥ 50, return empty matches array
-
-=== MATCH REASON FORMAT ===
-Write from the dietician's perspective (addressing them as "you"):
-
-Template: "High-priority match: This client's [specific condition/goal] directly aligns with your [specific specialization]. [Additional benefit: location/experience/complexity match]."
-
-Good Example: "High-priority match: This client's Type 2 Diabetes and weight loss goal directly align with your Diabetes Management and Weight Control specializations. Located in Nairobi like your clinic, making in-person consultations convenient."
-
-Bad Example: "Good match for your practice." (Too vague)
+1. **MINIMUM THRESHOLD: 50 points** 2. **SAFETY**: If client has *highly complex* conditions (e.g. Renal Failure) and dietician is Generalist -> Score < 30.
+3. **Diabetes/Hypertension**: These are common. If dietician is Generalist, SCORE THEM HIGH (50+).
 
 === OUTPUT FORMAT (STRICT JSON ONLY) ===
 {
     "matches": [
-        {
-            "user_id": 123,
-            "match_score": 85,
-            "match_reason": "High-priority match: This client's PCOS diagnosis and hormonal imbalance align perfectly with your Hormonal Health specialization. Your 8 years of experience is ideal for their complex case."
-        }
+        { "user_id": 123, "match_score": 85, "match_reason": "..." }
     ]
 }
-
-**CRITICAL:**
-- Output ONLY valid JSON
-- No markdown formatting
-- No explanatory text before or after JSON
-- Integer scores only (0-100)
-- If no matches ≥ 50, return {"matches": []}
-
-Generate matches now:
     `.trim();
 
     try {
-        console.log("[AI-MATCH] Sending request to Groq API...");
-        
         const completion = await groq.chat.completions.create({
             messages: [
                 { role: "system", content: "You are a precise medical matching AI. Always return valid JSON." },
@@ -196,64 +150,24 @@ Generate matches now:
             ],
             model: "llama-3.1-8b-instant",
             temperature: 0.2,
-            max_tokens: 2500,
             response_format: { type: "json_object" }
         });
 
-        const aiContent = completion.choices[0]?.message?.content;
-        
-        if (!aiContent) {
-            throw new Error("Empty AI response");
-        }
+        const aiContent = completion.choices[0]?.message?.content || "{}";
+        const parsedData = JSON.parse(aiContent);
+        const aiMatches = parsedData.matches || [];
 
-        console.log("[AI-MATCH] AI Response received (first 200 chars):", aiContent.substring(0, 200));
-
-        // 4. Parse and validate AI response
-        let parsedData;
-        try {
-            parsedData = JSON.parse(aiContent);
-        } catch (parseError) {
-            console.error("[AI-MATCH] JSON Parse Error:", parseError);
-            console.error("[AI-MATCH] Raw AI Content:", aiContent);
-            throw new Error("Invalid JSON response from AI");
-        }
-
-        if (!parsedData.matches || !Array.isArray(parsedData.matches)) {
-            console.error("[AI-MATCH] Invalid response structure:", parsedData);
-            throw new Error("AI response missing 'matches' array");
-        }
-
-        const aiMatches = parsedData.matches;
-        console.log(`[AI-MATCH] AI returned ${aiMatches.length} potential matches`);
-
-        // ✅ Validate matches and filter by threshold
         const validMatches = aiMatches
             .filter((match: any) => {
-                // Basic validation
-                if (!match.user_id || typeof match.match_score !== 'number' || !match.match_reason) {
-                    console.warn("[AI-MATCH] Invalid match object:", match);
-                    return false;
-                }
-
-                // Score validation
-                if (match.match_score < 50 || match.match_score > 100) {
-                    console.log(`[AI-MATCH] Filtered out match with score ${match.match_score} (below threshold or invalid)`);
-                    return false;
-                }
-
-                return true;
+                if (!match.user_id || typeof match.match_score !== 'number') return false;
+                return match.match_score >= 50; 
             });
-
-        console.log(`[AI-MATCH] ${validMatches.length} matches passed validation (score >= 50)`);
 
         // 5. Merge with original client data
         const finalResults = validMatches
             .map((match: any) => {
                 const originalClient = clients.find(c => c.user_id === match.user_id);
-                if (!originalClient) {
-                    console.warn(`[AI-MATCH] Client ${match.user_id} not found in original list`);
-                    return null;
-                }
+                if (!originalClient) return null;
 
                 return {
                     user_id: originalClient.user_id,
@@ -263,6 +177,11 @@ Generate matches now:
                     age: originalClient.age,
                     gender: originalClient.gender,
                     weight_goal: originalClient.weight_goal,
+                    
+                    // ✅ ADDED: Explicitly map height and weight
+                    weight: originalClient.weight,
+                    height: originalClient.height,
+                    
                     health_conditions: originalClient.health_conditions,
                     allergies: originalClient.allergies,
                     location: originalClient.location,
@@ -273,60 +192,18 @@ Generate matches now:
             })
             .filter(Boolean);
 
-        // 6. Sort by score and limit to top 15
         finalResults.sort((a: any, b: any) => b.match_score - a.match_score);
         const topMatches = finalResults.slice(0, 15);
 
-        console.log(`[AI-MATCH] Returning ${topMatches.length} top matches`);
-        if (topMatches.length > 0) {
-            console.log(`[AI-MATCH] Score range: ${topMatches[0].match_score} - ${topMatches[topMatches.length - 1].match_score}`);
-        }
-
         res.json({
-            message: topMatches.length > 0 
-                ? "AI matching complete - showing top candidates"
-                : "No suitable client matches found (all scored below 50%)",
+            message: topMatches.length > 0 ? "AI matching complete" : "No suitable matches found",
             count: topMatches.length,
-            dietician_specializations: specs,
-            min_score_threshold: 50,
             data: topMatches
         });
 
     } catch (error: any) {
         console.error("[AI-MATCH] Error:", error.message);
-        
-        // ✅ Smarter fallback - basic filtering by conditions
-        const hasSpecializations = specs.length > 0 && !specs.includes("General Nutrition");
-        
-        const fallbackData = clients
-            .filter(c => {
-                if (!hasSpecializations) return true; // Generalist accepts all
-                
-                const clientConditions = Array.isArray(c.health_conditions) 
-                    ? c.health_conditions 
-                    : (c.health_conditions ? [c.health_conditions] : []);
-                
-                // Check if any client condition matches dietician specializations
-                return clientConditions.some(condition => 
-                    specs.some(spec => 
-                        spec.toLowerCase().includes(condition.toLowerCase()) ||
-                        condition.toLowerCase().includes(spec.toLowerCase())
-                    )
-                );
-            })
-            .slice(0, 10)
-            .map(c => ({
-                ...c,
-                match_score: 55,
-                match_reason: "AI temporarily unavailable. Basic specialization match detected."
-            }));
-
-        res.status(200).json({ 
-            message: "AI matching temporarily unavailable - showing filtered results", 
-            count: fallbackData.length,
-            data: fallbackData,
-            note: "Manual review recommended"
-        });
+        res.status(200).json({ message: "AI unavailable", data: [] });
     }
 });
 
