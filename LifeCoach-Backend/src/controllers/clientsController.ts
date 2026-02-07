@@ -279,6 +279,7 @@ ${JSON.stringify(clients.map(c => ({
 
 export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) => {
   
+  // 1. Get the logged-in client's User ID
   const userId = (req as any).user.user_id;
 
   const query = `
@@ -288,7 +289,7 @@ export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) =
       mp.category,
       mp.description,
       
-      -- Calculate total calories for the plan
+      -- Calculate total calories for the plan from meal_items
       (
         SELECT COALESCE(SUM(calories), 0) 
         FROM meal_items mi 
@@ -298,21 +299,25 @@ export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) =
       cda.status,
       cda.assigned_date as start_date, 
       cda.custom_notes as dietician_notes,
+      
+      -- Fetch Dietician's name for context
       u.name as dietician_name
+    
     FROM client_diet_assignments cda
     JOIN meal_plans mp ON cda.meal_plan_id = mp.meal_plan_id
     JOIN dieticians d ON cda.dietician_id = d.dietician_id
     JOIN users u ON d.user_id = u.user_id
     
-    -- ✅ FIX: Join clients table using user_id, NOT client_id
-    -- Assuming 'cda.client_id' refers to the user_id of the client (standard practice)
+    -- ✅ Filter directly by the Client's User ID
     WHERE cda.client_id = $1 
     AND cda.status = 'active'
+    
     ORDER BY cda.assigned_date DESC
   `;
 
   const result = await pool.query(query, [userId]);
 
+  // Format calories to include units
   const formattedPlans = result.rows.map(plan => ({
     ...plan,
     calories: plan.calories ? `${plan.calories} kcal` : 'N/A'
@@ -320,7 +325,7 @@ export const getMyMealPlans = asyncHandler(async (req: Request, res: Response) =
 
   res.json({
     message: "Plans retrieved",
-    mealPlans: formattedPlans // Ensure frontend key matches (mealPlans vs plans)
+    mealPlans: formattedPlans
   });
 });
 
