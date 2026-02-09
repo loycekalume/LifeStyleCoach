@@ -16,19 +16,19 @@ const router = express.Router();
 // ===========================
 
 /**
- * GET /api/myprogress/progress/:userId
+ * GET myprogress/progress/:userId
  * Returns weight, BMI, and cumulative workout progress over time
  */
 router.get("/progress/:userId", getClientProgress);
 
 /**
- * GET /api/myprogress/nutrition/:userId
+ * GET /myprogress/nutrition/:userId
  * Returns daily nutrition logs (calories, protein, carbs, fats, meal count)
  */
 router.get("/nutrition/:userId", getClientNutritionProgress);
 
 /**
- * GET /api/myprogress/dashboard/:userId
+ * GET myprogress/dashboard/:userId
  * Returns summary statistics for the dashboard:
  * - Workout stats (last 30 days)
  * - Nutrition stats (last 30 days)
