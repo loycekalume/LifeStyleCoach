@@ -5,17 +5,13 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const axiosInstance = axios.create({
   baseURL: API_BASE,
-  // Keep this true if you ever use cookies, but we will primarily rely on the header now
-  withCredentials: true, 
+  withCredentials: true, // Critical for sending the Refresh Token cookie
 });
 
-// ✅ 1. REQUEST INTERCEPTOR: Attaches the token to every outgoing request
+//  1. REQUEST INTERCEPTOR
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Grab the token from storage
     const token = localStorage.getItem("token");
-    
-    // If token exists, attach it to the Authorization header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -24,25 +20,42 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ 2. RESPONSE INTERCEPTOR: Handles 401 errors
+//  2. RESPONSE INTERCEPTOR (Fixed Logic)
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // If error is 401 and we haven't tried to refresh yet
+    // Check if error is 401 and we haven't tried refreshing yet
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      console.warn("Session expired or unauthorized. Redirecting to login.");
-      
-      // Clear storage so the app knows we are logged out
-      localStorage.removeItem("token");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("role");
-      
-      // Redirect
-      window.location.href = "/login";
+      originalRequest._retry = true; // Mark as retried to prevent infinite loops
+
+      try {
+       
+        const refreshResponse = await axiosInstance.post("/auth/refresh-token"); 
+
+        const newAccessToken = refreshResponse.data.accessToken;
+
+        // 2. Update Local Storage
+        localStorage.setItem("token", newAccessToken);
+
+        // 3. Update the header for the failed request
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+        // 4. Retry the original request with the new token
+        return axiosInstance(originalRequest);
+
+      } catch (refreshError) {
+        // 5. If refresh fails (Refresh token expired too), THEN logout
+        console.warn("Session expired. Redirecting to login.");
+        
+        localStorage.removeItem("token");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("role");
+        
+        window.location.href = "/login";
+        return Promise.reject(refreshError);
+      }
     }
     return Promise.reject(error);
   }
