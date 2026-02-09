@@ -1,5 +1,6 @@
 import React from "react";
 import type { Client } from "../Services/clientViewService";
+import { FaTimes } from "react-icons/fa"; 
 import "./../styles/clientView.css";
 
 interface ClientProfileModalProps {
@@ -8,38 +9,40 @@ interface ClientProfileModalProps {
 }
 
 const ClientProfileModal: React.FC<ClientProfileModalProps> = ({ client, onClose }) => {
+  
+  
+  const handleCardClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card">
-        <button className="close-btn" onClick={onClose}>×</button>
-        <h2>{client.name}</h2>
-        <p className="modal-subtitle">{client.email}</p>
+    
+    <div className="modal-backdrop" onClick={onClose}>
+     
+      <div className="modal-card" onClick={handleCardClick}>
+        
+        
+        <button className="close-btn" onClick={onClose}>
+            <FaTimes />
+        </button>
+
+        <div className="modal-header-content">
+            <h2 className="modal-title">{client.name}</h2>
+            <p className="modal-subtitle">{client.email}</p>
+        </div>
 
         <div className="modal-details">
-          <p><strong>Age:</strong> {client.age}</p>
-          <p><strong>Gender:</strong> {client.gender}</p>
-          <p><strong>Goal:</strong> {client.weight_goal}</p>
-          <p><strong>Height:</strong> {client.height} cm</p>
-          <p><strong>Weight:</strong> {client.weight} kg</p>
-          <p><strong>Allergies:</strong> {client.allergies || "None"}</p>
-          <p><strong>Location:</strong> {client.location}</p>
-          <p><strong>Budget:</strong> ${client.budget}</p>
+          <div className="detail-row"><strong>Age:</strong> <span>{client.age || "N/A"}</span></div>
+          <div className="detail-row"><strong>Gender:</strong> <span>{client.gender || "N/A"}</span></div>
+          <div className="detail-row"><strong>Goal:</strong> <span>{client.weight_goal || "N/A"}</span></div>
+          <div className="detail-row"><strong>Height:</strong> <span>{client.height ? `${client.height} cm` : "N/A"}</span></div>
+          <div className="detail-row"><strong>Weight:</strong> <span>{client.weight ? `${client.weight} kg` : "N/A"}</span></div>
+          <div className="detail-row"><strong>Allergies:</strong> <span>{client.allergies || "None"}</span></div>
+          <div className="detail-row"><strong>Location:</strong> <span>{client.location || "Remote"}</span></div>
+          <div className="detail-row"><strong>Budget:</strong> <span>{client.budget ? `$${client.budget}` : "N/A"}</span></div>
         </div>
 
-        <div className="modal-actions">
-          <button
-            className="btn-profile"
-            onClick={() => window.open(`mailto:${client.email}`, "_blank")}
-          >
-            Email Client
-          </button>
-          <button
-            className="btn-contact"
-            onClick={() => alert("Chat feature coming soon!")}
-          >
-            Open Chat
-          </button>
-        </div>
+       
       </div>
     </div>
   );

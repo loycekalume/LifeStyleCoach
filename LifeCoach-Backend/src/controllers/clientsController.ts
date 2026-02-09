@@ -162,8 +162,15 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
   // 2. Fetch All Clients (including health conditions)
   const clientQuery = `
         SELECT 
-            u.user_id, u.name, 
-            c.weight_goal, c.location, c.gender, c.age, c.health_conditions, c.allergies
+            u.user_id, u.name, u.email,
+            c.weight_goal, c.location, c.gender, c.age, 
+            
+            -- ✅ ADDED: Height, Weight, Budget
+            c.height,
+            c.weight,
+            c.budget,
+            
+            c.health_conditions, c.allergies
         FROM users u
         JOIN clients c ON u.user_id = c.user_id
         WHERE u.role_id = 5
@@ -193,7 +200,7 @@ ${JSON.stringify(clients.map(c => ({
     location: c.location,
     gender: c.gender,
     age: c.age,
-    health_conditions: c.health_conditions, // AI now sees this
+    health_conditions: c.health_conditions,
     allergies: c.allergies
   })), null, 2)}
 
@@ -249,6 +256,12 @@ ${JSON.stringify(clients.map(c => ({
 
         return {
           ...originalClient,
+          
+          // ✅ Explicitly ensuring these fields are passed through
+          height: originalClient.height,
+          weight: originalClient.weight,
+          budget: originalClient.budget,
+          
           match_score: match.match_score,
           match_reasons: [match.match_reason]
         };
