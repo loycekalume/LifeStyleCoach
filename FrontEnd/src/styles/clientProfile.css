@@ -1,4 +1,4 @@
-.modal-overlay {
+.modal-overlayp {
   position: fixed;
   top: 0;
   left: 0;
@@ -12,7 +12,7 @@
   backdrop-filter: blur(3px);
 }
 
-.profile-modal {
+.profile-modalp {
   background: white;
   width: 90%;
   max-width: 500px;
@@ -27,7 +27,7 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-.modal-header {
+.modal-headerp {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -36,7 +36,7 @@
   padding-bottom: 10px;
 }
 
-.close-btn {
+.close-btnp {
   background: none;
   border: none;
   font-size: 1.2rem;
@@ -44,11 +44,11 @@
   color: #666;
 }
 
-.form-section {
+.form-sectionp {
   margin-bottom: 20px;
 }
 
-.form-section h3 {
+.form-sectionp h3 {
   font-size: 0.95rem;
   color: #10b981; /* Brand color */
   margin-bottom: 10px;
@@ -56,12 +56,12 @@
   letter-spacing: 0.5px;
 }
 
-.input-group {
+.input-groupp {
   position: relative;
   margin-bottom: 15px;
 }
 
-.input-icon {
+.input-iconp {
   position: absolute;
   left: 12px;
   top: 50%; /* Center vertically */
@@ -70,8 +70,8 @@
 }
 
 /* Specific fix for select inputs or when label is involved */
-.input-group select, 
-.input-group input {
+.input-groupp select, 
+.input-groupp input {
   width: 100%;
   padding: 10px 10px 10px 35px; /* Left padding makes room for icon */
   border: 1px solid #e5e7eb;
@@ -80,7 +80,7 @@
   transition: border-color 0.2s;
 }
 
-.input-group input:focus, .input-group select:focus {
+.input-groupp input:focus, .input-groupp select:focus {
   outline: none;
   border-color: #10b981;
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
@@ -91,18 +91,18 @@
   gap: 15px;
 }
 
-.row .input-group {
+.row .input-groupp {
   flex: 1;
 }
 
-.modal-actions {
+.modal-actionsp {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
 }
 
-.btn-cancel {
+.btn-cancelp {
   background: #f3f4f6;
   color: #4b5563;
   border: none;
@@ -112,7 +112,7 @@
   font-weight: 500;
 }
 
-.btn-save {
+.btn-savep {
   background: #10b981;
   color: white;
   border: none;
@@ -125,6 +125,6 @@
   gap: 8px;
 }
 
-.btn-save:hover {
+.btn-savep:hover {
   background: #059669;
 }

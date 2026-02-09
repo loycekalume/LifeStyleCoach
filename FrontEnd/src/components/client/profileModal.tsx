@@ -126,26 +126,26 @@ export default function ClientProfileModal({ onClose, onUpdateSuccess }: ClientP
   if (loading) return null; 
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content profile-modal">
-        <div className="modal-header">
+    <div className="modal-overlayp">
+      <div className="modal-contentp profile-modalp">
+        <div className="modal-headerp">
           <h2>Edit Profile</h2>
-          <button className="close-btn" onClick={onClose}><FaTimes /></button>
+          <button className="close-btnp" onClick={onClose}><FaTimes /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="profile-form">
+        <form onSubmit={handleSubmit} className="profile-formp">
           
           {/* Section 1: Identity */}
-          <div className="form-section">
+          <div className="form-sectionp">
             <h3>Personal Info</h3>
-            <div className="input-group">
-              <FaUser className="input-icon" />
+            <div className="input-groupp">
+              <FaUser className="input-iconp" />
               <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Full Name" required />
             </div>
             
             <div className="row">
-                <div className="input-group">
-                    <FaVenusMars className="input-icon" />
+                <div className="input-groupp">
+                    <FaVenusMars className="input-iconp" />
                     {/* ✅ Values must match exactly what is in DB */}
                     <select name="gender" value={formData.gender} onChange={handleChange}>
                         <option value="">Select Gender</option>
@@ -154,7 +154,7 @@ export default function ClientProfileModal({ onClose, onUpdateSuccess }: ClientP
                         <option value="Other">Other</option>
                     </select>
                 </div>
-                <div className="input-group">
+                <div className="input-groupp">
                     <label style={{position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'#9ca3af', fontSize:'0.9rem', fontWeight:'bold'}}>Age:</label>
                     <input type="number" name="age" value={formData.age} onChange={handleChange} style={{paddingLeft:'50px'}} />
                 </div>
@@ -162,21 +162,21 @@ export default function ClientProfileModal({ onClose, onUpdateSuccess }: ClientP
           </div>
 
           {/* Section 2: Metrics */}
-          <div className="form-section">
+          <div className="form-sectionp">
             <h3>Body & Fitness</h3>
             <div className="row">
-              <div className="input-group">
-                <FaWeight className="input-icon" />
+              <div className="input-groupp">
+                <FaWeight className="input-iconp" />
                 <input type="number" name="weight" value={formData.weight} onChange={handleChange} placeholder="Weight (kg)" step="0.1" />
               </div>
-              <div className="input-group">
-                <FaRulerVertical className="input-icon" />
+              <div className="input-groupp">
+                <FaRulerVertical className="input-iconp" />
                 <input type="number" name="height" value={formData.height} onChange={handleChange} placeholder="Height (cm)" />
               </div>
             </div>
             
-            <div className="input-group">
-              <FaBullseye className="input-icon" />
+            <div className="input-groupp">
+              <FaBullseye className="input-iconp" />
               <select name="goal" value={formData.goal} onChange={handleChange}>
                 <option value="">Select Goal</option>
                 <option value="lose">Lose Weight</option>
@@ -187,11 +187,11 @@ export default function ClientProfileModal({ onClose, onUpdateSuccess }: ClientP
           </div>
 
           {/* Section 3: Details */}
-          <div className="form-section">
+          <div className="form-sectionp">
             <h3>Health & Details</h3>
             
-            <div className="input-group">
-                <FaAllergies className="input-icon" />
+            <div className="input-groupp">
+                <FaAllergies className="input-iconp" />
                 <input 
                     type="text" 
                     name="allergies" 
@@ -201,8 +201,8 @@ export default function ClientProfileModal({ onClose, onUpdateSuccess }: ClientP
                 />
             </div>
 
-            <div className="input-group">
-                <FaFileMedical className="input-icon" />
+            <div className="input-groupp">
+                <FaFileMedical className="input-iconp" />
                 <input 
                     type="text" 
                     name="health_conditions" 
@@ -213,12 +213,12 @@ export default function ClientProfileModal({ onClose, onUpdateSuccess }: ClientP
             </div>
 
             <div className="row">
-                <div className="input-group">
-                    <FaMapMarkerAlt className="input-icon" />
+                <div className="input-groupp">
+                    <FaMapMarkerAlt className="input-iconp" />
                     <input type="text" name="location" value={formData.location} onChange={handleChange} placeholder="City/Location" />
                 </div>
-                <div className="input-group">
-                    <FaDollarSign className="input-icon" />
+                <div className="input-groupp">
+                    <FaDollarSign className="input-iconp" />
                     {/* ✅ Values must match exactly what is in DB */}
                     <select name="budget" value={formData.budget} onChange={handleChange}>
                         <option value="">Budget</option>
@@ -230,9 +230,9 @@ export default function ClientProfileModal({ onClose, onUpdateSuccess }: ClientP
             </div>
           </div>
 
-          <div className="modal-actions">
-            <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-save" disabled={saving}>
+          <div className="modal-actionsp">
+            <button type="button" className="btn-cancelp" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn-savep" disabled={saving}>
               {saving ? <div className="spinner-small"></div> : <><FaSave /> Save Changes</>}
             </button>
           </div>

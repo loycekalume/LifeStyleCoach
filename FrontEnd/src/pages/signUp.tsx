@@ -110,9 +110,9 @@ const Signup: React.FC = () => {
           <h2 className="auth-title">Create Account</h2>
 
           {/* First Name */}
-          <div className="form-group">
+          <div className="form-groups">
             <div className="input-wrapper">
-              <FontAwesomeIcon icon={faUser} className="input-icon" />
+              <FontAwesomeIcon icon={faUser} className="input-icons" />
               <input
                 type="text"
                 name="firstName"
@@ -125,9 +125,9 @@ const Signup: React.FC = () => {
           </div>
 
           {/* Last Name */}
-          <div className="form-group">
+          <div className="form-groups">
             <div className="input-wrapper">
-              <FontAwesomeIcon icon={faUser} className="input-icon" />
+              <FontAwesomeIcon icon={faUser} className="input-icons" />
               <input
                 type="text"
                 name="lastName"
@@ -140,9 +140,9 @@ const Signup: React.FC = () => {
           </div>
 
           {/* Email */}
-          <div className="form-group">
+          <div className="form-groups">
             <div className="input-wrapper">
-              <FontAwesomeIcon icon={faEnvelope} className="input-icon" />
+              <FontAwesomeIcon icon={faEnvelope} className="input-icons" />
               <input
                 type="email"
                 name="email"
@@ -155,9 +155,9 @@ const Signup: React.FC = () => {
           </div>
 
           {/* Contact */}
-          <div className="form-group">
+          <div className="form-groups">
             <div className="input-wrapper">
-              <FontAwesomeIcon icon={faPhone} className="input-icon" />
+              <FontAwesomeIcon icon={faPhone} className="input-icons" />
               <input
                 type="tel"
                 name="contact"
@@ -170,9 +170,9 @@ const Signup: React.FC = () => {
           </div>
 
           {/* Password */}
-          <div className="form-group">
+          <div className="form-groups">
             <div className="input-wrapper">
-              <FontAwesomeIcon icon={faLock} className="input-icon" />
+              <FontAwesomeIcon icon={faLock} className="input-icons" />
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
@@ -195,9 +195,9 @@ const Signup: React.FC = () => {
           )}
 
           {/* Confirm Password */}
-          <div className="form-group">
+          <div className="form-groups">
             <div className="input-wrapper">
-              <FontAwesomeIcon icon={faLock} className="input-icon" />
+              <FontAwesomeIcon icon={faLock} className="input-icons" />
               <input
                 type={showPassword ? "text" : "password"}
                 name="confirmPassword"
@@ -210,7 +210,7 @@ const Signup: React.FC = () => {
           </div>
 
           {/* Role Selection */}
-          <div className="form-group">
+          <div className="form-groups">
             <h4>Select Role:</h4>
             <div className="radio-group">
               <label className="radio-container">

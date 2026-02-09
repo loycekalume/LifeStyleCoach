@@ -37,8 +37,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // ✅ Added loading state
+  const [isLoading, setIsLoading] = useState(false)
 
   // Get API URL from env, similar to your axiosInstance
   const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -198,10 +197,10 @@ const Login: React.FC = () => {
           </div>
 
           <form className="login-form" onSubmit={handleSubmit}>
-            <div className="form-group">
+            <div className="form-groupl">
               <label htmlFor="email">Email Address</label>
               <div className="input-wrapper">
-                <i className="fas fa-envelope input-icon"></i>
+                <i className="fas fa-envelope input-iconl"></i>
                 <input
                   type="email"
                   id="email"
@@ -214,10 +213,10 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            <div className="form-group">
+            <div className="form-groupl">
               <label htmlFor="password">Password</label>
               <div className="input-wrapper">
-                <i className="fas fa-lock input-icon"></i>
+                <i className="fas fa-lock input-iconl"></i>
                 <input
                   type={showPassword ? "text" : "password"}
                   id="password"
@@ -238,45 +237,14 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            <div className="form-options">
-              <label className="checkbox-container">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                />
-                <span className="checkmark"></span>
-                Remember me
-              </label>
-              <a href="#" className="forgot-password">
-                Forgot Password?
-              </a>
-            </div>
+            
 
             <button type="submit" className="btn-primary" disabled={isLoading}>
               <span>{isLoading ? "Signing In..." : "Sign In"}</span>
               {!isLoading && <i className="fas fa-arrow-right"></i>}
             </button>
 
-            <div className="divider">
-              <span>or continue with</span>
-            </div>
-
-            <div className="social-login">
-              <button type="button" className="btn-social google">
-                <i className="fab fa-google"></i>
-                <span>Google</span>
-              </button>
-              <button type="button" className="btn-social facebook">
-                <i className="fab fa-facebook-f"></i>
-                <span>Facebook</span>
-              </button>
-              <button type="button" className="btn-social apple">
-                <i className="fab fa-apple"></i>
-                <span>Apple</span>
-              </button>
-            </div>
+        
 
             <div className="form-footer">
               <p>
