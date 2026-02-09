@@ -23,6 +23,7 @@ import MealPlanDetails from "../components/client/mealPlanDetails";
 
 import type { Client } from "../Services/clientViewService";
 import { getClientById } from "../Services/clientViewService";
+import ConsistencyCard from "../components/client/consistencyCard";
 
 type PageType = "dashboard" | "workouts" | "nutrition" | "instructors" | "schedule" | "progress";
 
@@ -166,7 +167,7 @@ export default function ClientDashboard() {
             <WorkoutPlan client={client} />
           </div>
           <div className="dashboard-middle">
-            <ProgressChart client={client} />
+          <ConsistencyCard clientId={client.user_id} />
             <NutritionCard client={client} /> 
           </div>
           <div className="dashboard-right">
