@@ -78,7 +78,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
 
     const instructorId = user.instructor_id || null;
 
-    // 🔥 GENERATE AND SET JWT TOKENS (this was missing!)
+    //  GENERATE AND SET JWT TOKENS (this was missing!)
     const { accessToken, refreshToken } = generateToken(
       res, 
       user.user_id.toString(), // Convert to string as your function expects
@@ -109,21 +109,23 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
 
 
 export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
-    //invalidate the access Token and the refresh Token
-    res.cookie("access_token", "", {
+    // We check environment again to ensure settings match exactly
+    const isProduction = process.env.NODE_ENV !== "development";
+
+    // Options MUST match the creation options exactly to delete the cookie
+    const cookieOptions: any = {
         httpOnly: true,
-        secure: process.env.NODE_ENV !== "development",
-        sameSite: "strict",
-        expires: new Date(0)
-    })
-    res.cookie("refresh_token", "", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV !== "development",
-        sameSite: "strict",
-        expires: new Date(0)
-    })
- res.status(200).json({message:"User successfully logged out"})
-})
+        secure: isProduction, // true on HTTPS (Render)
+        sameSite: isProduction ? "none" : "lax", // 'none' for cross-site in prod
+        expires: new Date(0) // Set expiration to the past to delete immediately
+    };
+
+    // Invalidate the access Token and the refresh Token
+    res.cookie("access_token", "", cookieOptions);
+    res.cookie("refresh_token", "", cookieOptions);
+    
+    res.status(200).json({ message: "User successfully logged out" });
+});
 
 // Refresh access token using refresh token
 export const refreshToken = asyncHandler(async (req: Request, res: Response) => {
