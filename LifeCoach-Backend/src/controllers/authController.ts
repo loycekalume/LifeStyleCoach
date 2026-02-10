@@ -163,15 +163,17 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
     const newAccessToken = jwt.sign(
       { userId: user.user_id, roleId: user.role_id },
       process.env.JWT_SECRET,
-      { expiresIn: "15m" } // Keep it short
+      { expiresIn: "15m" }
     );
 
-    // Set new access token cookie
+    // ✅ FIX: Use consistent cookie settings matching login
+    const isProduction = process.env.NODE_ENV !== "development";
+    
     res.cookie("access_token", newAccessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV !== "development",
-      sameSite: "strict",
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax", // ✅ Changed from "strict"
+      maxAge: 15 * 60 * 1000,
     });
 
     res.status(200).json({ 
