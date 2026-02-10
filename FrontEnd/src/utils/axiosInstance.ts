@@ -1,64 +1,85 @@
 import axios from "axios";
 
-// Use environment variable or fallback to localhost
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const axiosInstance = axios.create({
   baseURL: API_BASE,
-  withCredentials: true, // Critical for sending the Refresh Token cookie
+  withCredentials: true, // This sends cookies automatically
 });
 
-//  1. REQUEST INTERCEPTOR
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// ✅ REMOVE REQUEST INTERCEPTOR - cookies are sent automatically
+// No need for Authorization headers when using httpOnly cookies
 
-//  2. RESPONSE INTERCEPTOR (Fixed Logic)
+// RESPONSE INTERCEPTOR
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Check if error is 401 and we haven't tried refreshing yet
+    // If refresh endpoint itself fails, logout immediately
+    if (originalRequest.url?.includes("/auth/refresh-token")) {
+      console.warn("Refresh token failed. Redirecting to login.");
+      handleLogout();
+      return Promise.reject(error);
+    }
+
+    // Handle 401 errors (expired access token)
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // Mark as retried to prevent infinite loops
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => axiosInstance(originalRequest))
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
-       
-        const refreshResponse = await axiosInstance.post("/auth/refresh-token"); 
-
-        const newAccessToken = refreshResponse.data.accessToken;
-
-        // 2. Update Local Storage
-        localStorage.setItem("token", newAccessToken);
-
-        // 3. Update the header for the failed request
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-        // 4. Retry the original request with the new token
+        // Attempt to refresh - cookies are sent automatically
+        await axiosInstance.post("/auth/refresh-token");
+        
+        // Process queued requests
+        processQueue(null);
+        isRefreshing = false;
+        
+        // Retry original request
         return axiosInstance(originalRequest);
 
       } catch (refreshError) {
-        // 5. If refresh fails (Refresh token expired too), THEN logout
-        console.warn("Session expired. Redirecting to login.");
-        
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("role");
-        
-        window.location.href = "/login";
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        console.error("Session expired. Logging out.");
+        handleLogout();
         return Promise.reject(refreshError);
       }
     }
+
     return Promise.reject(error);
   }
 );
+
+function handleLogout() {
+  localStorage.removeItem("userId");
+  localStorage.removeItem("role");
+  // No need to remove "token" since we're using cookies
+  window.location.href = "/login";
+}
 
 export default axiosInstance;

@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios"; // ✅ Use raw axios to avoid interceptor redirects on login failure
+import axiosInstance from "../utils/axiosInstance";
 import "../styles/Login.css";
 
-// Define a map to convert backend role_id (number) to frontend role (string)
 const ROLE_MAP: { [key: number]: "Client" | "Instructor" | "Dietician" | "Admin" } = {
   3: "Instructor",
   4: "Dietician",
@@ -11,23 +10,21 @@ const ROLE_MAP: { [key: number]: "Client" | "Instructor" | "Dietician" | "Admin"
   1: "Admin",
 };
 
-// Define the interface to match the backend response
 interface LoginResponse {
-  token?: string;
+  token?: string; 
   message?: string;
   user?: {
-    id: number; // usually user_id
-    user_id?: number; // fallback if backend names it differently
+    id: number;
+    user_id?: number;
     email: string;
     name: string;
     role_id: number; 
     profile_complete: boolean;
     instructor_id?: number; 
-    dietician_id?: number; // Added for completeness
+    dietician_id?: number;
   };
 }
 
-// Utility function to safely get the role string
 const getRoleString = (roleId: number): "Client" | "Instructor" | "Dietician" | "Admin" | null => {
   return ROLE_MAP[roleId] || null;
 };
@@ -37,10 +34,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false)
-
-  // Get API URL from env, similar to your axiosInstance
-  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  const [isLoading, setIsLoading] = useState(false);
 
   const togglePassword = () => {
     setShowPassword((prev) => !prev);
@@ -50,12 +44,12 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // 1. Clear any old session data immediately
+    // Clear any old session data
     localStorage.clear();
 
     try {
-      // ✅ Use raw axios to prevent global interceptors from refreshing the page on 401 (Wrong Password)
-      const response = await axios.post<LoginResponse>(`${API_BASE}/auth/login`, {
+      // ✅ Use axiosInstance with withCredentials to receive cookies
+      const response = await axiosInstance.post<LoginResponse>("/auth/login", {
         email,
         password_hash: password,
       });
@@ -63,19 +57,18 @@ const Login: React.FC = () => {
       const data = response.data;
       console.log("Login success:", data);
 
-      // 2. Validate Response
-      if (data.token && data.user) {
-        // 3. Store Data
-        localStorage.setItem("token", data.token);
-        
-        const userId = data.user.id || data.user.user_id; // Handle both naming conventions
+      // ✅ DON'T store token - it's in httpOnly cookie now
+      // Validate Response
+      if (data.user) {
+        const userId = data.user.id || data.user.user_id;
         const userRoleString = data.user.role_id ? getRoleString(data.user.role_id) : null;
         
+        // ✅ Only store non-sensitive user info
         localStorage.setItem("userName", data.user.name);
         localStorage.setItem("userId", String(userId));
         
         if (userRoleString) {
-            localStorage.setItem("userRole", userRoleString);
+          localStorage.setItem("userRole", userRoleString);
         }
 
         // Handle Role-Specific IDs
@@ -83,7 +76,7 @@ const Login: React.FC = () => {
           localStorage.setItem("instructorId", String(data.user.instructor_id));
         }
         if (data.user.dietician_id) {
-            localStorage.setItem("dieticianId", String(data.user.dietician_id));
+          localStorage.setItem("dieticianId", String(data.user.dietician_id));
         }
 
         const isProfileComplete = data.user.profile_complete ?? false; 
@@ -94,15 +87,12 @@ const Login: React.FC = () => {
           return;
         }
 
-        // 4. Navigation Logic
-        
-        // A. Admin always goes to dashboard
+        // Navigation Logic
         if (userRoleString === "Admin") {
           navigate("/admin");
           return;
         }
 
-        // B. Check Profile Completion
         if (!isProfileComplete) {
           navigate("/complete-profile", {
             state: {
@@ -113,7 +103,7 @@ const Login: React.FC = () => {
           return;
         }
 
-        // C. Standard Redirects
+        // Standard Redirects
         switch (userRoleString) {
           case "Client":
             navigate("/client");
@@ -136,16 +126,14 @@ const Login: React.FC = () => {
       console.error("Login error:", error);
       
       if (error.response) {
-        // Server responded with error (e.g., 401 Invalid Credentials)
         alert(error.response.data?.message || "Invalid email or password.");
       } else if (error.request) {
-        // Request made but no response
         alert("Network error. Please check your internet connection.");
       } else {
         alert("An unexpected error occurred. Please try again.");
       }
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -230,21 +218,17 @@ const Login: React.FC = () => {
                   type="button"
                   className="password-toggle"
                   onClick={togglePassword}
-                  tabIndex={-1} // Prevent tabbing to this button
+                  tabIndex={-1}
                 >
-                 <i className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"}`} />
+                  <i className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"}`} />
                 </button>
               </div>
             </div>
-
-            
 
             <button type="submit" className="btn-primary" disabled={isLoading}>
               <span>{isLoading ? "Signing In..." : "Sign In"}</span>
               {!isLoading && <i className="fas fa-arrow-right"></i>}
             </button>
-
-        
 
             <div className="form-footer">
               <p>
