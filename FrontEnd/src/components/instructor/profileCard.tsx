@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import EditProfileModal from "./editProfileCard";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axiosInstance from "../../utils/axiosInstance";
 
 interface InstructorProfile {
   name?: string;
@@ -18,23 +19,24 @@ const ProfileCard: React.FC = () => {
   const [instructorId, setInstructorId] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
+  // Fetch instructorId from localStorage
   useEffect(() => {
     const storedId = localStorage.getItem("instructorId");
     if (storedId) setInstructorId(parseInt(storedId, 10));
   }, []);
 
+  // ✅ Fetch Profile using axiosInstance
   useEffect(() => {
     if (instructorId === null) return;
 
     const fetchProfile = async () => {
       try {
-        const res = await fetch(
-          `http://localhost:3000/instructors/${instructorId}/profile`
-        );
-        if (!res.ok) throw new Error("Failed to fetch instructor profile");
-
-        const json = await res.json();
-        setProfile(json.profile ?? json);
+        // No need for http://localhost:3000 - handled by baseURL
+        // Cookies are sent automatically
+        const res = await axiosInstance.get(`/instructors/${instructorId}/profile`);
+        
+        // Axios returns data directly in res.data
+        setProfile(res.data.profile ?? res.data);
       } catch (err) {
         console.error("Error fetching profile:", err);
         setError("Unable to load profile");
@@ -47,16 +49,17 @@ const ProfileCard: React.FC = () => {
   }, [instructorId]);
 
   const handleSave = (responseData: any) => {
+    // Handle both structures (nested profile or direct object)
     const profileData = responseData.profile ?? responseData;
     setProfile(profileData);
     toast.success("Profile updated successfully!");
   };
 
   const getAvatarUrl = (name?: string, avatar_url?: string | null) => {
-    // ✅ If there's an uploaded avatar, use it
+    // If there's an uploaded avatar, use it
     if (avatar_url) return avatar_url;
 
-    // ✅ Otherwise generate one using UI Avatars API
+    // Otherwise generate one using UI Avatars API
     const displayName = name || "Instructor";
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
       displayName
