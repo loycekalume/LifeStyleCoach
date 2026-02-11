@@ -1,151 +1,167 @@
 import React, { useEffect, useState } from "react";
+import axiosInstance from "../../utils/axiosInstance"; 
 
 interface InstructorProfile {
-    name?: string;
-    profile_title?: string | null;
-    years_of_experience?: number | null;
-    available_locations?: string[] | null;
+  name?: string;
+  profile_title?: string | null;
+  years_of_experience?: number | null;
+  available_locations?: string[] | null;
 }
 
 interface EditProfileModalProps {
-    instructorId: number;
-    profile: InstructorProfile | null;
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (updatedProfile: InstructorProfile) => void;
+  instructorId: number;
+  profile: InstructorProfile | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (updatedProfile: InstructorProfile) => void;
 }
 
 const EditProfileModal: React.FC<EditProfileModalProps> = ({
-    instructorId,
-    profile,
-    isOpen,
-    onClose,
-    onSave,
+  instructorId,
+  profile,
+  isOpen,
+  onClose,
+  onSave,
 }) => {
-    const [formData, setFormData] = useState<InstructorProfile>({
-        name: "",
-        profile_title: "",
-        years_of_experience: null,
-        available_locations: [],
-    });
+  const [formData, setFormData] = useState<InstructorProfile>({
+    name: "",
+    profile_title: "",
+    years_of_experience: null,
+    available_locations: [],
+  });
 
-    useEffect(() => {
-        if (profile) {
-            setFormData({
-                ...profile,
-                years_of_experience:
-                    profile.years_of_experience ?? null, // ensure null, not undefined
-                available_locations: profile.available_locations || [],
-            });
-        }
-    }, [profile]);
+  // Local state for locations input to prevent typing issues
+  const [locationsInput, setLocationsInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    if (!isOpen) return null;
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        ...profile,
+        years_of_experience: profile.years_of_experience ?? null,
+        available_locations: profile.available_locations || [],
+      });
+      // Initialize text input from array
+      setLocationsInput((profile.available_locations || []).join(", "));
+    }
+  }, [profile]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            const res = await fetch(
-                `http://localhost:3000/instructors/${instructorId}/profile`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(formData),
-                }
-            );
+  if (!isOpen) return null;
 
-            if (!res.ok) throw new Error("Failed to update profile");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-            const updated = await res.json();
-            onSave(updated.profile || updated);
-            onClose();
-        } catch (err) {
-            console.error("Error updating profile:", err);
-            alert("Failed to update profile");
-        }
-    };
+    // Convert string input back to array for submission
+    const locationsArray = locationsInput
+      .split(",")
+      .map((loc) => loc.trim())
+      .filter(Boolean);
 
-    return (
-        <div className="modal-backdrop">
-            <div className="modal-content">
-                <h3>Edit Profile</h3>
-                <form onSubmit={handleSubmit}>
-                    <label>
-                        Name:
-                        <input
-                            type="text"
-                            value={formData.name || ""}
-                            onChange={(e) =>
-                                setFormData({ ...formData, name: e.target.value })
-                            }
-                        />
-                    </label>
+    const payload = { ...formData, available_locations: locationsArray };
 
-                    <label>
-                        Profile Title:
-                        <input
-                            type="text"
-                            value={formData.profile_title || ""}
-                            onChange={(e) =>
-                                setFormData({ ...formData, profile_title: e.target.value })
-                            }
-                        />
-                    </label>
+    try {
+      // ✅ Use axiosInstance.put
+      const res = await axiosInstance.put(
+        `/instructors/${instructorId}/profile`,
+        payload
+      );
 
-                    <label>
-                        Years of Experience:
-                        <input
-                            type="number"
-                            value={
-                                formData.years_of_experience !== null &&
-                                    formData.years_of_experience !== undefined
-                                    ? formData.years_of_experience
-                                    : ""
-                            }
-                            onChange={(e) =>
-                                setFormData({
-                                    ...formData,
-                                    years_of_experience:
-                                        e.target.value === "" ? null : Number(e.target.value),
-                                })
-                            }
-                        />
-                    </label>
+      // Axios returns parsed data in res.data
+      const updated = res.data;
+      
+      onSave(updated.profile || updated);
+      onClose();
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      alert("Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-content">
+        <h3>Edit Profile</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Name:</label>
+            <input
+              type="text"
+              value={formData.name || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              className="form-input"
+            />
+          </div>
 
-                    <label>
-                        Available Locations (comma separated):
-                        <input
-                            type="text"
-                            value={formData.available_locations?.join(", ") || ""}
-                            onChange={(e) =>
-                                setFormData({
-                                    ...formData,
-                                    available_locations: e.target.value
-                                        .split(",")
-                                        .map((loc) => loc.trim())
-                                        .filter(Boolean),
-                                })
-                            }
-                        />
-                    </label>
+          <div className="form-group">
+            <label>Profile Title:</label>
+            <input
+              type="text"
+              value={formData.profile_title || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, profile_title: e.target.value })
+              }
+              className="form-input"
+            />
+          </div>
 
-                    <div className="modal-actions">
-                        <button
-                            type="button"
-                            className="btn btn-outline"
-                            onClick={onClose}
-                        >
-                            Cancel
-                        </button>
-                        <button type="submit" className="btn btn-primary">
-                            Save
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
+          <div className="form-group">
+            <label>Years of Experience:</label>
+            <input
+              type="number"
+              value={
+                formData.years_of_experience !== null &&
+                formData.years_of_experience !== undefined
+                  ? formData.years_of_experience
+                  : ""
+              }
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  years_of_experience:
+                    e.target.value === "" ? null : Number(e.target.value),
+                })
+              }
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Available Locations (comma separated):</label>
+            <input
+              type="text"
+              value={locationsInput}
+              onChange={(e) => setLocationsInput(e.target.value)}
+              className="form-input"
+              placeholder="e.g. New York, Online, Gym A"
+            />
+          </div>
+
+          <div className="modal-actions">
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="btn btn-primary"
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 export default EditProfileModal;

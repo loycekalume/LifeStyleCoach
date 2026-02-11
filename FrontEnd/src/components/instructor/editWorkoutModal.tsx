@@ -14,7 +14,7 @@ const EditWorkoutModal: React.FC<Props> = ({ isOpen, onClose, workout, onSave })
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [videoUrl, setVideoUrl] = useState(""); 
-  // ✅ New State for Duration
+
   const [totalDuration, setTotalDuration] = useState<number | string>(""); 
   const [plan, setPlan] = useState<PlanItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);

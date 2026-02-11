@@ -138,7 +138,7 @@ const WorkoutsModal: React.FC<WorkoutsModalProps> = ({ isOpen, onClose, instruct
     }
 
     try {
-      // ✅ AXIOS CALL: Handles JSON headers and auth automatically
+     
       const response = await axiosInstance.post("/workout", {
           instructor_id: instructorId, 
           title,
