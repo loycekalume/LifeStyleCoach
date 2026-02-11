@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import EditPricingModal from "./editPricingCard";
+import axiosInstance from "../../utils/axiosInstance"; 
 
 interface PricingOption {
   pricing_id: number;
@@ -24,18 +25,18 @@ const PricingCard: React.FC = () => {
     }
   }, []);
 
-  // Fetch pricing info
+  // ✅ Fetch pricing info (Refactored to use axiosInstance)
   useEffect(() => {
     if (instructorId === null) return;
     setLoading(true);
 
     const fetchPricing = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/instructors/${instructorId}/pricing`);
-        if (!res.ok && res.status !== 404) throw new Error(`Failed to fetch pricing (Status: ${res.status})`);
-
-        const json = await res.json();
-        setPricing(Array.isArray(json) ? json : []);
+        // No need for http://localhost:3000, axiosInstance handles baseURL
+        const res = await axiosInstance.get(`/instructors/${instructorId}/pricing`);
+        
+        // Axios puts the JSON response directly in res.data
+        setPricing(Array.isArray(res.data) ? res.data : []);
       } catch (error) {
         console.error("Error fetching pricing:", error);
         setPricing([]);
@@ -47,26 +48,27 @@ const PricingCard: React.FC = () => {
     fetchPricing();
   }, [instructorId]);
 
-  // Handle saving updates
+  // ✅ Handle saving updates (Refactored to use axiosInstance)
   const handleSave = async (updatedPricing: PricingOption[]) => {
     try {
-      for (const item of updatedPricing) {
-        const res = await fetch(`http://localhost:3000/instructors/pricing/${item.pricing_id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(item),
+      // Create an array of update promises to run them efficiently
+      const updatePromises = updatedPricing.map((item) => 
+        axiosInstance.put(`/instructors/pricing/${item.pricing_id}`, item)
+      );
+
+      // Wait for all updates to finish
+      const responses = await Promise.all(updatePromises);
+
+      // Update local state based on results
+      const newPricingData = responses.map(res => res.data.pricing);
+      
+      setPricing((prev) => {
+        // Map over previous state and replace updated items
+        return prev.map(p => {
+          const updated = newPricingData.find((u: PricingOption) => u.pricing_id === p.pricing_id);
+          return updated || p;
         });
-
-        if (!res.ok) throw new Error(`Failed to update pricing for ${item.session_type}`);
-
-        const result = await res.json();
-        const updated = result.pricing;
-
-        // Update the state for that one pricing row
-        setPricing((prev) =>
-          prev.map((p) => (p.pricing_id === updated.pricing_id ? updated : p))
-        );
-      }
+      });
 
       setIsEditing(false);
     } catch (err) {
