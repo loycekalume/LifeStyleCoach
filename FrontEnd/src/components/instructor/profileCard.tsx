@@ -25,14 +25,13 @@ const ProfileCard: React.FC = () => {
     if (storedId) setInstructorId(parseInt(storedId, 10));
   }, []);
 
-  // ✅ Fetch Profile using axiosInstance
+  
   useEffect(() => {
     if (instructorId === null) return;
 
     const fetchProfile = async () => {
       try {
-        // No need for http://localhost:3000 - handled by baseURL
-        // Cookies are sent automatically
+       
         const res = await axiosInstance.get(`/instructors/${instructorId}/profile`);
         
         // Axios returns data directly in res.data

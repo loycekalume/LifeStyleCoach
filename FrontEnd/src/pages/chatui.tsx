@@ -1,11 +1,11 @@
-// src/pages/MessagesPage.tsx
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import io, { Socket } from "socket.io-client";
 import axiosInstance from "../utils/axiosInstance"; 
 import "../styles/chatui.css";
 
-const SOCKET_URL = "http://localhost:3000"; 
+// ✅ FIX: Use Environment Variable or Fallback
+const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:3000"; 
 
 // --- 🕒 HELPER: WhatsApp-style Date Formatting ---
 const formatDateForSidebar = (isoDateString?: string) => {
@@ -56,7 +56,7 @@ interface Conversation {
   other_person_id: number;
   other_person_avatar?: string;
   last_message: string;
-  last_message_time: string; // We will store the RAW ISO string here mostly, or formatted
+  last_message_time: string;
   unread_count: number;
   other_person_role?: string; 
 }
@@ -64,7 +64,7 @@ interface Conversation {
 interface Message {
   sender_id: number;
   content: string;
-  time: string; // Display time (10:30 AM)
+  time: string;
 }
 
 const MessagesPage: React.FC = () => {
@@ -88,7 +88,12 @@ const MessagesPage: React.FC = () => {
   useEffect(() => {
     fetchConversations();
     
-    const newSocket = io(SOCKET_URL);
+    // ✅ FIX: Add withCredentials for Cross-Site support on Render
+    const newSocket = io(SOCKET_URL, {
+        withCredentials: true,
+        transports: ["websocket", "polling"] // Ensure fallback support
+    });
+    
     setSocket(newSocket);
     
     return () => { newSocket.disconnect(); };
@@ -122,7 +127,7 @@ const MessagesPage: React.FC = () => {
          setMessageList((list) => [...list, newMessage]);
       }
       
-      // Update sidebar preview with WhatsApp style date (Today = Time)
+      // Update sidebar preview
       const sidebarTime = formatDateForSidebar(new Date().toISOString());
 
       setConversations(prev => prev.map(conv => 
@@ -147,7 +152,6 @@ const MessagesPage: React.FC = () => {
     try {
       const response = await axiosInstance.get("/messages/conversations");
       
-      // ✅ Apply WhatsApp Formatting to Sidebar
       const formattedConversations = response.data.map((conv: any) => ({
         ...conv,
         last_message_time: formatDateForSidebar(conv.last_message_time)
@@ -171,7 +175,6 @@ const MessagesPage: React.FC = () => {
       const history = res.data.map((msg: any) => ({
         sender_id: msg.sender_id,
         content: msg.content,
-        // Chat bubbles just show Time (HH:MM)
         time: msg.sent_at 
             ? new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
             : "" 
@@ -200,15 +203,17 @@ const MessagesPage: React.FC = () => {
     const timeNowRaw = new Date();
     const timeForBubble = timeNowRaw.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
-    // Current time for the sidebar (Just now = Time)
+    // Current time for the sidebar
     const timeForSidebar = formatDateForSidebar(timeNowRaw.toISOString());
+
+    const activeConv = conversations.find(c => c.conversation_id === activeConversation);
 
     const messageData = {
       room: activeConversation,
       message: currentMessage,
       senderId: myUserId,
       recipientId: activeConv?.other_person_id,
-      time: timeNowRaw.toISOString(), // Send ISO to socket for accuracy
+      time: timeNowRaw.toISOString(),
     };
 
     socket.emit("send_message", messageData);
