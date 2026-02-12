@@ -26,7 +26,7 @@ export const getClientProgress = async (req: Request, res: Response) => {
         const workoutCountQuery = `
             SELECT 
                 cpl.log_date::text as date,
-                COUNT(wl.id) as total_workouts
+                COUNT(wl.log_id) as total_workouts
             FROM client_progress_logs cpl
             LEFT JOIN workout_logs wl 
                 ON wl.client_id = $1 
@@ -92,7 +92,7 @@ export const logWeight = async (req: Request, res: Response) => {
 
         // Check if entry already exists for this date
         const checkQuery = `
-            SELECT id FROM client_progress_logs 
+            SELECT log_id FROM client_progress_logs 
             WHERE user_id = $1 AND log_date = $2
         `;
         const existing = await pool.query(checkQuery, [userId, logDate]);
