@@ -83,33 +83,29 @@ export const deleteAdmin = asyncHandler(async (req: Request, res: Response) => {
 })
 
 
+
+
 export const getOverviewStats = async (req: Request, res: Response) => {
   try {
-    // Run all queries in parallel
-    const [clients, instructors, dieticians] = await Promise.all([
-      pool.query("SELECT COUNT(*) AS total_clients FROM users WHERE role_id = 5"),
-      pool.query("SELECT COUNT(*) AS total_instructors FROM users WHERE role_id = 3"),
-      pool.query("SELECT COUNT(*) AS total_dieticians FROM users WHERE role_id = 4"),
+    // Run all queries in parallel for performance
+    const [clientsRes, instructorsRes, dieticiansRes, allUsersRes] = await Promise.all([
+      pool.query("SELECT COUNT(*) AS count FROM users WHERE role_id = 5"), // Clients
+      pool.query("SELECT COUNT(*) AS count FROM users WHERE role_id = 3"), // Instructors
+      pool.query("SELECT COUNT(*) AS count FROM users WHERE role_id = 4"), // Dieticians
+      pool.query("SELECT COUNT(*) AS count FROM users")                    // All Users
     ]);
 
-    // Combine instructor + dietician counts as "verified experts"
-    const totalClients = parseInt(clients.rows[0].total_clients, 10);
-    const verifiedExperts =
-      parseInt(instructors.rows[0].total_instructors, 10) +
-      parseInt(dieticians.rows[0].total_dieticians, 10);
-
-    // If you have an approval column (e.g., is_verified / approved)
-    // use it here; otherwise simulate for now:
-    const pendingApprovals = 7;
-
-    // If you don’t have workout streak tracking, we’ll simulate this too:
-    const avgWorkoutStreak = 5.2;
+    // Parse counts (Postgres returns counts as strings)
+    const totalClients = parseInt(clientsRes.rows[0].count, 10);
+    const totalInstructors = parseInt(instructorsRes.rows[0].count, 10);
+    const totalDieticians = parseInt(dieticiansRes.rows[0].count, 10);
+    const totalUsers = parseInt(allUsersRes.rows[0].count, 10);
 
     res.json({
       totalClients,
-      verifiedExperts,
-      pendingApprovals,
-      avgStreak: avgWorkoutStreak,
+      verifiedExperts: totalInstructors,   // Mapped to Instructors
+      pendingApprovals: totalDieticians,   // Mapped to Dieticians
+      avgStreak: totalUsers                // Mapped to All Users
     });
   } catch (err) {
     console.error("Error fetching overview stats:", err);
