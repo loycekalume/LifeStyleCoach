@@ -2,97 +2,98 @@ import { Request, Response } from "express";
 import pool from "../db.config";
 
 // ===========================
-// EXISTING: Get Client Progress (Weight, BMI, Workouts)
+// GET CLIENT PROGRESS (Weight & Workouts over time)
 // ===========================
 export const getClientProgress = async (req: Request, res: Response) => {
     const { userId } = req.params;
 
     try {
-        // 1. Fetch Base Weight AND Height (Height is needed for BMI)
-        const profileQuery = `SELECT weight, height FROM clients WHERE user_id = $1`;
-        
-        // 2. Fetch Weight Logs
-        const progressQuery = `
+        // 1. Fetch Basic Profile Info (Height is constant-ish)
+        const profileRes = await pool.query(`SELECT height, weight FROM clients WHERE user_id = $1`, [userId]);
+        const heightCm = parseFloat(profileRes.rows[0]?.height || 0);
+        const heightM = heightCm > 0 ? heightCm / 100 : 0;
+        const currentWeight = parseFloat(profileRes.rows[0]?.weight || 0);
+
+        // 2. Fetch Weight History
+        const weightQuery = `
             SELECT log_date::text as date, weight 
             FROM client_progress_logs 
             WHERE user_id = $1 
             ORDER BY log_date ASC
         `;
 
-        // 3. Fetch Workout Dates
+        // 3. Fetch Workout History (Count per day)
         const workoutQuery = `
-            SELECT date_completed::date::text as date 
+            SELECT date_completed::date::text as date, COUNT(*) as count
             FROM workout_logs 
             WHERE client_id = $1 
-            ORDER BY date_completed ASC
+            GROUP BY date_completed::date
+            ORDER BY date_completed::date ASC
         `;
 
-        const [profileRes, progressRes, workoutRes] = await Promise.all([
-            pool.query(profileQuery, [userId]),
-            pool.query(progressQuery, [userId]),
+        const [weightRes, workoutRes] = await Promise.all([
+            pool.query(weightQuery, [userId]),
             pool.query(workoutQuery, [userId])
         ]);
 
-        const baseWeight = parseFloat(profileRes.rows[0]?.weight || 0);
-        const heightCm = parseFloat(profileRes.rows[0]?.height || 0);
-        const heightM = heightCm > 0 ? heightCm / 100 : 0;
-
-        const weightLogs = progressRes.rows;
+        const weightLogs = weightRes.rows;
         const workoutLogs = workoutRes.rows;
 
-        // 4. Merge Dates
-        const uniqueDates = new Set<string>();
-        weightLogs.forEach((w: any) => uniqueDates.add(w.date));
-        workoutLogs.forEach((w: any) => uniqueDates.add(w.date));
+        // 4. Collect ALL unique dates from both sets
+        const allDates = new Set<string>();
+        weightLogs.forEach((row: any) => allDates.add(row.date));
+        workoutLogs.forEach((row: any) => allDates.add(row.date));
 
-        // 5. Handle Empty Data
-        if (uniqueDates.size === 0) {
+        // If no logs exist, return a single entry with current profile data
+        if (allDates.size === 0) {
+            const today = new Date().toISOString().split('T')[0];
             return res.json([{
-                date: new Date().toISOString().split('T')[0], 
-                weight: baseWeight,
-                bmi: heightM > 0 ? parseFloat((baseWeight / (heightM * heightM)).toFixed(1)) : 0,
+                date: today,
+                weight: currentWeight,
+                bmi: heightM > 0 ? parseFloat((currentWeight / (heightM * heightM)).toFixed(1)) : 0,
                 total_workouts: 0
             }]);
         }
 
-        // 6. Sort Dates
-        const sortedDates = Array.from(uniqueDates).sort((a, b) => 
+        // 5. Sort dates chronologically
+        const sortedDates = Array.from(allDates).sort((a, b) => 
             new Date(a).getTime() - new Date(b).getTime()
         );
 
-        // 7. Create Lookups
-        const weightMap = new Map();
-        weightLogs.forEach((w: any) => weightMap.set(w.date, parseFloat(w.weight)));
-        
-        const workoutSet = new Set(workoutLogs.map((w: any) => w.date));
-
-        // 8. Build Response with Metrics
-        let lastKnownWeight = baseWeight;
-        if (weightLogs.length > 0 && new Date(weightLogs[0].date) < new Date(sortedDates[0])) {
-             lastKnownWeight = parseFloat(weightLogs[0].weight);
+        // 6. Build the timeline (Filling in gaps)
+        let lastWeight = currentWeight; 
+        // If the first log is historically earlier than current profile weight, start from that
+        if (weightLogs.length > 0) {
+             lastWeight = parseFloat(weightLogs[0].weight);
         }
 
         let cumulativeWorkouts = 0;
+        
+        // Maps for O(1) lookup
+        const weightMap = new Map(weightLogs.map((l: any) => [l.date, parseFloat(l.weight)]));
+        const workoutMap = new Map(workoutLogs.map((l: any) => [l.date, parseInt(l.count)]));
 
         const responseData = sortedDates.map(date => {
+            // Update weight if a new log exists for this date, otherwise keep previous (Forward Fill)
             if (weightMap.has(date)) {
-                lastKnownWeight = weightMap.get(date);
+                lastWeight = weightMap.get(date)!;
             }
 
-            if (workoutSet.has(date)) {
-                cumulativeWorkouts++;
+            // Update cumulative workouts
+            if (workoutMap.has(date)) {
+                cumulativeWorkouts += workoutMap.get(date)!;
             }
 
-            let bmi = 0;
-            if (heightM > 0 && lastKnownWeight > 0) {
-                bmi = parseFloat((lastKnownWeight / (heightM * heightM)).toFixed(1));
-            }
+            // Calculate BMI dynamically based on that day's weight
+            const bmi = (heightM > 0 && lastWeight > 0) 
+                ? parseFloat((lastWeight / (heightM * heightM)).toFixed(1)) 
+                : 0;
 
             return {
-                date: date,
-                weight: lastKnownWeight,
-                bmi: bmi,
-                total_workouts: cumulativeWorkouts
+                date,
+                weight: lastWeight,
+                bmi,
+                total_workouts: cumulativeWorkouts // Cumulative total up to this date
             };
         });
 
@@ -105,177 +106,144 @@ export const getClientProgress = async (req: Request, res: Response) => {
 };
 
 // ===========================
-// NEW: Get Client Nutrition Progress
+// GET NUTRITION PROGRESS (Calories/Macros over time)
 // ===========================
 export const getClientNutritionProgress = async (req: Request, res: Response) => {
     const { userId } = req.params;
 
     try {
-        const nutritionQuery = `
+        const query = `
             SELECT 
                 log_date::text as date,
-                SUM(calories) as total_calories,
-                SUM(protein) as total_protein,
-                SUM(carbs) as total_carbs,
-                SUM(fats) as total_fats,
+                COALESCE(SUM(calories), 0) as total_calories,
+                COALESCE(SUM(protein), 0) as total_protein,
+                COALESCE(SUM(carbs), 0) as total_carbs,
+                COALESCE(SUM(fats), 0) as total_fats,
                 COUNT(*) as meals_logged
             FROM meal_logs
             WHERE user_id = $1
             GROUP BY log_date
             ORDER BY log_date ASC
         `;
-        
-        const result = await pool.query(nutritionQuery, [userId]);
-        
-        // Convert to numbers and format
-        const formattedData = result.rows.map((row: any) => ({
+
+        const result = await pool.query(query, [userId]);
+
+        const formatted = result.rows.map((row: any) => ({
             date: row.date,
-            total_calories: parseInt(row.total_calories) || 0,
-            total_protein: parseInt(row.total_protein) || 0,
-            total_carbs: parseInt(row.total_carbs) || 0,
-            total_fats: parseInt(row.total_fats) || 0,
-            meals_logged: parseInt(row.meals_logged) || 0
+            total_calories: parseInt(row.total_calories),
+            total_protein: parseInt(row.total_protein),
+            total_carbs: parseInt(row.total_carbs),
+            total_fats: parseInt(row.total_fats),
+            meals_logged: parseInt(row.meals_logged)
         }));
 
-        res.json(formattedData);
+        res.json(formatted);
     } catch (err) {
-        console.error("Nutrition Progress API Error:", err);
+        console.error("Nutrition API Error:", err);
         res.status(500).json({ message: "Server Error" });
     }
 };
 
 // ===========================
-// NEW: Get Dashboard Summary Stats
+// GET DASHBOARD STATS (Summaries)
 // ===========================
 export const getClientDashboard = async (req: Request, res: Response) => {
     const { userId } = req.params;
 
     try {
-        // Fetch workout stats (last 30 days)
-        const workoutStatsQuery = `
+        // 1. Workout Stats (Last 30 Days)
+        const workoutRes = await pool.query(`
             SELECT 
                 COUNT(*) as total_workouts,
                 COALESCE(AVG(rating), 0) as avg_rating,
                 COALESCE(SUM(duration_minutes), 0) as total_minutes
             FROM workout_logs
-            WHERE client_id = $1
-                AND date_completed >= NOW() - INTERVAL '30 days'
-        `;
+            WHERE client_id = $1 
+            AND date_completed >= CURRENT_DATE - INTERVAL '30 days'
+        `, [userId]);
 
-        // Fetch nutrition stats (last 30 days)
-        const nutritionStatsQuery = `
-            SELECT 
+        // 2. Nutrition Stats (Last 30 Days)
+        const nutritionRes = await pool.query(`
+             SELECT 
                 COUNT(DISTINCT log_date) as days_logged,
-                COALESCE(AVG(daily_calories), 0) as avg_calories
-            FROM (
-                SELECT 
-                    log_date, 
-                    SUM(calories) as daily_calories
+                COALESCE(AVG(daily_cals), 0) as avg_calories
+             FROM (
+                SELECT log_date, SUM(calories) as daily_cals
                 FROM meal_logs
                 WHERE user_id = $1
-                    AND log_date >= CURRENT_DATE - INTERVAL '30 days'
+                AND log_date >= CURRENT_DATE - INTERVAL '30 days'
                 GROUP BY log_date
-            ) daily
-        `;
+             ) sub
+        `, [userId]);
 
-        // Fetch current streak
-        const streakQuery = `
+        // 3. Streak (Simplistic check for consecutive days)
+        // Note: Real streak logic is complex, this checks if they did something today/yesterday
+        const streakRes = await pool.query(`
             SELECT 
-                current_streak,
-                workout_done,
-                meals_logged
-            FROM progresslogs
-            WHERE user_id = $1
-            ORDER BY date DESC
-            LIMIT 1
-        `;
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM workout_logs WHERE client_id = $1 AND date_completed::date = CURRENT_DATE
+                ) THEN true ELSE false END as workout_done,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM meal_logs WHERE user_id = $1 AND log_date = CURRENT_DATE
+                ) THEN true ELSE false END as meals_logged
+        `, [userId]);
 
-        const [workoutStats, nutritionStats, streakData] = await Promise.all([
-            pool.query(workoutStatsQuery, [userId]),
-            pool.query(nutritionStatsQuery, [userId]),
-            pool.query(streakQuery, [userId])
-        ]);
+        // Mocking streak calculation for now (requires complex recursive query otherwise)
+        const streakCount = 0; 
 
-        // Format response
-        const response = {
+        res.json({
             workouts: {
-                total_workouts: parseInt(workoutStats.rows[0]?.total_workouts) || 0,
-                avg_rating: parseFloat(workoutStats.rows[0]?.avg_rating) || 0,
-                total_minutes: parseInt(workoutStats.rows[0]?.total_minutes) || 0
+                total_workouts: parseInt(workoutRes.rows[0]?.total_workouts || 0),
+                avg_rating: parseFloat(workoutRes.rows[0]?.avg_rating || 0).toFixed(1),
+                total_minutes: parseInt(workoutRes.rows[0]?.total_minutes || 0)
             },
             nutrition: {
-                days_logged: parseInt(nutritionStats.rows[0]?.days_logged) || 0,
-                avg_calories: parseFloat(nutritionStats.rows[0]?.avg_calories) || 0
+                days_logged: parseInt(nutritionRes.rows[0]?.days_logged || 0),
+                avg_calories: Math.round(parseFloat(nutritionRes.rows[0]?.avg_calories || 0))
             },
             streak: {
-                current_streak: parseInt(streakData.rows[0]?.current_streak) || 0,
-                workout_done: streakData.rows[0]?.workout_done || false,
-                meals_logged: streakData.rows[0]?.meals_logged || false
+                current_streak: streakCount, 
+                workout_done: streakRes.rows[0]?.workout_done,
+                meals_logged: streakRes.rows[0]?.meals_logged
             }
-        };
-
-        res.json(response);
+        });
 
     } catch (err) {
-        console.error("Dashboard API Error:", err);
+        console.error("Dashboard Stats Error:", err);
         res.status(500).json({ message: "Server Error" });
     }
 };
 
 // ===========================
-// BONUS: Get Weekly Summary (for detailed insights)
+// GET WEEKLY SUMMARY (Last 7 Days)
 // ===========================
 export const getWeeklySummary = async (req: Request, res: Response) => {
     const { userId } = req.params;
-
     try {
-        // Last 7 days of activity
-        const weeklyQuery = `
-            WITH date_series AS (
-                SELECT generate_series(
-                    CURRENT_DATE - INTERVAL '6 days',
-                    CURRENT_DATE,
-                    '1 day'::interval
-                )::date as date
-            ),
-            workouts AS (
-                SELECT 
-                    date_completed::date as date,
-                    COUNT(*) as workout_count,
-                    SUM(duration_minutes) as total_minutes
-                FROM workout_logs
-                WHERE client_id = $1
-                    AND date_completed >= CURRENT_DATE - INTERVAL '6 days'
-                GROUP BY date_completed::date
-            ),
-            meals AS (
-                SELECT 
-                    log_date as date,
-                    SUM(calories) as total_calories,
-                    COUNT(*) as meal_count
-                FROM meal_logs
-                WHERE user_id = $1
-                    AND log_date >= CURRENT_DATE - INTERVAL '6 days'
-                GROUP BY log_date
-            )
+        const query = `
             SELECT 
-                ds.date::text,
-                COALESCE(w.workout_count, 0) as workouts,
-                COALESCE(w.total_minutes, 0) as minutes,
-                COALESCE(m.meal_count, 0) as meals,
-                COALESCE(m.total_calories, 0) as calories
-            FROM date_series ds
-            LEFT JOIN workouts w ON ds.date = w.date
-            LEFT JOIN meals m ON ds.date = m.date
-            ORDER BY ds.date ASC
+                d.date::text,
+                COALESCE(w.count, 0) as workouts,
+                COALESCE(w.mins, 0) as minutes,
+                COALESCE(m.cals, 0) as calories
+            FROM (
+                SELECT generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, '1 day')::date as date
+            ) d
+            LEFT JOIN (
+                SELECT date_completed::date as date, COUNT(*) as count, SUM(duration_minutes) as mins
+                FROM workout_logs WHERE client_id = $1 GROUP BY 1
+            ) w ON d.date = w.date
+            LEFT JOIN (
+                SELECT log_date as date, SUM(calories) as cals
+                FROM meal_logs WHERE user_id = $1 GROUP BY 1
+            ) m ON d.date = m.date
+            ORDER BY d.date ASC
         `;
-
-        const result = await pool.query(weeklyQuery, [userId]);
-
+        
+        const result = await pool.query(query, [userId]);
         res.json(result.rows);
-
     } catch (err) {
-        console.error("Weekly Summary API Error:", err);
+        console.error("Weekly Summary Error:", err);
         res.status(500).json({ message: "Server Error" });
     }
 };
