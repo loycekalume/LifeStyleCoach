@@ -9,8 +9,8 @@ export const getClientProgress = async (req: Request, res: Response) => {
     const { userId } = req.params;
 
     try {
-        // 1. Fetch Height for BMI calculation
-        const profileQuery = `SELECT height FROM clients WHERE user_id = $1`;
+        // 1. Fetch current weight and height from clients table
+        const profileQuery = `SELECT weight, height FROM clients WHERE user_id = $1`;
         
         // 2. Fetch ACTUAL Weight Logs (only dates where weight was logged)
         const progressQuery = `
@@ -22,7 +22,7 @@ export const getClientProgress = async (req: Request, res: Response) => {
             ORDER BY log_date ASC
         `;
 
-        // 3. Count workouts up to each weight log date
+        // 3. Count workouts up to each date
         const workoutCountQuery = `
             SELECT 
                 cpl.log_date::text as date,
@@ -42,6 +42,7 @@ export const getClientProgress = async (req: Request, res: Response) => {
             pool.query(workoutCountQuery, [userId])
         ]);
 
+        const currentWeight = parseFloat(profileRes.rows[0]?.weight || 0);
         const heightCm = parseFloat(profileRes.rows[0]?.height || 0);
         const heightM = heightCm > 0 ? heightCm / 100 : 0;
 
@@ -50,7 +51,25 @@ export const getClientProgress = async (req: Request, res: Response) => {
             workoutCountRes.rows.map((row: any) => [row.date, parseInt(row.total_workouts)])
         );
 
-        // 4. Calculate BMI for each weight entry
+        // 4. If no weight logs exist, create initial entry with current weight from clients table
+        if (weightLogs.length === 0 && currentWeight > 0) {
+            // Get total workouts for today
+            const todayWorkouts = await pool.query(
+                `SELECT COUNT(*) as count FROM workout_logs WHERE client_id = $1`,
+                [userId]
+            );
+            
+            const bmi = heightM > 0 ? parseFloat((currentWeight / (heightM * heightM)).toFixed(1)) : 0;
+            
+            return res.json([{
+                date: new Date().toISOString().split('T')[0],
+                weight: currentWeight,
+                bmi: bmi,
+                total_workouts: parseInt(todayWorkouts.rows[0]?.count || 0)
+            }]);
+        }
+
+        // 5. Calculate BMI for each weight entry
         const responseData = weightLogs.map((log: any) => {
             const weight = parseFloat(log.weight);
             let bmi = 0;
@@ -97,19 +116,16 @@ export const logWeight = async (req: Request, res: Response) => {
         `;
         const existing = await pool.query(checkQuery, [userId, logDate]);
 
+        let result;
         if (existing.rows.length > 0) {
             // Update existing entry
             const updateQuery = `
                 UPDATE client_progress_logs 
-                SET weight = $1, updated_at = NOW()
+                SET weight = $1, created_at = NOW()
                 WHERE user_id = $2 AND log_date = $3
                 RETURNING *
             `;
-            const result = await pool.query(updateQuery, [weight, userId, logDate]);
-            return res.json({ 
-                message: "Weight updated successfully", 
-                data: result.rows[0] 
-            });
+            result = await pool.query(updateQuery, [weight, userId, logDate]);
         } else {
             // Insert new entry
             const insertQuery = `
@@ -117,12 +133,26 @@ export const logWeight = async (req: Request, res: Response) => {
                 VALUES ($1, $2, $3)
                 RETURNING *
             `;
-            const result = await pool.query(insertQuery, [userId, logDate, weight]);
-            return res.json({ 
-                message: "Weight logged successfully", 
-                data: result.rows[0] 
-            });
+            result = await pool.query(insertQuery, [userId, logDate, weight]);
         }
+
+        // ✅ ALSO UPDATE clients table with the latest weight
+        // Only update if this is the most recent log date
+        const updateClientQuery = `
+            UPDATE clients 
+            SET weight = $1
+            WHERE user_id = $2
+            AND NOT EXISTS (
+                SELECT 1 FROM client_progress_logs 
+                WHERE user_id = $2 AND log_date > $3
+            )
+        `;
+        await pool.query(updateClientQuery, [weight, userId, logDate]);
+
+        return res.json({ 
+            message: existing.rows.length > 0 ? "Weight updated successfully" : "Weight logged successfully", 
+            data: result.rows[0] 
+        });
 
     } catch (err) {
         console.error("Log Weight API Error:", err);
@@ -204,24 +234,75 @@ export const getClientDashboard = async (req: Request, res: Response) => {
             ) daily
         `;
 
-        // Fetch current streak
+        // ✅ UNIFIED STREAK CALCULATION (Same as goals controller)
         const streakQuery = `
-            SELECT 
-                current_streak,
-                workout_done,
-                meals_logged
-            FROM progresslogs
-            WHERE user_id = $1
-            ORDER BY date DESC
-            LIMIT 1
+            WITH combined_activity AS (
+                SELECT log_date as activity_date FROM meal_logs WHERE user_id = $1
+                UNION
+                SELECT date_completed::date as activity_date FROM workout_logs WHERE client_id = $1
+            ),
+            distinct_dates AS (
+                SELECT DISTINCT activity_date 
+                FROM combined_activity 
+                WHERE activity_date <= CURRENT_DATE
+            ),
+            groups AS (
+                SELECT activity_date, 
+                       activity_date - (ROW_NUMBER() OVER (ORDER BY activity_date))::integer AS grp
+                FROM distinct_dates
+            )
+            SELECT COUNT(*) as streak_days
+            FROM groups
+            WHERE grp = (
+                SELECT grp FROM groups ORDER BY activity_date DESC LIMIT 1
+            )
         `;
 
-        const [workoutStats, nutritionStats, streakData] = await Promise.all([
+        // Check if streak is alive (Activity today or yesterday?)
+        const lastActivityQuery = `
+            SELECT MAX(d) as last_date FROM (
+                SELECT log_date as d FROM meal_logs WHERE user_id = $1
+                UNION
+                SELECT date_completed::date as d FROM workout_logs WHERE client_id = $1
+            ) as recent
+        `;
+
+        const [workoutStats, nutritionStats, lastActivity] = await Promise.all([
             pool.query(workoutStatsQuery, [userId]),
             pool.query(nutritionStatsQuery, [userId]),
-            pool.query(streakQuery, [userId])
+            pool.query(lastActivityQuery, [userId])
         ]);
 
+        // Calculate current streak
+        let currentStreak = 0;
+        const lastDate = lastActivity.rows[0]?.last_date ? new Date(lastActivity.rows[0].last_date) : null;
+        
+        if (lastDate) {
+            const today = new Date();
+            const yesterday = new Date();
+            yesterday.setDate(today.getDate() - 1);
+            
+            // Normalize dates to YYYY-MM-DD format for comparison
+            const lastDateStr = lastDate.toISOString().split('T')[0];
+            const todayStr = today.toISOString().split('T')[0];
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            const isRecent = lastDateStr === todayStr || lastDateStr === yesterdayStr;
+
+            if (isRecent) {
+                const streakRes = await pool.query(streakQuery, [userId]);
+                currentStreak = parseInt(streakRes.rows[0]?.streak_days || "0");
+            }
+        }
+
+        // Check today's activity
+        const todayCheck = await pool.query(`
+            SELECT 
+                EXISTS(SELECT 1 FROM workout_logs WHERE client_id = $1 AND date_completed::date = CURRENT_DATE) as workout_done,
+                EXISTS(SELECT 1 FROM meal_logs WHERE user_id = $1 AND log_date = CURRENT_DATE) as meals_logged
+        `, [userId]);
+
+        // Format response
         const response = {
             workouts: {
                 total_workouts: parseInt(workoutStats.rows[0]?.total_workouts) || 0,
@@ -233,9 +314,9 @@ export const getClientDashboard = async (req: Request, res: Response) => {
                 avg_calories: parseFloat(nutritionStats.rows[0]?.avg_calories) || 0
             },
             streak: {
-                current_streak: parseInt(streakData.rows[0]?.current_streak) || 0,
-                workout_done: streakData.rows[0]?.workout_done || false,
-                meals_logged: streakData.rows[0]?.meals_logged || false
+                current_streak: currentStreak,
+                workout_done: todayCheck.rows[0]?.workout_done || false,
+                meals_logged: todayCheck.rows[0]?.meals_logged || false
             }
         };
 
