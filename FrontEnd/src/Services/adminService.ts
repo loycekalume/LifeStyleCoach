@@ -1,66 +1,44 @@
-// src/Services/adminService.ts
-import axios from "axios";
+import axiosInstance from "../utils/axiosInstance"; // ✅ Import your configured instance
 
-const API_URL = import.meta.env.VITE_API_URL ;
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+// Note: No need to manually get the token or pass it as an argument anymore.
+// axiosInstance handles credentials (cookies/headers) automatically.
 
 export const getUserEngagement = async () => {
-  const res = await axios.get(`${API_URL}/admin/engagement`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await axiosInstance.get("/admin/engagement");
   return res.data;
 };
 
 export const getDashboardStats = async () => {
-  const res = await axios.get(`${API_URL}/admin/stats`, {
-    headers: getAuthHeaders(),
-  });
+  const res = await axiosInstance.get("/admin/stats");
   return res.data;
 };
 
-
-export const getOverview = async (token: string) => {
-  const res = await axios.get(`${API_URL}/admin/overview`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const getOverview = async () => {
+  const res = await axiosInstance.get("/admin/overview");
   return res.data;
 };
 
-export const getAllUsers = async (token: string) => {
-  const res = await axios.get(`${API_URL}/admin/users`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.data;
-}
-
-export const getInstructors = async (token: string) => {
-  const res = await axios.get(`${API_URL}/users/instructors`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const getAllUsers = async () => {
+  const res = await axiosInstance.get("/admin/users");
   return res.data;
 };
 
-export const getDieticians = async (token: string) => {
-  const res = await axios.get(`${API_URL}/users/dieticians`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const getInstructors = async () => {
+  const res = await axiosInstance.get("/users/instructors");
   return res.data;
 };
 
-export const getClients = async (token: string) => {
-  const res = await axios.get(`${API_URL}/users/clients`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const getDieticians = async () => {
+  const res = await axiosInstance.get("/users/dieticians");
   return res.data;
 };
 
-export const toggleUserStatus = async (token: string, userId: number) => {
-  const res = await axios.patch(`${API_URL}/users/${userId}/toggle-active`, {}, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const getClients = async () => {
+  const res = await axiosInstance.get("/users/clients");
+  return res.data;
+};
+
+export const toggleUserStatus = async (userId: number) => {
+  const res = await axiosInstance.patch(`/users/${userId}/toggle-active`);
   return res.data;
 };

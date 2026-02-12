@@ -43,19 +43,9 @@ const Sidebar: React.FC = () => {
             <i className="fas fa-user-friends" /> Clients
           </NavLink>
 
-          <NavLink
-            to="/admin/community"
-            className={({ isActive }) => (isActive ? "active" : "")}
-          >
-            <i className="fas fa-comments" /> Community
-          </NavLink>
+         
 
-          <NavLink
-            to="/admin/ai-insights"
-            className={({ isActive }) => (isActive ? "active" : "")}
-          >
-            <i className="fas fa-robot" /> AI Insights
-          </NavLink>
+         
 
           <NavLink
             to="/admin/settings"

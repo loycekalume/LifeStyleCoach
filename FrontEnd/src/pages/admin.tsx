@@ -1,15 +1,14 @@
-// src/components/admin/AdminDashboard.tsx
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/admin/sidebar";
 import Topbar from "../components/admin/topBar";
 import OverviewCards from "../components/admin/overview";
-import EngagementChart from "../components/admin/engagement";
+import EngagementChart from "../components/admin/engagement"; 
 import AIStats from "../components/admin/aiStats";
 import UserTable from "../components/admin/userTable";
 import { getUserEngagement } from "../Services/adminService";
-
 import "../styles/admin.css";
 
+// Type definition matches the backend response exactly
 type EngagementPayload = {
   labels: string[];
   mealLogs: number[];
@@ -19,48 +18,76 @@ type EngagementPayload = {
 
 const AdminDashboard: React.FC = () => {
   const [engagement, setEngagement] = useState<EngagementPayload | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       try {
+        setLoading(true);
         const res = await getUserEngagement();
-setEngagement(res);
+        
+        // If API returns valid data, use it
+        if (res && res.labels) {
+            setEngagement(res);
+        }
       } catch (err) {
-        // fallback demo data
+        console.error("Failed to fetch engagement stats, using fallback", err);
+        // Fallback demo data if API fails or backend isn't ready
         setEngagement({
           labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-          mealLogs: [20, 35, 30, 40, 45, 25, 15],
-          workouts: [15, 20, 25, 30, 35, 20, 10],
-          newUsers: [5, 8, 6, 10, 12, 4, 3],
+          mealLogs: [0, 0, 0, 0, 0, 0, 0],
+          workouts: [0, 0, 0, 0, 0, 0, 0],
+          newUsers: [0, 0, 0, 0, 0, 0, 0],
         });
+      } finally {
+        setLoading(false);
       }
     };
-    fetch();
+
+    fetchData();
   }, []);
 
   return (
     <div className="dashboard-container">
       <Sidebar />
+      
       <main className="main-content1">
         <Topbar />
+        
+        {/* Key Metrics Cards */}
         <OverviewCards />
 
         <section className="analytics">
-          <div className="dashboard-section">
-            <h3>User Engagement Overview</h3>
-            {engagement && (
-              <EngagementChart
-                labels={engagement.labels}
-                mealLogs={engagement.mealLogs}
-                workouts={engagement.workouts}
-                newUsers={engagement.newUsers}
-              />
-            )}
+          {/* Engagement Chart Section */}
+          <div className="dashboard-section card-box">
+            <div className="section-header">
+              <h3>User Engagement Overview</h3>
+              <select className="time-filter">
+                <option>Last 7 Days</option>
+              </select>
+            </div>
+            
+            <div className="chart-wrapper">
+              {loading ? (
+                <div className="loading-chart">Loading statistics...</div>
+              ) : engagement ? (
+                <EngagementChart
+                  labels={engagement.labels}
+                  mealLogs={engagement.mealLogs}
+                  workouts={engagement.workouts}
+                  newUsers={engagement.newUsers}
+                />
+              ) : (
+                <p>No data available</p>
+              )}
+            </div>
           </div>
 
+          {/* AI Stats / Side Panel */}
           <AIStats />
         </section>
 
+        {/* Recent Users Table */}
         <UserTable />
       </main>
     </div>

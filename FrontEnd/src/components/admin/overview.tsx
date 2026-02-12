@@ -10,31 +10,47 @@ type OverviewData = {
 
 const OverviewCards: React.FC = () => {
   const [stats, setStats] = useState<OverviewData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
+    const fetchStats = async () => {
       try {
-        const data = await getOverview(token);
-        setStats(data);
+        setLoading(true);
+        // ✅ No token needed here anymore
+        const data = await getOverview(); 
+        
+        // Ensure data is valid before setting state
+        if (data && typeof data === 'object') {
+            setStats(data);
+        }
       } catch (err) {
         console.error("Failed to fetch overview stats:", err);
+        // Fallback data for demo/error state
         setStats({
-          totalClients: 1504,
-          verifiedExperts: 85,
-          pendingApprovals: 7,
-          avgStreak: "5.2 Days",
+          totalClients: 0,
+          verifiedExperts: 0,
+          pendingApprovals: 0,
+          avgStreak: "0 Days",
         });
+      } finally {
+        setLoading(false);
       }
     };
-    fetch();
+
+    fetchStats();
   }, []);
 
-  if (!stats) return <p>Loading...</p>;
+  const fmt = (v: number | string | undefined) =>
+    (typeof v === "number" ? v.toLocaleString() : v) || 0;
 
-  const fmt = (v: number | string) =>
-    typeof v === "number" ? v.toLocaleString() : v;
+  if (loading) {
+      return (
+        <section className="overview">
+            <h1>System Overview</h1>
+            <p style={{ color: "#666" }}>Loading stats...</p>
+        </section>
+      );
+  }
 
   return (
     <section className="overview">
@@ -45,7 +61,7 @@ const OverviewCards: React.FC = () => {
             <i className="fas fa-user-friends" />
           </div>
           <div className="card-info">
-            <h3>{fmt(stats.totalClients)}</h3>
+            <h3>{fmt(stats?.totalClients)}</h3>
             <p>Total Clients</p>
           </div>
         </div>
@@ -55,7 +71,7 @@ const OverviewCards: React.FC = () => {
             <i className="fas fa-certificate" />
           </div>
           <div className="card-info">
-            <h3>{fmt(stats.verifiedExperts)}</h3>
+            <h3>{fmt(stats?.verifiedExperts)}</h3>
             <p>Verified Experts</p>
           </div>
         </div>
@@ -65,7 +81,7 @@ const OverviewCards: React.FC = () => {
             <i className="fas fa-hourglass-half" />
           </div>
           <div className="card-info">
-            <h3>{fmt(stats.pendingApprovals)}</h3>
+            <h3>{fmt(stats?.pendingApprovals)}</h3>
             <p>Pending Approvals</p>
           </div>
         </div>
@@ -75,7 +91,7 @@ const OverviewCards: React.FC = () => {
             <i className="fas fa-fire" />
           </div>
           <div className="card-info">
-            <h3>{fmt(stats.avgStreak)}</h3>
+            <h3>{fmt(stats?.avgStreak)}</h3>
             <p>Avg. Workout Streak</p>
           </div>
         </div>
