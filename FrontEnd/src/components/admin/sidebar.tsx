@@ -47,12 +47,7 @@ const Sidebar: React.FC = () => {
 
          
 
-          <NavLink
-            to="/admin/settings"
-            className={({ isActive }) => (isActive ? "active" : "")}
-          >
-            <i className="fas fa-cog" /> Settings
-          </NavLink>
+          
         </nav>
       </div>
 

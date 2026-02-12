@@ -3,9 +3,9 @@ import { getOverview } from "../../Services/adminService";
 
 type OverviewData = {
   totalClients: number;
-  verifiedExperts: number;
-  pendingApprovals: number;
-  avgStreak: number | string;
+  verifiedExperts: number;   // This is now Instructors
+  pendingApprovals: number;  // This is now Dieticians
+  avgStreak: number ; // This is now All Users
 };
 
 const OverviewCards: React.FC = () => {
@@ -16,21 +16,17 @@ const OverviewCards: React.FC = () => {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        // ✅ No token needed here anymore
-        const data = await getOverview(); 
-        
-        // Ensure data is valid before setting state
+        const data = await getOverview();
         if (data && typeof data === 'object') {
             setStats(data);
         }
       } catch (err) {
         console.error("Failed to fetch overview stats:", err);
-        // Fallback data for demo/error state
         setStats({
           totalClients: 0,
           verifiedExperts: 0,
           pendingApprovals: 0,
-          avgStreak: "0 Days",
+          avgStreak: 0,
         });
       } finally {
         setLoading(false);
@@ -54,8 +50,10 @@ const OverviewCards: React.FC = () => {
 
   return (
     <section className="overview">
+
       <h1>System Overview</h1>
       <div className="cards">
+        {/* Card 1: Clients */}
         <div className="card">
           <div className="card-icon green">
             <i className="fas fa-user-friends" />
@@ -66,33 +64,39 @@ const OverviewCards: React.FC = () => {
           </div>
         </div>
 
+        {/* Card 2: Instructors */}
         <div className="card1">
           <div className="card-icon yellow">
-            <i className="fas fa-certificate" />
+            <i className="fas fa-dumbbell" />
           </div>
           <div className="card-info">
             <h3>{fmt(stats?.verifiedExperts)}</h3>
-            <p>Verified Experts</p>
+            <p>Total Instructors</p>
           </div>
         </div>
 
+        {/* Card 3: Dieticians */}
         <div className="card1">
           <div className="card-icon lightgreen">
-            <i className="fas fa-hourglass-half" />
+            <i className="fas fa-carrot" />
           </div>
           <div className="card-info">
             <h3>{fmt(stats?.pendingApprovals)}</h3>
-            <p>Pending Approvals</p>
+            <p>Total Dieticians</p>
           </div>
         </div>
 
+      
+
+        {/* Card 4: All Users */}
         <div className="card1">
           <div className="card-icon teal">
-            <i className="fas fa-fire" />
+            <i className="fas fa-users" />
           </div>
           <div className="card-info">
-            <h3>{fmt(stats?.avgStreak)}</h3>
-            <p>Avg. Workout Streak</p>
+            {/* This will now show the real count (e.g., 150) instead of 5.2 */}
+            <h3>{fmt(stats?.avgStreak)}</h3> 
+            <p>Total Users</p>
           </div>
         </div>
       </div>
