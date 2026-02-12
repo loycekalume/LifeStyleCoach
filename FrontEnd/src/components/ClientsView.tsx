@@ -119,7 +119,7 @@ const ClientsPage: React.FC = () => {
           <h1 className="page-title">
             {viewMode === 'recommended' && "Recommended Clients"}
             {viewMode === 'leads' && "My Leads (Conversations)"}
-            {viewMode === 'hired' && "My Roster (Hired)"}
+            {viewMode === 'hired' && "My Roster (Accepted)"}
           </h1>
           
           {userRole === "Instructor" && (
