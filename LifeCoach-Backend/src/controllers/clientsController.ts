@@ -153,7 +153,7 @@ export const updateClient = asyncHandler(async (req: Request, res: Response) => 
 
 
 
-export const getMatchedInstructors = asyncHandler(async (req: Request, res: Response) => {
+export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, res: Response) => {
     // 1. Get Logged-in Instructor ID from Token
     const instructorUserId = (req as any).user.user_id;
 
