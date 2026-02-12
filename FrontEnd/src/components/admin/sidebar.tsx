@@ -52,7 +52,7 @@ const Sidebar: React.FC = () => {
       </div>
 
       <div className="sidebar-footer">
-        <NavLink to="/logout">
+        <NavLink to="/login">
           <i className="fas fa-sign-out-alt" /> Logout
         </NavLink>
       </div>
