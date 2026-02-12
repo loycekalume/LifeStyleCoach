@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-// ❌ REMOVED: import axios from "axios";
-import axiosInstance from "../utils/axiosInstance"; // ✅ Use configured instance
+import axiosInstance from "../utils/axiosInstance"; 
 import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -11,7 +10,6 @@ import {
   faChalkboardTeacher,
   faFileContract,
   faAddressCard,
-  faDollarSign,
   faPlus,
   faTrashAlt,
 } from "@fortawesome/free-solid-svg-icons";
@@ -37,7 +35,7 @@ interface InstructorProfileData {
   website_url: string;
   certifications: string;
   years_of_experience: string;
- profile_title: string;
+  profile_title: string;
   coaching_mode: "onsite" | "remote" | "both" | "";
   bio: string;
   available_locations: string;
@@ -210,45 +208,48 @@ const Step4: React.FC<StepProps> = ({
 }) => (
     <>
       <h3 className="step-title">4. Pricing & Services</h3>
-      <p className="step-subtitle">Define your session types and pricing options.</p>
+      <p className="step-subtitle">Define your session types and pricing in <strong>Kenya Shillings (KSh)</strong>.</p>
 
       <div className="pricing-form">
         <div className="form-group">
           <input
             type="text"
             name="session_type"
-            placeholder="Session Type (e.g., 1-on-1, 10-Session Package)"
+            placeholder="Session Type (e.g., 1-on-1 Coaching, Monthly Plan)"
             value={newPricing.session_type}
             onChange={handlePricingChange}
-            required
+            // ❌ REMOVED required - prevents blocking submit when list is full but input is empty
           />
         </div>
         <div className="form-group-inline">
-          <div className="input-wrapper">
-            <FontAwesomeIcon icon={faDollarSign} className="input-icon" />
+          <div className="input-wrapper price-input-container">
+            {/* Currency Prefix */}
+            <span className="currency-prefix">KSh</span>
             <input
               type="number"
               name="price"
-              placeholder="Price (e.g., 75.00)"
+              className="input-with-prefix"
+              placeholder="1500"
               value={newPricing.price}
               onChange={handlePricingChange}
-              required
-              min="0.01"
-              step="0.01"
+              min="0"
+              // ❌ REMOVED required
             />
           </div>
-          <select
-            name="unit"
-            value={newPricing.unit}
-            onChange={handlePricingChange}
-            required
-          >
-            <option value="">Select Unit</option>
-            <option value="hour">/hour</option>
-            <option value="session">/session</option>
-            <option value="package">/package</option>
-            <option value="month">/month</option>
-          </select>
+          <div className="unit-select-container">
+            <select
+              name="unit"
+              value={newPricing.unit}
+              onChange={handlePricingChange}
+              // ❌ REMOVED required
+            >
+              <option value="">Select Unit</option>
+              <option value="session">/ session</option>
+              <option value="hour">/ hour</option>
+              <option value="month">/ month</option>
+              <option value="package">/ package</option>
+            </select>
+          </div>
         </div>
         <button type="button" className="btn-add-pricing" onClick={addPricingOption}>
           <FontAwesomeIcon icon={faPlus} /> Add Option
@@ -263,7 +264,12 @@ const Step4: React.FC<StepProps> = ({
           pricingOptions.map((p) => (
             <div key={p.temp_id} className="pricing-item">
               <span className="pricing-details">
-                <strong>{p.session_type}</strong> - ${Number(p.price).toFixed(2)}{p.unit ? `/${p.unit}` : ''}
+                <strong>{p.session_type}</strong> 
+                {/* Format as KSh 1,500 */}
+                <span style={{ marginLeft: '8px', color: '#00C853', fontWeight: 'bold' }}>
+                    KSh {Number(p.price).toLocaleString()} 
+                    <span style={{ color: '#666', fontSize: '0.9em', fontWeight: 'normal' }}> / {p.unit}</span>
+                </span>
               </span>
               <button
                 type="button"
@@ -284,6 +290,7 @@ const Step4: React.FC<StepProps> = ({
         <button
           type="submit" 
           className="btn-primary"
+          // We disable submit only if the pricing list is empty
           disabled={isLoading || !userId || pricingOptions.length === 0}
         >
           {isLoading ? "Submitting..." : "Complete Profile"}
@@ -362,14 +369,15 @@ const InstructorProfileWizard: React.FC = () => {
   const addPricingOption = (e: React.FormEvent) => {
     e.preventDefault(); 
     
+    // Manual validation before adding to list
     if (!newPricing.session_type || newPricing.price === "" || !newPricing.unit) {
-      setError("Please fill in all pricing fields.");
+      setError("Please fill in all pricing fields before adding.");
       return;
     }
     
     const priceValue = parseFloat(newPricing.price as string);
-    if (isNaN(priceValue)) {
-      setError("Price must be a valid number.");
+    if (isNaN(priceValue) || priceValue < 0) {
+      setError("Price must be a valid positive number.");
       return;
     }
 
@@ -379,7 +387,7 @@ const InstructorProfileWizard: React.FC = () => {
       price: newPricing.price, 
     };
     setPricingOptions((prev) => [...prev, newOption]);
-    setNewPricing({ session_type: "", price: "", unit: "" });
+    setNewPricing({ session_type: "", price: "", unit: "" }); // Clear inputs
     setError(null);
   };
 
@@ -417,6 +425,7 @@ const InstructorProfileWizard: React.FC = () => {
         setError("User ID is missing. Please log in again.");
         return;
     }
+    // Check if list has items (instead of checking input fields)
     if (pricingOptions.length === 0) {
         setError("Please add at least one pricing option to your profile.");
         return;
@@ -430,14 +439,13 @@ const InstructorProfileWizard: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
-    // ✅ Define endpoints relative to base URL handled by axiosInstance
     const instructorEndpoint = "/instructors"; 
     const pricingEndpoint = "/instructors/pricing"; 
 
     try {
       const formatArray = (input: string): string => {
         if (!input) return "{}";
-        const elements = input.split(',').map(e => `"${e.trim()}"`).filter(e => e.length > 2);
+        const elements = input.split(',').map(e => `"${e.trim()}"`).filter(e => e.length > 0);
         return `{${elements.join(',')}}`;
       };
       
@@ -454,7 +462,6 @@ const InstructorProfileWizard: React.FC = () => {
         available_locations: formatArray(formData.available_locations), 
       };
 
-      // ✅ Use axiosInstance for POST request
       const instructorRes = await axiosInstance.post(instructorEndpoint, instructorPayload);
       const instructor_id = instructorRes.data.instructor.instructor_id; 
 

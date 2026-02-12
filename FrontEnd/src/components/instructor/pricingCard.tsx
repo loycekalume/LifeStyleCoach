@@ -110,7 +110,7 @@ const PricingCard: React.FC = () => {
               <div key={item.pricing_id} className="pricing-item">
                 <span>{item.session_type}</span>
                 <span className="price">
-                  ${item.price}/{item.unit}
+                  ksh {item.price}/{item.unit}
                 </span>
               </div>
             ))
