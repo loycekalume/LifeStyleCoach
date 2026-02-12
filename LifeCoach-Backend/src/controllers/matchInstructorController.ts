@@ -9,125 +9,130 @@ dotenv.config();
 
 const groq = new Groq({ apiKey: process.env.IAI_API_KEY });
 
+export const getMatchedInstructors = asyncHandler(async (req: UserRequest, res: Response) => {
+    // 1. Get the logged-in user's ID
+    const userId = req.user?.user_id;
 
-
-export const getMatchedInstructors = asyncHandler(async (req: Request, res: Response) => {
-    // 1. Get Logged-in Instructor ID from Token
-    const instructorUserId = (req as any).user.user_id;
-
-    // 2. Fetch Instructor Profile (Specialization, Location, Mode, Bio)
-    const instQuery = `
-        SELECT specialization, available_locations, coaching_mode, bio 
-        FROM instructors WHERE user_id = $1
-    `;
-    const instRes = await pool.query(instQuery, [instructorUserId]);
-
-    if (instRes.rows.length === 0) {
-        return res.status(404).json({ message: "Instructor profile not found." });
+    if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
     }
-    const instructor = instRes.rows[0];
 
-    // 3. Fetch All Potential Clients (Limit 100 to ensure we catch enough candidates)
+    // 2. Fetch Client Profile
     const clientQuery = `
         SELECT 
-            u.user_id, u.name, u.email,
-            c.weight_goal, c.location, c.gender, c.age, 
-            c.height, c.weight, c.budget
-        FROM users u
-        JOIN clients c ON u.user_id = c.user_id
-        WHERE u.role_id = 5
-        LIMIT 100
+            weight_goal, 
+            health_conditions, 
+            budget, 
+            location, 
+            gender
+        FROM clients 
+        WHERE user_id = $1
     `;
-    const clientRes = await pool.query(clientQuery);
-    const allClients = clientRes.rows;
+    const clientRes = await pool.query(clientQuery, [userId]);
 
-    if (allClients.length === 0) {
-        return res.status(200).json({ message: "No clients found in the system yet.", data: [] });
+    if (clientRes.rows.length === 0) {
+        return res.status(404).json({ message: "Client profile not found. Please complete your profile first." });
+    }
+    const client = clientRes.rows[0];
+
+    // Normalize client location for comparison
+    const clientLocationNorm = client.location ? client.location.toLowerCase().trim() : "";
+
+    // 3. Fetch All Instructors
+    const instructorQuery = `
+        SELECT 
+            i.instructor_id,
+            u.name as full_name,
+            i.specialization,
+            i.coaching_mode,
+            i.available_locations,
+            i.years_of_experience,
+            i.bio,
+            i.website_url,
+            i.profile_title
+        FROM instructors i
+        JOIN users u ON i.user_id = u.user_id
+    `;
+    const instructorsRes = await pool.query(instructorQuery);
+    let allInstructors = instructorsRes.rows;
+
+    if (allInstructors.length === 0) {
+        return res.status(200).json({ message: "No instructors available yet", data: [] });
     }
 
     // =================================================================================
-    // 🚀 STEP 4: STRICT CODE-LEVEL FILTERING (Location & Mode Logic)
+    // 🚀 STEP 3.5: STRICT PRE-FILTERING (The Logic Fix)
+    // We filter strictly in code before asking AI. This guarantees the location rule works.
     // =================================================================================
-    
-    // Normalize Instructor Mode & Locations
-    const mode = instructor.coaching_mode ? instructor.coaching_mode.toLowerCase() : "";
-    let instLocs: string[] = [];
-
-    // Handle Postgres Array or String format safely
-    if (Array.isArray(instructor.available_locations)) {
-        instLocs = instructor.available_locations.map((l: string) => l.toLowerCase().trim());
-    } else if (typeof instructor.available_locations === 'string') {
-        instLocs = instructor.available_locations.replace(/[{"}]/g, "").split(',').map(l => l.trim().toLowerCase());
-    }
-
-    // Determine strict mode flags
-    const isOnline = mode.includes('remote') || mode.includes('online');
-    const isHybrid = mode.includes('both') || mode.includes('hybrid');
-    const isOnsite = mode.includes('onsite') || mode.includes('person');
-
-    // Filter Clients: Keep only those reachable by this instructor
-    const validClients = allClients.filter(client => {
-        // CASE A: If Instructor is Online or Hybrid -> They can coach ANYONE.
-        if (isOnline || isHybrid) return true;
-
-        // CASE B: If Instructor is strictly Onsite -> Client MUST match location.
-        if (isOnsite) {
-            const clientLoc = client.location ? client.location.toLowerCase().trim() : "";
-            
-            // Check if locations overlap (e.g. "Nairobi" inside "Westlands, Nairobi")
-            const isLocationMatch = instLocs.some(loc => 
-                clientLoc.includes(loc) || loc.includes(clientLoc)
-            );
-            return isLocationMatch;
+    const validInstructors = allInstructors.filter(inst => {
+        const mode = inst.coaching_mode ? inst.coaching_mode.toLowerCase() : "";
+        
+        // Ensure locations is an array and normalize strings
+        let instLocs = [];
+        if (Array.isArray(inst.available_locations)) {
+            instLocs = inst.available_locations.map((l: string) => l.toLowerCase().trim());
+        } else if (typeof inst.available_locations === 'string') {
+            // Handle Postgres array literal string format like "{Nairobi,Kisumu}" if raw query returns it
+            instLocs = inst.available_locations.replace(/[{"}]/g, "").split(',').map(l => l.trim().toLowerCase());
         }
 
-        return false; // Fallback if mode is undefined
+        const isOnline = mode.includes('remote') || mode.includes('online');
+        const isHybrid = mode.includes('both') || mode.includes('hybrid');
+        const isOnsite = mode.includes('onsite') || mode.includes('person');
+
+        // RULE 1: If Online/Remote or Hybrid, they match EVERYONE (Location irrelevant)
+        if (isOnline || isHybrid) return true;
+
+        // RULE 2: If Strictly Onsite, they MUST match the client's location exactly
+        if (isOnsite) {
+            return instLocs.includes(clientLocationNorm);
+        }
+
+        return false; // Fallback
     });
 
-    if (validClients.length === 0) {
+    if (validInstructors.length === 0) {
         return res.status(200).json({ 
-            message: "No clients found matching your location or coaching mode.", 
+            message: "No instructors found matching your location or offering online coaching.", 
             data: [] 
         });
     }
 
-    // =================================================================================
-    // 🚀 STEP 5: AI SCORING (Strict Specialization vs. Weight Goal)
-    // =================================================================================
+    // 4. Construct AI Prompt with ONLY the Valid Instructors
+    const systemPrompt = `You are a fitness instructor matching expert.
     
-    const systemPrompt = `You are a fitness business expert matching clients to an instructor based PURELY on fitness goals.
+    **CLIENT PROFILE:**
+    - Goal: ${client.weight_goal}
+    - Location: ${client.location}
+    - Health Conditions: ${client.health_conditions ? client.health_conditions.join(', ') : 'None'}
 
-    **INSTRUCTOR PROFILE:**
-    - Specialization: ${instructor.specialization}
-    - Bio: ${instructor.bio}
-
-    **CANDIDATE CLIENTS:**
-    ${JSON.stringify(validClients.map(c => ({
-        id: c.user_id,
-        name: c.name,
-        goal: c.weight_goal, // Crucial Field
-        budget: c.budget
+    **CANDIDATES (Already pre-filtered for location/mode availability):**
+    ${JSON.stringify(validInstructors.map(i => ({
+        id: i.instructor_id,
+        name: i.full_name,
+        specialization: i.specialization, // This is an Array or String
+        bio: i.bio,
+        coaching_mode: i.coaching_mode
     })), null, 2)}
 
     **YOUR TASK:**
-    Score each client from 0-100 based on how well the Instructor's Specialization matches the Client's Goal.
+    Score these candidates primarily on **Specialization Match**.
 
     **SCORING RULES:**
-    - **90-100 (Perfect Match):** Instructor specializes exactly in what the client wants.
-      (e.g., Instructor: "Hypertrophy/Bodybuilding" -> Client: "Muscle Gain")
-      (e.g., Instructor: "Weight Management" -> Client: "Weight Loss")
-    - **70-89 (Strong Match):** Specialization is highly relevant.
-      (e.g., Instructor: "General Fitness" -> Client: "Weight Loss")
-    - **50-69 (Possible Match):** Loosely related.
-    - **< 50 (Mismatch):** Completely unrelated fields (e.g., Yoga vs. Powerlifting).
+    1. **Specialization (0-100 pts):** - 90-100: Specialization explicitly targets the client's goal (e.g., Client wants "Weight Loss", Instructor does "Fat Loss/Weight Mgmt").
+       - 70-89: Specialization is highly complementary (e.g., Client wants "Muscle", Instructor does "Strength & Conditioning").
+       - 40-69: Specialization is somewhat related (e.g., Client wants "Weight Loss", Instructor does "Yoga/Pilates").
+       - < 40: Mismatch.
+
+    2. **Health Bonus (+10 pts):** Add points if instructor bio mentions rehab/medical handling IF client has conditions.
 
     **OUTPUT FORMAT (JSON ONLY):**
     {
         "matches": [
             { 
-                "user_id": <number>,
+                "instructor_id": <number>,
                 "match_score": <number>,
-                "match_reason": "<Short explanation for the instructor. Example: 'Client wants muscle gain, which aligns perfectly with your Bodybuilding specialization.'>"
+                "match_reason": "<Speak to the client ('You'). Explain why this specific instructor fits their goal. Mention explicitly if they are Online or Local based on the data.>"
             }
         ]
     }
@@ -137,38 +142,40 @@ export const getMatchedInstructors = asyncHandler(async (req: Request, res: Resp
         const completion = await groq.chat.completions.create({
             messages: [{ role: "system", content: systemPrompt }],
             model: "llama-3.1-8b-instant",
-            temperature: 0.1, // Keep low for consistent results
+            temperature: 0.1,
             response_format: { type: "json_object" },
         });
 
-        // Parse AI Response
         const aiContent = completion.choices[0]?.message?.content || "{}";
+        
+        // Parse AI Response
         const firstBrace = aiContent.indexOf('{');
         const lastBrace = aiContent.lastIndexOf('}');
         
-        let aiMatches = [];
+        let matches = [];
+
         if (firstBrace !== -1 && lastBrace !== -1) {
-             const jsonString = aiContent.substring(firstBrace, lastBrace + 1);
-             const parsedData = JSON.parse(jsonString);
-             aiMatches = parsedData.matches || [];
+            const jsonString = aiContent.substring(firstBrace, lastBrace + 1);
+            const parsedData = JSON.parse(jsonString);
+            matches = Array.isArray(parsedData) ? parsedData : (parsedData.matches || []);
         }
 
-        // 6. Merge AI Scores back into Full Client Objects
-        const finalResults = aiMatches
-            .filter((match: any) => match.match_score >= 50) // Filter out weak matches
+        // 5. Merge AI Results with Full DB Data
+        const finalResults = matches
+            .filter((match: any) => match.match_score >= 50) // Filter weak specialization matches
             .map((match: any) => {
-                const originalClient = validClients.find(c => c.user_id === match.user_id);
-                if (!originalClient) return null;
-
+                const originalInstructor = validInstructors.find(i => i.instructor_id === match.instructor_id);
+                if (!originalInstructor) return null;
+                
                 return {
-                    ...originalClient,
+                    ...originalInstructor,
                     match_score: match.match_score,
-                    match_reason: match.match_reason 
+                    match_reason: match.match_reason
                 };
             })
             .filter(Boolean);
 
-        // Sort by score descending (Best matches first)
+        // Sort by score descending
         finalResults.sort((a: any, b: any) => b.match_score - a.match_score);
 
         res.status(200).json({
