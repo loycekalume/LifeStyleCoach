@@ -1,5 +1,5 @@
 
-const API_URL = "http://localhost:3000/mealLogs";
+const API_URL = "https://lifestylecoach.onrender.com/mealLogs";
 
 export type MealLog = {
   log_id: number;
