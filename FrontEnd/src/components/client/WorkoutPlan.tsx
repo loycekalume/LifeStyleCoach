@@ -31,7 +31,7 @@ export default function WorkoutPlan({ client }: Props) {
     async function fetchMyWorkouts() {
       try {
         // MATCHING THE NEW ROUTE WE JUST CREATED
-        const res = await fetch(`http://localhost:3000/clientWorkouts/client/${userId}/workouts`);
+        const res = await fetch(`https://lifestylecoach.onrender.com/clientWorkouts/client/${userId}/workouts`);
         
         if (res.ok) {
             const data = await res.json();

@@ -28,7 +28,7 @@ import ConsistencyCard from "../components/client/consistencyCard";
 type PageType = "dashboard" | "workouts" | "nutrition" | "instructors" | "schedule" | "progress";
 
 // Ensure this matches your backend URL
-const SOCKET_URL = "http://localhost:3000"; 
+const SOCKET_URL = "https://lifestylecoach.onrender.com"; 
 
 export default function ClientDashboard() {
   const [client, setClient] = useState<Client | null>(null);
