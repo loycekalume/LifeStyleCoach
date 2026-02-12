@@ -6,7 +6,8 @@ import {
     getClientProgress,
     getClientNutritionProgress,
     getClientDashboard,
-    getWeeklySummary
+    getWeeklySummary,
+    logWeight
 } from "../controllers/progressLogsController";
 
 const router = express.Router();
@@ -42,6 +43,6 @@ router.get("/dashboard/:userId", getClientDashboard);
  */
 router.get("/weekly/:userId", getWeeklySummary);
 
-
+router.post("/progress/:userId/log-weight", logWeight);
 
 export default router;
