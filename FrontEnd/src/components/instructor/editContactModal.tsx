@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import axiosInstance from "../../utils/axiosInstance"; 
-import "../../styles/editInstructorModals.css"
 interface ContactInfo {
   name: string; 
   email: string;
@@ -52,12 +51,12 @@ const EditContactModal: React.FC<EditContactModalProps> = ({
   };
 
   return (
-    <div className="modal-backdropt">
-      <div className="modal-contentt">
+    <div className="modal-backdrop">
+      <div className="modal-content">
         <h3>Edit Contact Info</h3>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-groupt">
+          <div className="form-group">
             <label>Email:</label>
             <input
               type="email"
@@ -67,7 +66,7 @@ const EditContactModal: React.FC<EditContactModalProps> = ({
             />
           </div>
 
-          <div className="form-groupt">
+          <div className="form-group">
             <label>Contact Number:</label>
             <input
               type="text"
@@ -77,7 +76,7 @@ const EditContactModal: React.FC<EditContactModalProps> = ({
             />
           </div>
 
-          <div className="form-groupt">
+          <div className="form-group">
             <label>Website URL:</label>
             <input
               type="text"
@@ -88,7 +87,7 @@ const EditContactModal: React.FC<EditContactModalProps> = ({
             />
           </div>
 
-          <div className="form-groupt">
+          <div className="form-group">
             <label>Availability:</label>
             <input
               type="text"
@@ -99,7 +98,7 @@ const EditContactModal: React.FC<EditContactModalProps> = ({
             />
           </div>
 
-          <div className="form-groupt">
+          <div className="form-group">
             <label>Coaching Mode:</label>
             <select
               value={formData.coaching_mode}
@@ -112,10 +111,10 @@ const EditContactModal: React.FC<EditContactModalProps> = ({
             </select>
           </div>
 
-          <div className="modal-actionst">
+          <div className="modal-actions">
             <button 
               type="button" 
-              className="btnt btn-outlinet" 
+              className="btnt btn-outline" 
               onClick={onClose}
               disabled={loading}
             >
@@ -123,7 +122,7 @@ const EditContactModal: React.FC<EditContactModalProps> = ({
             </button>
             <button 
               type="submit" 
-              className="btnt btn-primaryt"
+              className="btnt btn-primary"
               disabled={loading}
             >
               {loading ? "Saving..." : "Save Changes"}
