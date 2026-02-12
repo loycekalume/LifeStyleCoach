@@ -7,11 +7,9 @@ import Groq from "groq-sdk";
 const groq = new Groq({ apiKey: process.env.LAI_API_KEY });
 
 export const upsertClient = asyncHandler(async (req: Request, res: Response) => {
-  // ✅ Extract health_conditions from the body
   const { user_id, age, weight, height, goal, gender, allergies, health_conditions, budget, location } = req.body;
 
   // 1. Insert or Update the Client details
-  // Added health_conditions to the INSERT and UPDATE logic
   const result = await pool.query(
     `INSERT INTO clients (
         user_id, age, weight, height, weight_goal, gender, allergies, health_conditions, budget, location
@@ -33,6 +31,16 @@ export const upsertClient = asyncHandler(async (req: Request, res: Response) => 
 
   // 2. Mark the user profile as complete in the USERS table
   await pool.query("UPDATE users SET profile_complete = TRUE WHERE user_id = $1", [user_id]);
+
+  // 3. ✅ Insert baseline weight into progress logs
+  // ON CONFLICT DO NOTHING → safe to call on profile updates too,
+  // won't overwrite existing entries on the same date
+  await pool.query(
+    `INSERT INTO client_progress_logs (user_id, weight, log_date)
+     VALUES ($1, $2, CURRENT_DATE)
+     ON CONFLICT (user_id, log_date) DO NOTHING`,
+    [user_id, weight]
+  );
 
   res.status(200).json({
     message: "Client profile saved successfully",
