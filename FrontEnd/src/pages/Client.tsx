@@ -221,7 +221,7 @@ export default function ClientDashboard() {
       case "nutrition": return renderNutrition(); 
       case "instructors": return <section className="main-section"><h1>Instructors</h1><InstructorsList /></section>;
       case "schedule": return <section className="main-section"><MatchedDieticians /></section>;
-      case "progress": return <section className="main-section"><h1>Your Progress</h1>{client && <ProgressChart client={client} />}</section>;
+      case "progress": return <section className="main-section">{client && <ProgressChart client={client} />}</section>;
       default: return <div>Page not found</div>;
     }
   };

@@ -79,44 +79,69 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const [loading, setLoading] = useState(true);
+  const [showWeightModal, setShowWeightModal] = useState(false);
+  const [newWeight, setNewWeight] = useState("");
+  const [logDate, setLogDate] = useState(new Date().toISOString().split("T")[0]);
 
   const userId = client.user_id;
 
   // ===========================
   // DATA FETCHING
   // ===========================
-  useEffect(() => {
-    async function fetchAllData() {
-      if (!userId) return;
-      try {
-        setLoading(true);
-        const [progressRes, nutritionRes, statsRes] = await Promise.all([
-          axiosInstance.get(`/myprogress/progress/${userId}`),
-          axiosInstance.get(`/myprogress/nutrition/${userId}`),
-          axiosInstance.get(`/myprogress/dashboard/${userId}`)
-        ]);
+  const fetchAllData = async () => {
+    if (!userId) return;
+    try {
+      setLoading(true);
+      const [progressRes, nutritionRes, statsRes] = await Promise.all([
+        axiosInstance.get(`/myprogress/progress/${userId}`),
+        axiosInstance.get(`/myprogress/nutrition/${userId}`),
+        axiosInstance.get(`/myprogress/dashboard/${userId}`)
+      ]);
 
-        // ✅ CRITICAL FIX: Sort data by date (Oldest -> Newest)
-        // This ensures the line graph draws from left to right correctly.
-        const sortedProgress = progressRes.data.sort((a: any, b: any) => 
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-        
-        const sortedNutrition = nutritionRes.data.sort((a: any, b: any) => 
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-
-        setProgressLogs(sortedProgress);
-        setNutritionLogs(sortedNutrition);
-        setDashboardStats(statsRes.data);
-      } catch (err) {
-        console.error("Error loading dashboard data:", err);
-      } finally {
-        setLoading(false);
-      }
+      // Data is already sorted by backend
+      setProgressLogs(progressRes.data);
+      setNutritionLogs(nutritionRes.data);
+      setDashboardStats(statsRes.data);
+    } catch (err) {
+      console.error("Error loading dashboard data:", err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchAllData();
   }, [userId]);
+
+  // ===========================
+  // WEIGHT LOGGING
+  // ===========================
+  const handleLogWeight = async () => {
+    const weight = parseFloat(newWeight);
+    if (!weight || weight <= 0 || weight > 500) {
+      alert("Please enter a valid weight (1-500 kg)");
+      return;
+    }
+
+    try {
+      await axiosInstance.post(`/myprogress/progress/${userId}/log-weight`, {
+        weight,
+        date: logDate
+      });
+
+      setShowWeightModal(false);
+      setNewWeight("");
+      setLogDate(new Date().toISOString().split("T")[0]);
+      
+      // Refresh data
+      await fetchAllData();
+      
+      alert("Weight logged successfully!");
+    } catch (err) {
+      console.error("Error logging weight:", err);
+      alert("Failed to log weight. Please try again.");
+    }
+  };
 
   // ===========================
   // FILTER DATA BY TIME RANGE
@@ -154,6 +179,12 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
       <div className="dashboard-empty" style={styles.emptyState}>
         <h2>Start Your Journey! 🎯</h2>
         <p>Log your first workout or meal to begin tracking your progress.</p>
+        <button 
+          onClick={() => setShowWeightModal(true)}
+          style={styles.primaryButton}
+        >
+          Log Your Weight
+        </button>
       </div>
     );
   }
@@ -213,8 +244,11 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
 
       {/* CHARTS */}
       <div className="charts-grid" style={styles.chartsGrid}>
-        {/* Weight & BMI Chart */}
-        <WeightBMIChart data={filteredProgress} />
+        {/* Weight & BMI Chart with Log Button */}
+        <WeightBMIChart 
+          data={filteredProgress} 
+          onLogWeight={() => setShowWeightModal(true)}
+        />
 
         {/* Nutrition Chart */}
         <NutritionChart data={filteredNutrition} />
@@ -231,6 +265,55 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
         progressLogs={progressLogs}
         nutritionLogs={nutritionLogs}
       />
+
+      {/* WEIGHT LOGGING MODAL */}
+      {showWeightModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowWeightModal(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 style={styles.modalTitle}>Log Your Weight</h3>
+            
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Weight (kg)</label>
+              <input
+                type="number"
+                value={newWeight}
+                onChange={(e) => setNewWeight(e.target.value)}
+                placeholder="e.g., 70.5"
+                step="0.1"
+                min="1"
+                max="500"
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Date</label>
+              <input
+                type="date"
+                value={logDate}
+                onChange={(e) => setLogDate(e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.modalActions}>
+              <button 
+                onClick={() => setShowWeightModal(false)}
+                style={styles.secondaryButton}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleLogWeight}
+                style={styles.primaryButton}
+              >
+                Log Weight
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -261,12 +344,30 @@ function MetricCard({ title, value, unit, icon, color }: MetricCardProps) {
 }
 
 // ===========================
-// WEIGHT & BMI CHART (Standard: X=Date, Y=Weight)
+// WEIGHT & BMI CHART WITH LOG BUTTON
 // ===========================
-function WeightBMIChart({ data }: { data: ProgressLog[] }) {
-  if (data.length === 0) return null;
+interface WeightBMIChartProps {
+  data: ProgressLog[];
+  onLogWeight: () => void;
+}
 
-  // Format Dates for X-Axis
+function WeightBMIChart({ data, onLogWeight }: WeightBMIChartProps) {
+  if (data.length === 0) {
+    return (
+      <div className="chart-card" style={styles.chartCard}>
+        <div style={styles.chartHeader}>
+          <h3 style={styles.chartTitle}>Weight Trend</h3>
+          <button onClick={onLogWeight} style={styles.logButton}>
+            ➕ Log Weight
+          </button>
+        </div>
+        <div style={styles.emptyChart}>
+          No weight entries yet. Click "Log Weight" to start tracking!
+        </div>
+      </div>
+    );
+  }
+
   const labels = data.map(log =>
     new Date(log.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })
   );
@@ -281,9 +382,9 @@ function WeightBMIChart({ data }: { data: ProgressLog[] }) {
         backgroundColor: "rgba(59, 130, 246, 0.1)",
         pointBackgroundColor: "#fff",
         pointBorderColor: "#3b82f6",
-        pointRadius: 6, // Larger dots to see the entries clearly
+        pointRadius: 6,
         pointHoverRadius: 8,
-        tension: 0.3, // Curve slightly to show "flow"
+        tension: 0.3,
         fill: true,
         yAxisID: "y",
       },
@@ -292,8 +393,10 @@ function WeightBMIChart({ data }: { data: ProgressLog[] }) {
         data: data.map(log => log.bmi),
         borderColor: "#10b981",
         backgroundColor: "transparent",
-        pointRadius: 0, // Hide dots for BMI to reduce clutter
-        borderDash: [5, 5], // Dashed line for BMI
+        pointRadius: 4,
+        pointBackgroundColor: "#fff",
+        pointBorderColor: "#10b981",
+        borderDash: [5, 5],
         tension: 0.3,
         yAxisID: "y1",
       },
@@ -312,12 +415,19 @@ function WeightBMIChart({ data }: { data: ProgressLog[] }) {
         bodyColor: "#334155",
         borderColor: "#e2e8f0",
         borderWidth: 1,
+        callbacks: {
+          afterBody: function(context: any) {
+            const index = context[0].dataIndex;
+            const date = data[index].date;
+            return `Date: ${new Date(date).toLocaleDateString()}`;
+          }
+        }
       },
     },
     scales: {
       x: {
         grid: { display: false },
-        title: { display: true, text: "Timeline (Days)" } 
+        title: { display: true, text: "Date" } 
       },
       y: { 
         type: "linear" as const, 
@@ -338,7 +448,12 @@ function WeightBMIChart({ data }: { data: ProgressLog[] }) {
 
   return (
     <div className="chart-card" style={styles.chartCard}>
-      <h3 style={styles.chartTitle}>Weight Trend</h3>
+      <div style={styles.chartHeader}>
+        <h3 style={styles.chartTitle}>Weight Trend</h3>
+        <button onClick={onLogWeight} style={styles.logButton}>
+          ➕ Log Weight
+        </button>
+      </div>
       <div style={styles.chartContainer}>
         <Line data={chartData} options={options} />
       </div>
@@ -347,7 +462,7 @@ function WeightBMIChart({ data }: { data: ProgressLog[] }) {
 }
 
 // ===========================
-// NUTRITION CHART (Line Graph)
+// NUTRITION CHART (Daily Calories)
 // ===========================
 function NutritionChart({ data }: { data: NutritionLog[] }) {
   if (data.length === 0) {
@@ -373,7 +488,8 @@ function NutritionChart({ data }: { data: NutritionLog[] }) {
         backgroundColor: "rgba(245, 158, 11, 0.1)",
         pointBackgroundColor: "#fff",
         pointBorderColor: "#f59e0b",
-        pointRadius: 4,
+        pointRadius: 5,
+        pointHoverRadius: 7,
         tension: 0.3,
         fill: true,
       },
@@ -385,10 +501,24 @@ function NutritionChart({ data }: { data: NutritionLog[] }) {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
+      tooltip: {
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
+        titleColor: "#1e293b",
+        bodyColor: "#334155",
+        borderColor: "#e2e8f0",
+        borderWidth: 1,
+      },
     },
     scales: {
-      y: { beginAtZero: true, title: { display: true, text: "Calories" } },
-      x: { grid: { display: false } }
+      y: { 
+        beginAtZero: true, 
+        title: { display: true, text: "Calories (kcal)" },
+        grid: { color: "#f1f5f9" }
+      },
+      x: { 
+        grid: { display: false },
+        title: { display: true, text: "Date" }
+      }
     },
   };
 
@@ -403,7 +533,7 @@ function NutritionChart({ data }: { data: NutritionLog[] }) {
 }
 
 // ===========================
-// WORKOUT ACTIVITY CHART (Line Graph)
+// WORKOUT ACTIVITY CHART
 // ===========================
 function WorkoutActivityChart({ data }: { data: ProgressLog[] }) {
   if (data.length === 0) return null;
@@ -416,7 +546,7 @@ function WorkoutActivityChart({ data }: { data: ProgressLog[] }) {
     labels,
     datasets: [
       {
-        label: "Workouts",
+        label: "Total Workouts",
         data: data.map(log => log.total_workouts),
         borderColor: "#8b5cf6",
         backgroundColor: "rgba(139, 92, 246, 0.1)",
@@ -439,7 +569,7 @@ function WorkoutActivityChart({ data }: { data: ProgressLog[] }) {
       y: { 
         beginAtZero: true, 
         ticks: { stepSize: 1 },
-        title: { display: true, text: "Count" }
+        title: { display: true, text: "Cumulative Workouts" }
       },
       x: { grid: { display: false } }
     },
@@ -447,7 +577,7 @@ function WorkoutActivityChart({ data }: { data: ProgressLog[] }) {
 
   return (
     <div className="chart-card" style={styles.chartCard}>
-      <h3 style={styles.chartTitle}>Workout Frequency</h3>
+      <h3 style={styles.chartTitle}>Workout Progress</h3>
       <div style={styles.chartContainer}>
         <Line data={chartData} options={options} />
       </div>
@@ -687,11 +817,28 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "20px",
     boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
   },
+  chartHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "16px",
+  },
   chartTitle: {
-    margin: "0 0 16px 0",
+    margin: 0,
     fontSize: "18px",
     fontWeight: "600",
     color: "#0f172a",
+  },
+  logButton: {
+    padding: "8px 16px",
+    background: "#3b82f6",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "background 0.2s",
   },
   chartContainer: {
     height: "300px",
@@ -739,5 +886,78 @@ const styles: Record<string, React.CSSProperties> = {
     width: "16px",
     height: "16px",
     borderRadius: "3px",
+  },
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+  modal: {
+    background: "white",
+    borderRadius: "12px",
+    padding: "32px",
+    width: "90%",
+    maxWidth: "400px",
+    boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
+  },
+  modalTitle: {
+    margin: "0 0 24px 0",
+    fontSize: "24px",
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  formGroup: {
+    marginBottom: "20px",
+  },
+  label: {
+    display: "block",
+    marginBottom: "8px",
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#334155",
+  },
+  input: {
+    width: "100%",
+    padding: "12px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    fontSize: "16px",
+    boxSizing: "border-box",
+  },
+  modalActions: {
+    display: "flex",
+    gap: "12px",
+    marginTop: "24px",
+  },
+  primaryButton: {
+    flex: 1,
+    padding: "12px 24px",
+    background: "#3b82f6",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "16px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "background 0.2s",
+  },
+  secondaryButton: {
+    flex: 1,
+    padding: "12px 24px",
+    background: "#f1f5f9",
+    color: "#64748b",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "16px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "background 0.2s",
   },
 };
