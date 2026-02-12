@@ -14,7 +14,7 @@ const Sidebar: React.FC = () => {
 
         <nav className="sidebar-nav" aria-label="Main navigation">
           <NavLink
-            to="/admin/dashboard"
+            to="/admin"
             className={({ isActive }) => (isActive ? "active" : "")}
           >
             <i className="fas fa-chart-line" /> Dashboard
