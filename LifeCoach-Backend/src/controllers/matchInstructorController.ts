@@ -35,6 +35,9 @@ export const getMatchedInstructors = asyncHandler(async (req: UserRequest, res: 
     }
     const client = clientRes.rows[0];
 
+    // Normalize client location for comparison
+    const clientLocationNorm = client.location ? client.location.toLowerCase().trim() : "";
+
     // 3. Fetch All Instructors
     const instructorQuery = `
         SELECT 
@@ -51,78 +54,89 @@ export const getMatchedInstructors = asyncHandler(async (req: UserRequest, res: 
         JOIN users u ON i.user_id = u.user_id
     `;
     const instructorsRes = await pool.query(instructorQuery);
-    const instructors = instructorsRes.rows;
+    let allInstructors = instructorsRes.rows;
 
-    if (instructors.length === 0) {
+    if (allInstructors.length === 0) {
         return res.status(200).json({ message: "No instructors available yet", data: [] });
     }
 
-    // 4. Construct AI Prompt
-    const systemPrompt = `You are a fitness instructor matching expert. Your job is to find the BEST instructor matches for a client based on strict compatibility criteria.
-
-**CLIENT PROFILE:**
-- Fitness Goal: ${client.weight_goal}
-- Health Conditions: ${client.health_conditions ? client.health_conditions.join(', ') : 'None'}
-- Location: ${client.location}
-- Budget: ${client.budget}
-
-**INSTRUCTORS TO EVALUATE:**
-${JSON.stringify(instructors.map(i => ({
-    id: i.instructor_id,
-    name: i.full_name,
-    specialization: i.specialization,
-    coaching_mode: i.coaching_mode,
-    available_locations: i.available_locations,
-    years_of_experience: i.years_of_experience,
-    bio: i.bio
-})), null, 2)}
-
-**MATCHING RULES (APPLY STRICTLY):**
-
-1. **Specialization Match (60 points max):**
-   - EXACT match between instructor specialization and client fitness goal: 60 points
-   - Partial/related match (e.g., "weight loss" specialization + "fat loss" goal): 40 points
-   - Loosely related (e.g., "strength training" + "muscle gain"): 25 points
-   - No match: 0 points
-
-2. **Location & Coaching Mode Match (40 points max):**
-   - COACHING MODE LOGIC:
-     * If instructor coaching_mode is "Online" or "Remote": Award 40 points to this client (location irrelevant)
-     * If instructor coaching_mode is "In-Person" or "Onsite": Client location MUST appear in instructor's available_locations array
-       - Exact match: 40 points
-       - Same region/state: 25 points
-       - No match: 0 points
-     * If instructor coaching_mode is "Both" or "Hybrid":
-       - Location match: 40 points
-       - No location match but can work online: 30 points
-
-3. **Health Conditions Consideration (Bonus +10 points):**
-   - If client has health conditions AND instructor bio mentions experience with rehab/therapy/injury/medical conditions: +10 bonus points
-   - Otherwise: 0 bonus points
-
-**SCORING:**
-- Calculate total score (max 110 points with bonus)
-- ONLY return matches with score ≥ 50
-- Be STRICT - don't force matches that don't meet criteria
-
-**OUTPUT FORMAT (STRICT JSON):**
-{
-    "matches": [
-        { 
-            "instructor_id": <number>,
-            "match_score": <number 0-110>,
-            "match_reason": "<2-3 sentence explanation from client's perspective using 'you' for client and 'this instructor/they' for instructor. Be specific about WHY this is a good match based on specialization and location/mode compatibility.>"
+    // =================================================================================
+    // 🚀 STEP 3.5: STRICT PRE-FILTERING (The Logic Fix)
+    // We filter strictly in code before asking AI. This guarantees the location rule works.
+    // =================================================================================
+    const validInstructors = allInstructors.filter(inst => {
+        const mode = inst.coaching_mode ? inst.coaching_mode.toLowerCase() : "";
+        
+        // Ensure locations is an array and normalize strings
+        let instLocs = [];
+        if (Array.isArray(inst.available_locations)) {
+            instLocs = inst.available_locations.map((l: string) => l.toLowerCase().trim());
+        } else if (typeof inst.available_locations === 'string') {
+            // Handle Postgres array literal string format like "{Nairobi,Kisumu}" if raw query returns it
+            instLocs = inst.available_locations.replace(/[{"}]/g, "").split(',').map(l => l.trim().toLowerCase());
         }
-    ]
-}
 
-**IMPORTANT:**
-- Speak directly to the client (use "you")
-- Be professional and encouraging
-- Only include scores ≥ 50
-- If no matches meet criteria, return empty matches array
-- Be honest - don't inflate scores artificially
-- Focus explanation on how instructor's specialization aligns with client's goal and location/mode works`;
+        const isOnline = mode.includes('remote') || mode.includes('online');
+        const isHybrid = mode.includes('both') || mode.includes('hybrid');
+        const isOnsite = mode.includes('onsite') || mode.includes('person');
+
+        // RULE 1: If Online/Remote or Hybrid, they match EVERYONE (Location irrelevant)
+        if (isOnline || isHybrid) return true;
+
+        // RULE 2: If Strictly Onsite, they MUST match the client's location exactly
+        if (isOnsite) {
+            return instLocs.includes(clientLocationNorm);
+        }
+
+        return false; // Fallback
+    });
+
+    if (validInstructors.length === 0) {
+        return res.status(200).json({ 
+            message: "No instructors found matching your location or offering online coaching.", 
+            data: [] 
+        });
+    }
+
+    // 4. Construct AI Prompt with ONLY the Valid Instructors
+    const systemPrompt = `You are a fitness instructor matching expert.
+    
+    **CLIENT PROFILE:**
+    - Goal: ${client.weight_goal}
+    - Location: ${client.location}
+    - Health Conditions: ${client.health_conditions ? client.health_conditions.join(', ') : 'None'}
+
+    **CANDIDATES (Already pre-filtered for location/mode availability):**
+    ${JSON.stringify(validInstructors.map(i => ({
+        id: i.instructor_id,
+        name: i.full_name,
+        specialization: i.specialization, // This is an Array or String
+        bio: i.bio,
+        coaching_mode: i.coaching_mode
+    })), null, 2)}
+
+    **YOUR TASK:**
+    Score these candidates primarily on **Specialization Match**.
+
+    **SCORING RULES:**
+    1. **Specialization (0-100 pts):** - 90-100: Specialization explicitly targets the client's goal (e.g., Client wants "Weight Loss", Instructor does "Fat Loss/Weight Mgmt").
+       - 70-89: Specialization is highly complementary (e.g., Client wants "Muscle", Instructor does "Strength & Conditioning").
+       - 40-69: Specialization is somewhat related (e.g., Client wants "Weight Loss", Instructor does "Yoga/Pilates").
+       - < 40: Mismatch.
+
+    2. **Health Bonus (+10 pts):** Add points if instructor bio mentions rehab/medical handling IF client has conditions.
+
+    **OUTPUT FORMAT (JSON ONLY):**
+    {
+        "matches": [
+            { 
+                "instructor_id": <number>,
+                "match_score": <number>,
+                "match_reason": "<Speak to the client ('You'). Explain why this specific instructor fits their goal. Mention explicitly if they are Online or Local based on the data.>"
+            }
+        ]
+    }
+    `;
 
     try {
         const completion = await groq.chat.completions.create({
@@ -143,17 +157,14 @@ ${JSON.stringify(instructors.map(i => ({
         if (firstBrace !== -1 && lastBrace !== -1) {
             const jsonString = aiContent.substring(firstBrace, lastBrace + 1);
             const parsedData = JSON.parse(jsonString);
-            
             matches = Array.isArray(parsedData) ? parsedData : (parsedData.matches || []);
-        } else {
-            matches = [];
         }
 
         // 5. Merge AI Results with Full DB Data
         const finalResults = matches
-            .filter((match: any) => match.match_score > 50)
+            .filter((match: any) => match.match_score >= 50) // Filter weak specialization matches
             .map((match: any) => {
-                const originalInstructor = instructors.find(i => i.instructor_id === match.instructor_id);
+                const originalInstructor = validInstructors.find(i => i.instructor_id === match.instructor_id);
                 if (!originalInstructor) return null;
                 
                 return {
