@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Line, Bar, Doughnut } from "react-chartjs-2";
+import { Line, Doughnut } from "react-chartjs-2";
 import axiosInstance from "../../utils/axiosInstance";
 import {
   Chart as ChartJS,
@@ -7,12 +7,12 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   ArcElement,
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  TimeScale
 } from "chart.js";
 
 ChartJS.register(
@@ -20,12 +20,12 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   ArcElement,
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  TimeScale
 );
 
 // ===========================
@@ -96,8 +96,18 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
           axiosInstance.get(`/myprogress/dashboard/${userId}`)
         ]);
 
-        setProgressLogs(progressRes.data);
-        setNutritionLogs(nutritionRes.data);
+        // ✅ CRITICAL FIX: Sort data by date (Oldest -> Newest)
+        // This ensures the line graph draws from left to right correctly.
+        const sortedProgress = progressRes.data.sort((a: any, b: any) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        
+        const sortedNutrition = nutritionRes.data.sort((a: any, b: any) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+
+        setProgressLogs(sortedProgress);
+        setNutritionLogs(sortedNutrition);
         setDashboardStats(statsRes.data);
       } catch (err) {
         console.error("Error loading dashboard data:", err);
@@ -150,9 +160,7 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
 
   return (
     <div className="client-progress-dashboard" style={styles.container}>
-      {/* ===========================
-          HEADER WITH TIME RANGE SELECTOR
-          =========================== */}
+      {/* HEADER */}
       <div className="dashboard-header" style={styles.header}>
         <h2 style={styles.title}>Your Progress Dashboard</h2>
         <div className="time-range-selector" style={styles.timeRangeContainer}>
@@ -171,9 +179,7 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
         </div>
       </div>
 
-      {/* ===========================
-          KEY METRICS CARDS
-          =========================== */}
+      {/* METRICS */}
       <div className="metrics-grid" style={styles.metricsGrid}>
         <MetricCard
           title="Current Streak"
@@ -205,9 +211,7 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
         />
       </div>
 
-      {/* ===========================
-          CHARTS GRID
-          =========================== */}
+      {/* CHARTS */}
       <div className="charts-grid" style={styles.chartsGrid}>
         {/* Weight & BMI Chart */}
         <WeightBMIChart data={filteredProgress} />
@@ -222,9 +226,7 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
         <MacroDistributionChart data={filteredNutrition} />
       </div>
 
-      {/* ===========================
-          CONSISTENCY CALENDAR
-          =========================== */}
+      {/* CALENDAR */}
       <ConsistencyCalendar
         progressLogs={progressLogs}
         nutritionLogs={nutritionLogs}
@@ -259,11 +261,12 @@ function MetricCard({ title, value, unit, icon, color }: MetricCardProps) {
 }
 
 // ===========================
-// WEIGHT & BMI CHART
+// WEIGHT & BMI CHART (Standard: X=Date, Y=Weight)
 // ===========================
 function WeightBMIChart({ data }: { data: ProgressLog[] }) {
   if (data.length === 0) return null;
 
+  // Format Dates for X-Axis
   const labels = data.map(log =>
     new Date(log.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })
   );
@@ -276,7 +279,11 @@ function WeightBMIChart({ data }: { data: ProgressLog[] }) {
         data: data.map(log => log.weight),
         borderColor: "#3b82f6",
         backgroundColor: "rgba(59, 130, 246, 0.1)",
-        tension: 0.4,
+        pointBackgroundColor: "#fff",
+        pointBorderColor: "#3b82f6",
+        pointRadius: 6, // Larger dots to see the entries clearly
+        pointHoverRadius: 8,
+        tension: 0.3, // Curve slightly to show "flow"
         fill: true,
         yAxisID: "y",
       },
@@ -284,9 +291,10 @@ function WeightBMIChart({ data }: { data: ProgressLog[] }) {
         label: "BMI",
         data: data.map(log => log.bmi),
         borderColor: "#10b981",
-        backgroundColor: "rgba(16, 185, 129, 0.1)",
-        tension: 0.4,
-        fill: true,
+        backgroundColor: "transparent",
+        pointRadius: 0, // Hide dots for BMI to reduce clutter
+        borderDash: [5, 5], // Dashed line for BMI
+        tension: 0.3,
         yAxisID: "y1",
       },
     ],
@@ -307,14 +315,30 @@ function WeightBMIChart({ data }: { data: ProgressLog[] }) {
       },
     },
     scales: {
-      y: { type: "linear" as const, display: true, position: "left" as const, title: { display: true, text: "Weight (kg)" } },
-      y1: { type: "linear" as const, display: true, position: "right" as const, title: { display: true, text: "BMI" }, grid: { drawOnChartArea: false } },
+      x: {
+        grid: { display: false },
+        title: { display: true, text: "Timeline (Days)" } 
+      },
+      y: { 
+        type: "linear" as const, 
+        display: true, 
+        position: "left" as const, 
+        title: { display: true, text: "Weight (kg)" },
+        grid: { color: "#f1f5f9" }
+      },
+      y1: { 
+        type: "linear" as const, 
+        display: true, 
+        position: "right" as const, 
+        title: { display: true, text: "BMI" }, 
+        grid: { drawOnChartArea: false } 
+      },
     },
   };
 
   return (
     <div className="chart-card" style={styles.chartCard}>
-      <h3 style={styles.chartTitle}>Weight & BMI Trend</h3>
+      <h3 style={styles.chartTitle}>Weight Trend</h3>
       <div style={styles.chartContainer}>
         <Line data={chartData} options={options} />
       </div>
@@ -323,7 +347,7 @@ function WeightBMIChart({ data }: { data: ProgressLog[] }) {
 }
 
 // ===========================
-// NUTRITION CHART
+// NUTRITION CHART (Line Graph)
 // ===========================
 function NutritionChart({ data }: { data: NutritionLog[] }) {
   if (data.length === 0) {
@@ -345,8 +369,11 @@ function NutritionChart({ data }: { data: NutritionLog[] }) {
       {
         label: "Calories",
         data: data.map(log => log.total_calories),
-        borderColor: "#10b981",
-        backgroundColor: "rgba(16, 185, 129, 0.2)",
+        borderColor: "#f59e0b",
+        backgroundColor: "rgba(245, 158, 11, 0.1)",
+        pointBackgroundColor: "#fff",
+        pointBorderColor: "#f59e0b",
+        pointRadius: 4,
         tension: 0.3,
         fill: true,
       },
@@ -358,16 +385,10 @@ function NutritionChart({ data }: { data: NutritionLog[] }) {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      tooltip: {
-        backgroundColor: "rgba(255, 255, 255, 0.95)",
-        titleColor: "#1e293b",
-        bodyColor: "#334155",
-        borderColor: "#e2e8f0",
-        borderWidth: 1,
-      },
     },
     scales: {
-      y: { beginAtZero: true, title: { display: true, text: "Calories (kcal)" } },
+      y: { beginAtZero: true, title: { display: true, text: "Calories" } },
+      x: { grid: { display: false } }
     },
   };
 
@@ -382,7 +403,7 @@ function NutritionChart({ data }: { data: NutritionLog[] }) {
 }
 
 // ===========================
-// WORKOUT ACTIVITY CHART
+// WORKOUT ACTIVITY CHART (Line Graph)
 // ===========================
 function WorkoutActivityChart({ data }: { data: ProgressLog[] }) {
   if (data.length === 0) return null;
@@ -395,11 +416,15 @@ function WorkoutActivityChart({ data }: { data: ProgressLog[] }) {
     labels,
     datasets: [
       {
-        label: "Total Workouts",
+        label: "Workouts",
         data: data.map(log => log.total_workouts),
-        backgroundColor: "#f59e0b",
-        borderColor: "#f59e0b",
-        borderWidth: 2,
+        borderColor: "#8b5cf6",
+        backgroundColor: "rgba(139, 92, 246, 0.1)",
+        pointBackgroundColor: "#fff",
+        pointBorderColor: "#8b5cf6",
+        pointRadius: 5,
+        tension: 0.3,
+        fill: true,
       },
     ],
   };
@@ -409,24 +434,22 @@ function WorkoutActivityChart({ data }: { data: ProgressLog[] }) {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      tooltip: {
-        backgroundColor: "rgba(255, 255, 255, 0.95)",
-        titleColor: "#1e293b",
-        bodyColor: "#334155",
-        borderColor: "#e2e8f0",
-        borderWidth: 1,
-      },
     },
     scales: {
-      y: { beginAtZero: true, title: { display: true, text: "Workouts Completed" } },
+      y: { 
+        beginAtZero: true, 
+        ticks: { stepSize: 1 },
+        title: { display: true, text: "Count" }
+      },
+      x: { grid: { display: false } }
     },
   };
 
   return (
     <div className="chart-card" style={styles.chartCard}>
-      <h3 style={styles.chartTitle}>Workout Progress</h3>
+      <h3 style={styles.chartTitle}>Workout Frequency</h3>
       <div style={styles.chartContainer}>
-        <Bar data={chartData} options={options} />
+        <Line data={chartData} options={options} />
       </div>
     </div>
   );
@@ -445,7 +468,6 @@ function MacroDistributionChart({ data }: { data: NutritionLog[] }) {
     );
   }
 
-  // Calculate average macros
   const totalProtein = data.reduce((sum, log) => sum + log.total_protein, 0);
   const totalCarbs = data.reduce((sum, log) => sum + log.total_carbs, 0);
   const totalFats = data.reduce((sum, log) => sum + log.total_fats, 0);
@@ -467,15 +489,6 @@ function MacroDistributionChart({ data }: { data: NutritionLog[] }) {
     maintainAspectRatio: false,
     plugins: {
       legend: { position: "bottom" as const },
-      tooltip: {
-        callbacks: {
-          label: (context: any) => {
-            const label = context.label || "";
-            const value = context.parsed || 0;
-            return `${label}: ${value.toFixed(0)}g`;
-          },
-        },
-      },
     },
   };
 
@@ -499,15 +512,14 @@ function ConsistencyCalendar({
   progressLogs: ProgressLog[];
   nutritionLogs: NutritionLog[];
 }) {
-  // Get last 30 days
   const last30Days = Array.from({ length: 30 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (29 - i));
     return date.toISOString().split("T")[0];
   });
 
-  const workoutDates = new Set(progressLogs.map(log => log.date));
-  const nutritionDates = new Set(nutritionLogs.map(log => log.date));
+  const workoutDates = new Set(progressLogs.map(log => new Date(log.date).toISOString().split("T")[0]));
+  const nutritionDates = new Set(nutritionLogs.map(log => new Date(log.date).toISOString().split("T")[0]));
 
   return (
     <div className="consistency-calendar" style={styles.calendarCard}>
@@ -518,10 +530,10 @@ function ConsistencyCalendar({
           const hasMeal = nutritionDates.has(date);
           const isPerfect = hasWorkout && hasMeal;
 
-          let bgColor = "#f1f5f9"; // Default: no activity
-          if (isPerfect) bgColor = "#fbbf24"; // Gold: both
-          else if (hasWorkout) bgColor = "#60a5fa"; // Blue: workout only
-          else if (hasMeal) bgColor = "#34d399"; // Green: meal only
+          let bgColor = "#f1f5f9"; 
+          if (isPerfect) bgColor = "#fbbf24"; 
+          else if (hasWorkout) bgColor = "#60a5fa"; 
+          else if (hasMeal) bgColor = "#34d399"; 
 
           return (
             <div

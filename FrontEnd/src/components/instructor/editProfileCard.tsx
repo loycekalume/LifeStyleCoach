@@ -81,8 +81,8 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-content">
+    <div className="modal-backdropt">
+      <div className="modal-contentt">
         <h3>Edit Profile</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -141,7 +141,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
             />
           </div>
 
-          <div className="modal-actions">
+          <div className="modal-actionst">
             <button
               type="button"
               className="btn btn-outline"

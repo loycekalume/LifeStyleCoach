@@ -26,8 +26,8 @@ const EditSpecializationsModal: React.FC<EditSpecializationsModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card">
+    <div className="modal-backdropt">
+      <div className="modal-cardt">
         <h3>Edit Specializations</h3>
         <label>Specializations (comma-separated)</label>
         <input
@@ -41,7 +41,7 @@ const EditSpecializationsModal: React.FC<EditSpecializationsModalProps> = ({
           value={certifications}
           onChange={(e) => setCertifications(e.target.value)}
         />
-        <div className="modal-actions">
+        <div className="modal-actionst">
           <button onClick={onClose} className="btn btn-secondary">Cancel</button>
           <button onClick={handleSave} className="btn btn-primary">Save</button>
         </div>

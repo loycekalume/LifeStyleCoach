@@ -27,8 +27,8 @@ const EditPricingModal: React.FC<EditPricingModalProps> = ({ initialPricing, onS
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card">
+    <div className="modal-backdropt">
+      <div className="modal-cardt">
         <h3>Edit Pricing</h3>
         {pricingData.map((item, idx) => (
           <div key={item.pricing_id} className="pricing-edit-row">
@@ -53,7 +53,7 @@ const EditPricingModal: React.FC<EditPricingModalProps> = ({ initialPricing, onS
           </div>
         ))}
 
-        <div className="modal-actions">
+        <div className="modal-actionst">
           <button onClick={onClose} className="btn btn-secondary">Cancel</button>
           <button onClick={handleSave} className="btn btn-primary">Save</button>
         </div>

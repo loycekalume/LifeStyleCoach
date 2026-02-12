@@ -782,118 +782,7 @@ html {
         border: 1px solid #E0E0E0;
     }
 }
-/* Modal Overlay */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(15, 23, 42, 0.65); /* darker glassy overlay */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  backdrop-filter: blur(4px); /* glass effect */
-  animation: fadeIn 0.3s ease-in-out;
-}
 
-/* Modal Content */
-.modal-content {
-  background: #ffffff;
-  padding: 2rem;
-  border-radius: 16px;
-  width: 500px;
-  max-width: 90%;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
-  text-align: left;
-  position: relative;
-  animation: slideUp 0.3s ease-in-out;
-}
-
-/* Modal Header */
-.modal-content h2 {
-  margin-bottom: 1rem;
-  font-size: 1.6rem;
-  font-weight: 600;
-  color: #1f2937; /* slate-800 */
-  border-bottom: 1px solid #e5e7eb; /* light gray line */
-  padding-bottom: 0.75rem;
-}
-
-/* Close Button */
-.modal-close {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #6b7280; /* gray-500 */
-  cursor: pointer;
-  transition: color 0.2s ease-in-out;
-}
-
-.modal-close:hover {
-  color: #ef4444; /* red-500 */
-}
-
-/* Form Fields */
-.modal-content input,
-.modal-content textarea,
-.modal-content select {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  font-size: 1rem;
-  outline: none;
-  transition: border 0.2s;
-}
-
-.modal-content input:focus,
-.modal-content textarea:focus,
-.modal-content select:focus {
-  border-color: #3b82f6; /* blue-500 */
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-}
-
-/* Buttons */
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-.modal-btn {
-  padding: 0.6rem 1.2rem;
-  border-radius: 10px;
-  border: none;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.modal-btn.cancel {
-  background: #f3f4f6; /* gray-100 */
-  color: #374151; /* gray-700 */
-}
-
-.modal-btn.cancel:hover {
-  background: #e5e7eb;
-}
-
-.modal-btn.save {
-  background: #3b82f6; /* blue-500 */
-  color: #fff;
-}
-
-.modal-btn.save:hover {
-  background: #2563eb; /* blue-600 */
-}
 
 /* Animations */
 @keyframes fadeIn {
@@ -1116,97 +1005,169 @@ html {
 .btn-danger:hover {
   background-color: #dc2626;
 }
-/* ✅ Modal Background */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-/* ✅ Modal Box */
-.modal-content {
-  background: #fff;
-  padding: 24px;
-  border-radius: 10px;
-  width: 500px;
-  max-width: 90%;
-  max-height: 85vh;  /* prevent it from overflowing screen */
-  overflow-y: auto;  /* scroll inside if too long */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  animation: fadeIn 0.3s ease-in-out;
-}
 
 
-.modal-content::-webkit-scrollbar {
-  width: 6px;
-}
-.modal-content::-webkit-scrollbar-thumb {
-  background: #9ca3af;
-  border-radius: 6px;
-}
-.modal-content::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+/* 1. The Wrapper/Background */
+.modal-backdrop, 
+.modal-overlayt, 
+.modalt {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(15, 23, 42, 0.7); /* Dark slate overlay */
+    backdrop-filter: blur(4px); /* Glass effect */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000; /* High z-index to sit above everything */
+    animation: fadeIn 0.2s ease-out;
 }
 
-/* ✅ Fade-in animation */
+/* 2. The Modal Box */
+.modal-contentt {
+    background: #ffffff;
+    width: 100%;
+    max-width: 500px; /* Consistent width */
+    max-height: 90vh; /* Prevent overflow on small screens */
+    overflow-y: auto; /* Internal scroll */
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    position: relative;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); /* Smooth spring-like effect */
+}
+
+/* 3. Typography inside Modal */
+.modal-contentt h2,
+.modal-contentt h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    text-align: center;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 1rem;
+}
+
+/* 4. Inputs & Forms */
+.modal-contentt form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.modal-contentt label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.modal-contentt input,
+.modal-contentt select,
+.modal-contentt textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #1f2937;
+    background-color: #f9fafb;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.modal-contentt input:focus,
+.modal-contentt select:focus,
+.modal-contentt textarea:focus {
+    border-color: #3b82f6;
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 5. Close Button (X) */
+.modal-closet {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: color 0.2s;
+    line-height: 1;
+    padding: 0.25rem;
+}
+
+.modal-closet:hover {
+    color: #ef4444;
+}
+
+/* 6. Action Buttons */
+.modal-actionst {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.modal-btnt,
+.btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+/* Primary Button (Save/Submit) */
+.modal-btnt.save,
+.btn-primary {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.modal-btnt.save:hover,
+.btn-primary:hover {
+    background-color: #2563eb;
+}
+
+/* Secondary Button (Cancel) */
+.modal-btnt.cancel,
+.btn-outline {
+    background-color: white;
+    border-color: #d1d5db;
+    color: #374151;
+}
+
+.modal-btnt.cancel:hover,
+.btn-outline:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+/* 7. Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-/* ✅ Form Styling */
-.modal-content form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.modal-content input,
-.modal-content select,
-.modal-content textarea {
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-  width: 100%;
-  transition: border 0.2s ease, box-shadow 0.2s ease;
-}
-
-.modal-content input:focus,
-.modal-content select:focus,
-.modal-content textarea:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
-  outline: none;
-}
-
-/* ✅ Modal Header */
-.modal-content h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  text-align: center;
-}
-
-/* ✅ Modal Actions */
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 12px;
+@keyframes slideUp {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px) scale(0.95); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+    }
 }

@@ -51,8 +51,8 @@ const EditContactModal: React.FC<EditContactModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-content">
+    <div className="modal-backdropt">
+      <div className="modal-contentt">
         <h3>Edit Contact Info</h3>
 
         <form onSubmit={handleSubmit}>
@@ -111,7 +111,7 @@ const EditContactModal: React.FC<EditContactModalProps> = ({
             </select>
           </div>
 
-          <div className="modal-actions">
+          <div className="modal-actionst">
             <button 
               type="button" 
               className="btnt btn-outline" 
