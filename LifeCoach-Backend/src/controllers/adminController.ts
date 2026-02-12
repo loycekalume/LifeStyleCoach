@@ -157,3 +157,62 @@ export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
+export const getUserEngagement = asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const query = `
+      WITH last_7_days AS (
+          -- 1. Generate the last 7 dates
+          SELECT generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, '1 day')::date AS date
+      ),
+      daily_meals AS (
+          -- 2. Count meals per day
+          SELECT log_date AS date, COUNT(*) AS count 
+          FROM meal_logs 
+          WHERE log_date >= CURRENT_DATE - INTERVAL '6 days'
+          GROUP BY log_date
+      ),
+      daily_workouts AS (
+          -- 3. Count workouts per day
+          SELECT date_completed::date AS date, COUNT(*) AS count 
+          FROM workout_logs 
+          WHERE date_completed >= CURRENT_DATE - INTERVAL '6 days'
+          GROUP BY date_completed::date
+      ),
+      daily_users AS (
+          -- 4. Count new signups per day
+          SELECT created_at::date AS date, COUNT(*) AS count 
+          FROM users 
+          WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
+          GROUP BY created_at::date
+      )
+      -- 5. Join everything together
+      SELECT 
+          TO_CHAR(d.date, 'Dy') AS label,  -- Returns 'Mon', 'Tue', etc.
+          COALESCE(m.count, 0) AS meal_logs,
+          COALESCE(w.count, 0) AS workouts,
+          COALESCE(u.count, 0) AS new_users
+      FROM last_7_days d
+      LEFT JOIN daily_meals m ON d.date = m.date
+      LEFT JOIN daily_workouts w ON d.date = w.date
+      LEFT JOIN daily_users u ON d.date = u.date
+      ORDER BY d.date ASC;
+    `;
+
+    const result = await pool.query(query);
+
+    // 6. Format the data for Chart.js (Split rows into separate arrays)
+    const data = {
+      labels: result.rows.map(row => row.label),
+      mealLogs: result.rows.map(row => parseInt(row.meal_logs, 10)),
+      workouts: result.rows.map(row => parseInt(row.workouts, 10)),
+      newUsers: result.rows.map(row => parseInt(row.new_users, 10))
+    };
+
+    res.json(data);
+
+  } catch (err) {
+    console.error("Error fetching engagement stats:", err);
+    res.status(500).json({ error: "Server error fetching engagement stats" });
+  }
+});

@@ -6,16 +6,18 @@ import {
   updateAdmin,
   deleteAdmin,
   getOverviewStats,
-  getAllUsers
+  getAllUsers,
+  getUserEngagement
 } from '../controllers/adminController'
 
 const router = express.Router()
 
+router.post('/', createAdmin)
 router.get('/', getAllAdmins)
 router.get("/overview", getOverviewStats);
 router.get("/users",  getAllUsers);
+router.get('/engagement', getUserEngagement);
 router.get("/:id",getAdminById)
-router.post('/', createAdmin)
 router.put('/:id', updateAdmin)
 router.delete('/:id', deleteAdmin)
 
