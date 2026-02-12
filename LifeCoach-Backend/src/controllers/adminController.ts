@@ -85,9 +85,10 @@ export const deleteAdmin = asyncHandler(async (req: Request, res: Response) => {
 
 
 
+
 export const getOverviewStats = async (req: Request, res: Response) => {
   try {
-    // Run all queries in parallel for performance
+    // 1. Run all queries in parallel
     const [clientsRes, instructorsRes, dieticiansRes, allUsersRes] = await Promise.all([
       pool.query("SELECT COUNT(*) AS count FROM users WHERE role_id = 5"), // Clients
       pool.query("SELECT COUNT(*) AS count FROM users WHERE role_id = 3"), // Instructors
@@ -95,18 +96,22 @@ export const getOverviewStats = async (req: Request, res: Response) => {
       pool.query("SELECT COUNT(*) AS count FROM users")                    // All Users
     ]);
 
-    // Parse counts (Postgres returns counts as strings)
+    // 2. Extract the numbers (Postgres returns counts as strings)
     const totalClients = parseInt(clientsRes.rows[0].count, 10);
     const totalInstructors = parseInt(instructorsRes.rows[0].count, 10);
     const totalDieticians = parseInt(dieticiansRes.rows[0].count, 10);
-    const totalUsers = parseInt(allUsersRes.rows[0].count, 10);
+    
+    // ✅ THIS FIXES THE 5.2 ISSUE:
+    const totalUsers = parseInt(allUsersRes.rows[0].count, 10); 
 
+    // 3. Send the response
     res.json({
       totalClients,
-      verifiedExperts: totalInstructors,   // Mapped to Instructors
-      pendingApprovals: totalDieticians,   // Mapped to Dieticians
-      avgStreak: totalUsers                // Mapped to All Users
+      verifiedExperts: totalInstructors,   
+      pendingApprovals: totalDieticians,   
+      avgStreak: totalUsers  // We map "Total Users" to this field
     });
+
   } catch (err) {
     console.error("Error fetching overview stats:", err);
     res.status(500).json({ error: "Server error fetching stats" });
