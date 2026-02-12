@@ -153,11 +153,11 @@ export const updateClient = asyncHandler(async (req: Request, res: Response) => 
 
 
 
-export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, res: Response) => {
-    // 1. Get Logged-in Instructor
+export const getMatchedInstructors = asyncHandler(async (req: Request, res: Response) => {
+    // 1. Get Logged-in Instructor ID from Token
     const instructorUserId = (req as any).user.user_id;
 
-    // Fetch Instructor Profile
+    // 2. Fetch Instructor Profile (Specialization, Location, Mode, Bio)
     const instQuery = `
         SELECT specialization, available_locations, coaching_mode, bio 
         FROM instructors WHERE user_id = $1
@@ -169,13 +169,12 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
     }
     const instructor = instRes.rows[0];
 
-    // 2. Fetch All Clients (Limit increased to find enough valid matches)
+    // 3. Fetch All Potential Clients (Limit 100 to ensure we catch enough candidates)
     const clientQuery = `
         SELECT 
             u.user_id, u.name, u.email,
             c.weight_goal, c.location, c.gender, c.age, 
-            c.height, c.weight, c.budget,
-            c.health_conditions, c.allergies
+            c.height, c.weight, c.budget
         FROM users u
         JOIN clients c ON u.user_id = c.user_id
         WHERE u.role_id = 5
@@ -185,76 +184,84 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
     const allClients = clientRes.rows;
 
     if (allClients.length === 0) {
-        return res.status(200).json({ data: [] });
+        return res.status(200).json({ message: "No clients found in the system yet.", data: [] });
     }
 
     // =================================================================================
-    // 🚀 STEP 3: STRICT PRE-FILTERING (Location & Mode Logic)
+    // 🚀 STEP 4: STRICT CODE-LEVEL FILTERING (Location & Mode Logic)
     // =================================================================================
     
-    // Normalize Instructor Data
+    // Normalize Instructor Mode & Locations
     const mode = instructor.coaching_mode ? instructor.coaching_mode.toLowerCase() : "";
     let instLocs: string[] = [];
 
+    // Handle Postgres Array or String format safely
     if (Array.isArray(instructor.available_locations)) {
         instLocs = instructor.available_locations.map((l: string) => l.toLowerCase().trim());
     } else if (typeof instructor.available_locations === 'string') {
         instLocs = instructor.available_locations.replace(/[{"}]/g, "").split(',').map(l => l.trim().toLowerCase());
     }
 
+    // Determine strict mode flags
     const isOnline = mode.includes('remote') || mode.includes('online');
     const isHybrid = mode.includes('both') || mode.includes('hybrid');
     const isOnsite = mode.includes('onsite') || mode.includes('person');
 
-    // Filter Clients
+    // Filter Clients: Keep only those reachable by this instructor
     const validClients = allClients.filter(client => {
-        // RULE 1: If Instructor is Online or Hybrid, they can coach ANYONE.
+        // CASE A: If Instructor is Online or Hybrid -> They can coach ANYONE.
         if (isOnline || isHybrid) return true;
 
-        // RULE 2: If Instructor is strictly Onsite, client MUST be in their location.
+        // CASE B: If Instructor is strictly Onsite -> Client MUST match location.
         if (isOnsite) {
             const clientLoc = client.location ? client.location.toLowerCase().trim() : "";
-            // Check if client location vaguely matches any of the instructor's locations
-            return instLocs.some(loc => clientLoc.includes(loc) || loc.includes(clientLoc));
+            
+            // Check if locations overlap (e.g. "Nairobi" inside "Westlands, Nairobi")
+            const isLocationMatch = instLocs.some(loc => 
+                clientLoc.includes(loc) || loc.includes(clientLoc)
+            );
+            return isLocationMatch;
         }
 
-        return false; // Fallback (shouldn't happen if modes are set correctly)
+        return false; // Fallback if mode is undefined
     });
 
     if (validClients.length === 0) {
         return res.status(200).json({ 
-            message: "No clients found matching your coaching mode/location.", 
+            message: "No clients found matching your location or coaching mode.", 
             data: [] 
         });
     }
 
-    // 3. Construct AI Prompt
-    // We remove the location rules from the prompt because we already handled them.
-    const systemPrompt = `You are a fitness client matching expert.
+    // =================================================================================
+    // 🚀 STEP 5: AI SCORING (Strict Specialization vs. Weight Goal)
+    // =================================================================================
+    
+    const systemPrompt = `You are a fitness business expert matching clients to an instructor based PURELY on fitness goals.
 
-    **YOUR PROFILE (INSTRUCTOR):**
+    **INSTRUCTOR PROFILE:**
     - Specialization: ${instructor.specialization}
     - Bio: ${instructor.bio}
 
-    **CANDIDATE CLIENTS (Already pre-filtered for your location/mode):**
+    **CANDIDATE CLIENTS:**
     ${JSON.stringify(validClients.map(c => ({
         id: c.user_id,
         name: c.name,
-        goal: c.weight_goal,
-        conditions: c.health_conditions,
+        goal: c.weight_goal, // Crucial Field
         budget: c.budget
     })), null, 2)}
 
     **YOUR TASK:**
-    Score these clients based on how well YOU can help them achieve their goals.
+    Score each client from 0-100 based on how well the Instructor's Specialization matches the Client's Goal.
 
     **SCORING RULES:**
-    1. **Goal Match (0-100 pts):** - High Score (80-100): Your specialization is exactly what they need (e.g., You do "Muscle Building", they want "Hypertrophy").
-       - Mid Score (50-79): Your specialization is related or helpful.
-       - Low Score (<50): Mismatch.
-
-    2. **Safety Check (Critical):**
-       - If client has serious conditions (Heart, Injury) AND your bio/specialization does NOT mention "Rehab", "Therapy", or "Medical", **SCORE = 0**. Do not match unsafe clients.
+    - **90-100 (Perfect Match):** Instructor specializes exactly in what the client wants.
+      (e.g., Instructor: "Hypertrophy/Bodybuilding" -> Client: "Muscle Gain")
+      (e.g., Instructor: "Weight Management" -> Client: "Weight Loss")
+    - **70-89 (Strong Match):** Specialization is highly relevant.
+      (e.g., Instructor: "General Fitness" -> Client: "Weight Loss")
+    - **50-69 (Possible Match):** Loosely related.
+    - **< 50 (Mismatch):** Completely unrelated fields (e.g., Yoga vs. Powerlifting).
 
     **OUTPUT FORMAT (JSON ONLY):**
     {
@@ -262,7 +269,7 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
             { 
                 "user_id": <number>,
                 "match_score": <number>,
-                "match_reason": "<Speak to the instructor ('You'). Explain why this client is a good business fit or success story waiting to happen.>"
+                "match_reason": "<Short explanation for the instructor. Example: 'Client wants muscle gain, which aligns perfectly with your Bodybuilding specialization.'>"
             }
         ]
     }
@@ -272,11 +279,11 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
         const completion = await groq.chat.completions.create({
             messages: [{ role: "system", content: systemPrompt }],
             model: "llama-3.1-8b-instant",
-            temperature: 0.1,
+            temperature: 0.1, // Keep low for consistent results
             response_format: { type: "json_object" },
         });
 
-        // 4. Robust JSON Parsing
+        // Parse AI Response
         const aiContent = completion.choices[0]?.message?.content || "{}";
         const firstBrace = aiContent.indexOf('{');
         const lastBrace = aiContent.lastIndexOf('}');
@@ -288,36 +295,31 @@ export const getMatchedClientsForInstructor = asyncHandler(async (req: Request, 
              aiMatches = parsedData.matches || [];
         }
 
-        // 5. Merge AI Scores back into Full Client Objects
+        // 6. Merge AI Scores back into Full Client Objects
         const finalResults = aiMatches
-            .filter((match: any) => match.match_score >= 50)
+            .filter((match: any) => match.match_score >= 50) // Filter out weak matches
             .map((match: any) => {
                 const originalClient = validClients.find(c => c.user_id === match.user_id);
                 if (!originalClient) return null;
 
                 return {
                     ...originalClient,
-                    // Pass through all necessary UI fields
-                    height: originalClient.height,
-                    weight: originalClient.weight,
-                    budget: originalClient.budget,
-                    
                     match_score: match.match_score,
-                    match_reason: match.match_reason // Single string is easier for UI
+                    match_reason: match.match_reason 
                 };
             })
             .filter(Boolean);
 
-        // Sort by score
+        // Sort by score descending (Best matches first)
         finalResults.sort((a: any, b: any) => b.match_score - a.match_score);
 
-        res.json({
+        res.status(200).json({
             message: `Found ${finalResults.length} qualified matches`,
             data: finalResults
         });
 
     } catch (error) {
-        console.error("AI Error:", error);
+        console.error("AI Matching Error:", error);
         res.status(500).json({
             message: "AI matching service unavailable",
             data: []
