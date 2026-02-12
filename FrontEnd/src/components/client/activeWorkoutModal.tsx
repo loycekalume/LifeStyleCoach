@@ -88,7 +88,7 @@ export default function ActiveWorkoutModal({
 
     try {
       const durationMinutes = Math.ceil(seconds / 60);
-      await axios.post("http://localhost:3000/workoutLogs/complete", {
+      await axios.post("https://lifestylecoach.onrender.com/workoutLogs/complete", {
         user_id: userId,
         template_id: workoutId,
         duration_minutes: durationMinutes,
