@@ -156,7 +156,7 @@ export const getClientDashboard = async (req: Request, res: Response) => {
     const { userId } = req.params;
 
     try {
-        // Workout stats (last 30 days)
+        // 1. Workout stats (last 30 days)
         const workoutStatsQuery = `
             SELECT 
                 COUNT(*) as total_workouts,
@@ -167,23 +167,23 @@ export const getClientDashboard = async (req: Request, res: Response) => {
                 AND date_completed >= NOW() - INTERVAL '30 days'
         `;
 
-        // Nutrition stats (last 30 days)
+        // 2. Nutrition stats (History: days logged)
         const nutritionStatsQuery = `
             SELECT 
-                COUNT(DISTINCT log_date) as days_logged,
-                COALESCE(AVG(daily_calories), 0) as avg_calories
-            FROM (
-                SELECT 
-                    log_date, 
-                    SUM(calories) as daily_calories
-                FROM meal_logs
-                WHERE user_id = $1
-                    AND log_date >= CURRENT_DATE - INTERVAL '30 days'
-                GROUP BY log_date
-            ) daily
+                COUNT(DISTINCT log_date) as days_logged
+            FROM meal_logs
+            WHERE user_id = $1
+                AND log_date >= CURRENT_DATE - INTERVAL '30 days'
         `;
 
-        // Streak calculation
+        // 3. Today's Calorie Total (The Fix)
+        const todayCaloriesQuery = `
+            SELECT COALESCE(SUM(calories), 0) as today_calories
+            FROM meal_logs
+            WHERE user_id = $1 AND log_date = CURRENT_DATE
+        `;
+
+        // 4. Streak calculation
         const streakQuery = `
             WITH combined_activity AS (
                 SELECT log_date as activity_date FROM meal_logs WHERE user_id = $1
@@ -207,7 +207,7 @@ export const getClientDashboard = async (req: Request, res: Response) => {
             )
         `;
 
-        // Last activity date (to check if streak is still alive)
+        // 5. Last activity date (to check if streak is still alive)
         const lastActivityQuery = `
             SELECT MAX(d) as last_date FROM (
                 SELECT log_date as d FROM meal_logs WHERE user_id = $1
@@ -216,13 +216,15 @@ export const getClientDashboard = async (req: Request, res: Response) => {
             ) as recent
         `;
 
-        const [workoutStats, nutritionStats, lastActivity] = await Promise.all([
+        // Run all queries in parallel
+        const [workoutStats, nutritionStats, todayCaloriesRes, lastActivity] = await Promise.all([
             pool.query(workoutStatsQuery, [userId]),
             pool.query(nutritionStatsQuery, [userId]),
+            pool.query(todayCaloriesQuery, [userId]),
             pool.query(lastActivityQuery, [userId])
         ]);
 
-        // Calculate streak only if activity was today or yesterday
+        // Streak Logic
         let currentStreak = 0;
         const lastDate = lastActivity.rows[0]?.last_date
             ? new Date(lastActivity.rows[0].last_date)
@@ -245,7 +247,7 @@ export const getClientDashboard = async (req: Request, res: Response) => {
             }
         }
 
-        // Check today's activity
+        // Check today's specific activity flags
         const todayCheck = await pool.query(`
             SELECT 
                 EXISTS(
@@ -258,6 +260,7 @@ export const getClientDashboard = async (req: Request, res: Response) => {
                 ) as meals_logged
         `, [userId]);
 
+        // Send Final Response
         res.json({
             workouts: {
                 total_workouts: parseInt(workoutStats.rows[0]?.total_workouts) || 0,
@@ -266,7 +269,8 @@ export const getClientDashboard = async (req: Request, res: Response) => {
             },
             nutrition: {
                 days_logged: parseInt(nutritionStats.rows[0]?.days_logged) || 0,
-                avg_calories: parseFloat(nutritionStats.rows[0]?.avg_calories) || 0
+                // ✅ FIXED: Returns today's total sum instead of average
+                today_calories: parseInt(todayCaloriesRes.rows[0]?.today_calories) || 0 
             },
             streak: {
                 current_streak: currentStreak,
