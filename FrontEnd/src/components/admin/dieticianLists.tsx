@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ Use navigate
-import { getDieticians, toggleUserStatus } from "../../Services/adminService";
-import { toast } from "react-toastify"; // Optional: Notification
+import { useNavigate } from "react-router-dom";
+import { getDieticians } from "../../Services/adminService"; // ✅ Removed unused imports
+import { toast } from "react-toastify";
 import "../../styles/adminTable.css";
 
 interface Dietician {
@@ -18,19 +18,17 @@ const DieticiansTable: React.FC = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch Dieticians (No Token Needed)
+  // ✅ Fetch Dieticians
   useEffect(() => {
     const fetchDieticians = async () => {
       try {
         setLoading(true);
-        // axiosInstance handles credentials automatically
         const data = await getDieticians();
         
         if (Array.isArray(data)) {
             setDieticians(data);
             setFilteredDieticians(data);
         } else {
-            console.error("API did not return an array", data);
             setDieticians([]);
         }
       } catch (err) {
@@ -53,25 +51,6 @@ const DieticiansTable: React.FC = () => {
     setFilteredDieticians(
       dieticians.filter((d) => (d.name || "").toLowerCase().includes(term))
     );
-  };
-
-  // ✅ Toggle Status (No Token Needed)
-  const handleToggleStatus = async (user_id: number) => {
-    try {
-      await toggleUserStatus(user_id);
-      
-      toast.success("Dietician status updated");
-
-      // Optimistic Update
-      const updateState = (prev: Dietician[]) => 
-        prev.map((d) => (d.user_id === user_id ? { ...d, active: !d.active } : d));
-
-      setDieticians(updateState);
-      setFilteredDieticians(updateState);
-    } catch (err) {
-      console.error("Error toggling dietician:", err);
-      toast.error("Failed to update status");
-    }
   };
 
   return (
@@ -105,54 +84,37 @@ const DieticiansTable: React.FC = () => {
             <table className="custom-table">
             <thead>
                 <tr>
+                <th style={{ width: "50px" }}>#</th>
                 <th>Name</th>
-                <th>Joined</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Date Joined</th>
                 </tr>
             </thead>
 
             <tbody>
                 {filteredDieticians.length > 0 ? (
-                filteredDieticians.map((d) => (
+                filteredDieticians.map((d, index) => (
                     <tr key={d.user_id}>
+                    {/* Numbering */}
+                    <td>{index + 1}</td>
+                    
+                    {/* Name */}
                     <td>
                         <div className="user-info">
                             <span className="user-name">{d.name}</span>
                         </div>
                     </td>
+                    
+                    {/* Date Joined */}
                     <td>
                         <span className="joined-date">
                         {new Date(d.created_at).toLocaleDateString()}
                         </span>
                     </td>
-                    <td>
-                        <span className={`badge ${d.active ? "success" : "danger"}`}>
-                        {d.active ? "Active" : "Inactive"}
-                        </span>
-                    </td>
-                    <td className="actions">
-                        <button
-                            className="action view"
-                            onClick={() => navigate(`/admin/dietician/${d.user_id}`)}
-                            title="View Profile"
-                        >
-                            <i className="fas fa-eye"></i> View
-                        </button>
-
-                        <button
-                        className={`btn ${d.active ? "btn-danger" : "btn-success"}`}
-                        onClick={() => handleToggleStatus(d.user_id)}
-                        >
-                        <i className={`fas ${d.active ? "fa-user-slash" : "fa-user-check"}`}></i>{" "}
-                        {d.active ? "Deactivate" : "Activate"}
-                        </button>
-                    </td>
                     </tr>
                 ))
                 ) : (
                 <tr>
-                    <td colSpan={4} className="no-data">
+                    <td colSpan={3} className="no-data">
                     No dieticians found
                     </td>
                 </tr>

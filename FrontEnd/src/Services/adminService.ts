@@ -42,3 +42,8 @@ export const toggleUserStatus = async (userId: number) => {
   const res = await axiosInstance.patch(`/users/${userId}/toggle-active`);
   return res.data;
 };
+
+export const deleteUser = async (userId: number) => {
+  const res = await axiosInstance.delete(`/users/${userId}`);
+  return res.data;
+};

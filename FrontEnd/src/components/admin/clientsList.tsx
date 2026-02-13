@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ Use navigate
-import { getClients, toggleUserStatus } from "../../Services/adminService";
-import { toast } from "react-toastify"; // Optional: Notification
+import { useNavigate } from "react-router-dom";
+import { getClients } from "../../Services/adminService"; // ✅ Removed unused imports
+import { toast } from "react-toastify";
 import "../../styles/adminTable.css";
 
 interface Client {
@@ -18,19 +18,17 @@ const ClientsTable: React.FC = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch Clients (No Token Needed)
+  // ✅ Fetch Clients
   useEffect(() => {
     const fetchClients = async () => {
       try {
         setLoading(true);
-        // axiosInstance handles credentials automatically
         const data = await getClients();
         
         if (Array.isArray(data)) {
             setClients(data);
             setFilteredClients(data);
         } else {
-            console.error("API did not return an array", data);
             setClients([]);
         }
       } catch (err) {
@@ -53,25 +51,6 @@ const ClientsTable: React.FC = () => {
     setFilteredClients(
       clients.filter((c) => (c.name || "").toLowerCase().includes(term))
     );
-  };
-
-  // ✅ Toggle Status (No Token Needed)
-  const handleToggleStatus = async (user_id: number) => {
-    try {
-      await toggleUserStatus(user_id);
-      
-      toast.success("Client status updated");
-
-      // Optimistic Update
-      const updateState = (prev: Client[]) => 
-        prev.map((c) => (c.user_id === user_id ? { ...c, active: !c.active } : c));
-
-      setClients(updateState);
-      setFilteredClients(updateState);
-    } catch (err) {
-      console.error("Error toggling client:", err);
-      toast.error("Failed to update status");
-    }
   };
 
   return (
@@ -105,54 +84,37 @@ const ClientsTable: React.FC = () => {
             <table className="custom-table">
             <thead>
                 <tr>
+                <th style={{ width: "50px" }}>#</th>
                 <th>Name</th>
-                <th>Joined</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Date Joined</th>
                 </tr>
             </thead>
 
             <tbody>
                 {filteredClients.length > 0 ? (
-                filteredClients.map((c) => (
+                filteredClients.map((c, index) => (
                     <tr key={c.user_id}>
+                    {/* Numbering */}
+                    <td>{index + 1}</td>
+                    
+                    {/* Name */}
                     <td>
                         <div className="user-info">
                             <span className="user-name">{c.name}</span>
                         </div>
                     </td>
+                    
+                    {/* Date Joined */}
                     <td>
                         <span className="joined-date">
                         {new Date(c.created_at).toLocaleDateString()}
                         </span>
                     </td>
-                    <td>
-                        <span className={`badge ${c.active ? "success" : "danger"}`}>
-                        {c.active ? "Active" : "Inactive"}
-                        </span>
-                    </td>
-                    <td className="actions">
-                        <button
-                            className="action view"
-                            onClick={() => navigate(`/admin/client/${c.user_id}`)}
-                            title="View Profile"
-                        >
-                            <i className="fas fa-eye"></i> View
-                        </button>
-
-                        <button
-                        className={`btn ${c.active ? "btn-danger" : "btn-success"}`}
-                        onClick={() => handleToggleStatus(c.user_id)}
-                        >
-                        <i className={`fas ${c.active ? "fa-user-slash" : "fa-user-check"}`}></i>{" "}
-                        {c.active ? "Deactivate" : "Activate"}
-                        </button>
-                    </td>
                     </tr>
                 ))
                 ) : (
                 <tr>
-                    <td colSpan={4} className="no-data">
+                    <td colSpan={3} className="no-data">
                     No clients found
                     </td>
                 </tr>
