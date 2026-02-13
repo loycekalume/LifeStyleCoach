@@ -32,11 +32,9 @@ export const upsertClient = asyncHandler(async (req: Request, res: Response) => 
   // 2. Mark the user profile as complete in the USERS table
   await pool.query("UPDATE users SET profile_complete = TRUE WHERE user_id = $1", [user_id]);
 
-  // 3. ✅ Insert baseline weight into progress logs
-  // ON CONFLICT DO NOTHING → safe to call on profile updates too,
-  // won't overwrite existing entries on the same date
+ 
   await pool.query(
-    `INSERT INTO client_progress_logs (user_id, weight, log_date)
+    `INSERT INTO weight_logs (user_id, weight, log_date)
      VALUES ($1, $2, CURRENT_DATE)
      ON CONFLICT (user_id, log_date) DO NOTHING`,
     [user_id, weight]
