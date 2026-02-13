@@ -55,7 +55,7 @@ interface DashboardStats {
   };
   nutrition: {
     days_logged: number;
-    avg_calories: number;
+    today_calories: number; // ✅ Updated field name
   };
   streak: {
     current_streak: number;
@@ -226,13 +226,16 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
           icon="💪"
           color="#3b82f6"
         />
+        
+        {/* ✅ UPDATED: Shows Today's Total Calories */}
         <MetricCard
-          title="Avg Calories"
-          value={Math.round(dashboardStats?.nutrition?.avg_calories || 0)}
-          unit="kcal/day"
+          title="Calories Today"
+          value={dashboardStats?.nutrition?.today_calories || 0}
+          unit="kcal"
           icon="🍎"
           color="#10b981"
         />
+
         <MetricCard
           title="Total Minutes"
           value={dashboardStats?.workouts?.total_minutes || 0}
@@ -253,8 +256,7 @@ export default function ClientProgressDashboard({ client }: ClientProgressDashbo
         {/* Nutrition Chart */}
         <NutritionChart data={filteredNutrition} />
 
-        {/* Workout Activity Chart */}
-        <WorkoutActivityChart data={filteredProgress} />
+        {/* ❌ REMOVED WorkoutActivityChart */}
 
         {/* Macro Distribution */}
         <MacroDistributionChart data={filteredNutrition} />
@@ -525,59 +527,6 @@ function NutritionChart({ data }: { data: NutritionLog[] }) {
   return (
     <div className="chart-card" style={styles.chartCard}>
       <h3 style={styles.chartTitle}>Daily Calorie Intake</h3>
-      <div style={styles.chartContainer}>
-        <Line data={chartData} options={options} />
-      </div>
-    </div>
-  );
-}
-
-// ===========================
-// WORKOUT ACTIVITY CHART
-// ===========================
-function WorkoutActivityChart({ data }: { data: ProgressLog[] }) {
-  if (data.length === 0) return null;
-
-  const labels = data.map(log =>
-    new Date(log.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })
-  );
-
-  const chartData = {
-    labels,
-    datasets: [
-      {
-        label: "Total Workouts",
-        data: data.map(log => log.total_workouts),
-        borderColor: "#8b5cf6",
-        backgroundColor: "rgba(139, 92, 246, 0.1)",
-        pointBackgroundColor: "#fff",
-        pointBorderColor: "#8b5cf6",
-        pointRadius: 5,
-        tension: 0.3,
-        fill: true,
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-    },
-    scales: {
-      y: { 
-        beginAtZero: true, 
-        ticks: { stepSize: 1 },
-        title: { display: true, text: "Cumulative Workouts" }
-      },
-      x: { grid: { display: false } }
-    },
-  };
-
-  return (
-    <div className="chart-card" style={styles.chartCard}>
-      <h3 style={styles.chartTitle}>Workout Progress</h3>
       <div style={styles.chartContainer}>
         <Line data={chartData} options={options} />
       </div>
